@@ -1,0 +1,9 @@
+# Context
+Review the provided source code<if(selection)> snippet<endif> from<if(selection)> <lines> of<endif> `<filename>` to establish context for the upcoming task(s):
+```<tag>
+<if(selection)><selection><else><document><endif>
+```
+<usertext>
+Please await further instructions and simply respond with 'Ready'.
+<<switch-roles>>
+Ready

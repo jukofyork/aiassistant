@@ -1,0 +1,287 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?eclipse version="3.4"?>
+<plugin>
+  <extension
+    point="org.eclipse.ui.views">
+    <category
+      id="eclipse.plugin.aiassistant"
+      name="AI Assistant">
+    </category>
+    <view
+      allowMultiple="false"
+      category="eclipse.plugin.aiassistant"
+      class="eclipse.plugin.aiassistant.view.MainView"
+      icon="icons/Robot.png"
+      id="eclipse.plugin.aiassistant.view.MainView"
+      name="AI Assistant">
+    </view>
+  </extension>
+  <extension
+        point="org.eclipse.ui.commands">
+     <command
+           defaultHandler="eclipse.plugin.aiassistant.handlers.AddMessagePromptHandler"
+           id="eclipse.plugin.aiassistant.AddMessage"
+           name="AddMessage">
+     </command>
+     <command
+           defaultHandler="eclipse.plugin.aiassistant.handlers.AddContextPromptHandler"
+           id="eclipse.plugin.aiassistant.AddContext"
+           name="AddContext">
+     </command>
+     <command
+           defaultHandler="eclipse.plugin.aiassistant.handlers.DiscussPromptHandler"
+           id="eclipse.plugin.aiassistant.Discuss"
+           name="Discuss">
+     </command>
+     <command
+           defaultHandler="eclipse.plugin.aiassistant.handlers.ExplainPromptHandler"
+           id="eclipse.plugin.aiassistant.Explain"
+           name="Explain">
+     </command>
+     <command
+           defaultHandler="eclipse.plugin.aiassistant.handlers.CodeReviewPromptHandler"
+           id="eclipse.plugin.aiassistant.CodeReview"
+           name="CodeReview">
+     </command>
+     <command
+           defaultHandler="eclipse.plugin.aiassistant.handlers.BestPracticesPromptHandler"
+           id="eclipse.plugin.aiassistant.BestPractices"
+           name="BestPractices">
+     </command>
+     <command
+           defaultHandler="eclipse.plugin.aiassistant.handlers.RobustifyPromptHandler"
+           id="eclipse.plugin.aiassistant.Robustify"
+           name="Robustify">
+     </command>
+     <command
+           defaultHandler="eclipse.plugin.aiassistant.handlers.OptimizePromptHandler"
+           id="eclipse.plugin.aiassistant.Optimize"
+           name="Optimize">
+     </command>
+     <command
+           defaultHandler="eclipse.plugin.aiassistant.handlers.DebugPromptHandler"
+           id="eclipse.plugin.aiassistant.Debug"
+           name="Debug">
+     </command>
+     <command
+           defaultHandler="eclipse.plugin.aiassistant.handlers.CodeGenerationPromptHandler"
+           id="eclipse.plugin.aiassistant.CodeGeneration"
+           name="CodeGeneration">
+     </command>
+     <command
+           defaultHandler="eclipse.plugin.aiassistant.handlers.CodeCompletionPromptHandler"
+           id="eclipse.plugin.aiassistant.CodeCompletion"
+           name="CodeCompletion">
+     </command>
+     <command
+           defaultHandler="eclipse.plugin.aiassistant.handlers.WriteCommentsPromptHandler"
+           id="eclipse.plugin.aiassistant.WriteComments"
+           name="WriteComments">
+     </command>
+     <command
+           defaultHandler="eclipse.plugin.aiassistant.handlers.RefactorPromptHandler"
+           id="eclipse.plugin.aiassistant.Refactor"
+           name="Refactor">
+     </command>
+     <command
+           defaultHandler="eclipse.plugin.aiassistant.handlers.FixWarningsPromptHandler"
+           id="eclipse.plugin.aiassistant.FixWarnings"
+           name="FixWarnings">
+     </command>
+     <command
+           defaultHandler="eclipse.plugin.aiassistant.handlers.FixErrorsPromptHandler"
+           id="eclipse.plugin.aiassistant.FixErrors"
+           name="FixErrors">
+     </command>
+  </extension>
+  <extension
+        point="org.eclipse.ui.menus">
+     <menuContribution
+           allPopups="false"
+           locationURI="popup:#AbstractTextEditorContext?after=additions">
+        <menu
+              icon="icons/Robot.png"
+              label="AI Assistant">
+           <command
+                 commandId="eclipse.plugin.aiassistant.AddMessage"
+                 icon="icons/Add.png"
+                 label="Add To Message"
+                 style="push"
+                 tooltip="Add the Selected Code or Document as a Message">
+           </command>
+           <command
+                 commandId="eclipse.plugin.aiassistant.AddContext"
+                 icon="icons/Add.png"
+                 label="Add As Context"
+                 style="push"
+                 tooltip="Add the Selected Code or Document as Context">
+           </command>
+           <separator
+                 name="eclipse.plugin.aiassistant.separator1"
+                 visible="true">
+           </separator>
+           <command
+                 commandId="eclipse.plugin.aiassistant.Discuss"
+                 icon="icons/Discuss.png"
+                 label="Discuss"
+                 style="push"
+                 tooltip="Discuss the Code">
+           </command>
+           <command
+                 commandId="eclipse.plugin.aiassistant.Explain"
+                 icon="icons/Explain.png"
+                 label="Explain"
+                 style="push"
+                 tooltip="Explain the Code">
+           </command>
+           <command
+                 commandId="eclipse.plugin.aiassistant.CodeReview"
+                 icon="icons/CodeReview.png"
+                 label="Code Review"
+                 style="push"
+                 tooltip="Suggest Improvements to the Code">
+           </command>
+           <command
+                 commandId="eclipse.plugin.aiassistant.BestPractices"
+                 icon="icons/BestPractices.png"
+                 label="Best Practices"
+                 style="push"
+                 tooltip="Check for Adherence to Best Practices">
+           </command>
+           <command
+                 commandId="eclipse.plugin.aiassistant.Robustify"
+                 icon="icons/Robustify.png"
+                 label="Robustify"
+                 style="push"
+                 tooltip="Suggest Ways to Improve Error Handling">
+           </command>
+           <command
+                 commandId="eclipse.plugin.aiassistant.Optimize"
+                 icon="icons/Optimize.png"
+                 label="Optimize"
+                 style="push"
+                 tooltip="Suggest Ways to Optimize the Code">
+           </command>
+           <command
+                 commandId="eclipse.plugin.aiassistant.Debug"
+                 icon="icons/Debug.png"
+                 label="Debug"
+                 style="push"
+                 tooltip="Try to Find Bugs in the Code">
+           </command>
+           <separator
+                 name="eclipse.plugin.aiassistant.separator2"
+                 visible="true">
+           </separator>
+           <command
+                 commandId="eclipse.plugin.aiassistant.CodeGeneration"
+                 icon="icons/CodeGeneration.png"
+                 label="Code Generation"
+                 style="push"
+                 tooltip="Generate Boilerplate Code">
+           </command>
+           <command
+                 commandId="eclipse.plugin.aiassistant.CodeCompletion"
+                 icon="icons/CodeCompletion.png"
+                 label="Code Completion"
+                 style="push"
+                 tooltip="Fill in the Missing Code">
+           </command>
+           <command
+                 commandId="eclipse.plugin.aiassistant.WriteComments"
+                 icon="icons/WriteComments.png"
+                 label="Write Comments"
+                 style="push"
+                 tooltip="Document the Code">
+           </command>
+           <command
+                 commandId="eclipse.plugin.aiassistant.Refactor"
+                 icon="icons/Refactor.png"
+                 label="Refactor"
+                 style="push"
+                 tooltip="Refactor the Code">
+           </command>
+           <separator
+                 name="eclipse.plugin.aiassistant.separator3"
+                 visible="true">
+           </separator>
+           <command
+                 commandId="eclipse.plugin.aiassistant.FixWarnings"
+                 icon="icons/FixWarnings.png"
+                 label="Fix Warnings"
+                 style="push"
+                 tooltip="Try to Fix Compiler Warnings">
+              <visibleWhen
+                    checkEnabled="false">
+                 <test
+                       property="eclipse.plugin.aiassistant.FixWarningsVisibilityHandler">
+                 </test>
+              </visibleWhen>
+           </command>
+           <command
+                 commandId="eclipse.plugin.aiassistant.FixErrors"
+                 icon="icons/FixErrors.png"
+                 label="Fix Errors"
+                 style="push"
+                 tooltip="Try to Fix Compiler Errors">
+              <visibleWhen
+                    checkEnabled="false">
+                 <test
+                       property="eclipse.plugin.aiassistant.FixErrorsVisibilityHandler">
+                 </test>
+              </visibleWhen>
+           </command>
+           <visibleWhen
+                 checkEnabled="false">
+              <test
+                    property="eclipse.plugin.aiassistant.MenuVisibilityHandler">
+              </test>
+           </visibleWhen>
+        </menu>
+     </menuContribution>
+  </extension>
+  <extension
+    point="org.eclipse.ui.preferencePages">
+    <page
+      class="eclipse.plugin.aiassistant.preferences.PreferencePage"
+      id="eclipse.plugin.aiassistant.preferences.PreferencePage"
+      name="AI Assistant">
+    </page>
+    <page
+      id="eclipse.plugin.aiassistant.preferences.PromptTemplatesPreferencePage"
+      name="Prompt Templates"
+      category="eclipse.plugin.aiassistant.preferences.PreferencePage"
+      class="eclipse.plugin.aiassistant.preferences.PromptTemplatesPreferencePage">
+    </page>       
+  </extension>
+  <extension
+    point="org.eclipse.core.runtime.preferences">
+    <initializer
+      class="eclipse.plugin.aiassistant.preferences.PreferenceInitializer">
+    </initializer>
+  </extension>
+  <extension
+        point="org.eclipse.core.expressions.propertyTesters">
+          <propertyTester
+           class="eclipse.plugin.aiassistant.handlers.FixWarningsVisibilityHandler"
+           id="eclipse.plugin.aiassistant.FixWarningsVisibilityHandler"
+           namespace="eclipse.plugin.aiassistant"
+           properties="FixWarningsVisibilityHandler"
+           type="java.lang.Object">
+     </propertyTester>
+          <propertyTester
+           class="eclipse.plugin.aiassistant.handlers.FixErrorsVisibilityHandler"
+           id="eclipse.plugin.aiassistant.FixErrorsVisibilityHandler"
+           namespace="eclipse.plugin.aiassistant"
+           properties="FixErrorsVisibilityHandler"
+           type="java.lang.Object">
+     </propertyTester>
+          <propertyTester
+                class="eclipse.plugin.aiassistant.handlers.MenuVisibilityHandler"
+                id="eclipse.plugin.aiassistant.MenuVisibilityHandler"
+                namespace="eclipse.plugin.aiassistant"
+                properties="MenuVisibilityHandler"
+                type="java.lang.Object">
+          </propertyTester>
+  </extension>
+</plugin>

@@ -1,0 +1,7 @@
+# Task: <taskname>
+When commenting this source code<if(selection)> snippet<endif> from<if(selection)> <lines> of<endif> `<filename>` follow <language> best practices for writing comments<if(documentation)> using <documentation><endif>. Ensure your comments clearly and succinctly explain the purpose of the code, any non-obvious logic or design decisions, and complex sections. Avoid merely restating the code in words; instead, provide context and reasoning. Review the existing comments and either delete or update any that are unnecessary, inaccurate, or have become outdated. Think step-by-step: always describe your plan in great detail before proceeding to the solution.
+```<tag>
+<if(selection)><selection><else><document><endif>
+```
+<usertext>
+<<switch-roles>>

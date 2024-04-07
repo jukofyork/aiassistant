@@ -1,0 +1,7 @@
+# Task: <taskname>
+Analyze this source code<if(selection)> snippet<endif> from<if(selection)> <lines> of<endif> `<filename>` looking for missing classes or methods, or any obvious "boilerplate" code that needs to be generated. Infer intended functionality from existing names and comments. Ensure any new or modified code adheres to best practices and guidelines in <language>, follows <language> recommended commenting practices<if(documentation)> using <documentation><endif> and matches any already established coding style. Think step-by-step: always describe your plan in great detail before proceeding to the solution.
+```<tag>
+<if(selection)><selection><else><document><endif>
+```
+<usertext>
+<<switch-roles>>

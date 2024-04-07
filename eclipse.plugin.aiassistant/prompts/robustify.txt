@@ -1,0 +1,7 @@
+# Task: <taskname>
+Suggest modifications to this source code<if(selection)> snippet<endif> from<if(selection)> <lines> of<endif> `<filename>` to enhance overall robustness and prevent future potential problems. Consider syntax errors, logical errors, null pointer exceptions, out-of-bounds errors, resource leaks, concurrency issues, performance problems and security vulnerabilities. Look for areas where exception handling, assertions or the addition of logging statements might be beneficial for ensuring proper functionality. Make suggestions for improvements where necessary.
+```<tag>
+<if(selection)><selection><else><document><endif>
+```
+<usertext>
+<<switch-roles>>

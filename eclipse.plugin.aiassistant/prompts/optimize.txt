@@ -1,0 +1,7 @@
+# Task: <taskname>
+Suggest modifications to this source code<if(selection)> snippet<endif> from<if(selection)> <lines> of<endif> `<filename>` to improve overall performance. Look for bottlenecks involving loops, dynamic memory allocation, CPU caching, disk I/O, network requests, database queries, and so on. Check the use of appropriate data structures and algorithms, paying particular attention to their complexity in terms of Big-O notation. Consider leveraging efficient libraries, the use of parallelization where feasible, the caching and reuse of computations, lazy evaluation, and dynamic programming.
+```<tag>
+<if(selection)><selection><else><document><endif>
+```
+<usertext>
+<<switch-roles>>

@@ -1,0 +1,5 @@
+From<if(selection)> <lines> of<endif> `<filename>`:
+```<tag>
+<if(selection)><selection><else><document><endif>
+```
+<usertext>

@@ -1,0 +1,9 @@
+# Task: <taskname>
+This source code<if(selection)> snippet<endif> from<if(selection)> <lines> of<endif> `<filename>`:
+```<tag>
+<if(selection)><selection><else><document><endif>
+```
+Has the following compiler errors:
+<errors>
+<if(usertext)><usertext><else>Please explain what these errors mean and provide a solution on how to fix them.<endif>
+<<switch-roles>>

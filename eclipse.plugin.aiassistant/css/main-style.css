@@ -1,0 +1,112 @@
+/* Define common variables */
+:root {
+  --bubble-alignment: flex-end;
+  --assistant-bubble-alignment: flex-start;
+  --main-font: 'Sans', sans-serif;
+  --mono-font: 'Monospace', monospace;
+  --default-font-size: 14px;	/* Leave at 14px for BrowserScriptGenerator.substituteFontSizes() to set */
+  --small-font-size: 10px;		/* Leave at 10px for BrowserScriptGenerator.substituteFontSizes() to set */
+  --text-color: #fff;  
+  --body-bg-color: #000;
+  --user-bubble-bg-color: #222;
+  --assistant-bubble-bg-color: #444;
+  --notification-bubble-bg-color: #225;
+  --error-bubble-bg-color: #522;
+  --selected-shadow-color: #00f;
+  --selected-shadow-blur-radius: 15px;
+  --default-margin: 0.5rem;
+  --top-margin: 1rem;
+  --bottom-margin: 0;
+  --padding: 1rem;
+  --small-padding: 0.5rem;
+  --bubble-radius: 0.5rem;
+  --line-height: 150%;
+  --code-block-tab-size: 4;		/* To match Eclipse (TODO: add a preference property change listener) */
+}
+
+/* Define common styles */
+.chat-bubble {
+  flex-direction: column;
+  align-self: var(--bubble-alignment);
+  font-family: var(--main-font);
+  font-size: var(--default-font-size);
+  color: var(--text-color);  
+  line-height: var(--line-height);
+  margin: var(--default-margin);
+  margin-top: var(--top-margin);
+  margin-bottom: var(--bottom-margin);
+  padding: var(--padding);
+  border-radius: var(--bubble-radius);
+}
+
+/* Define user bubble styles */
+.chat-bubble.user {
+  background-color: var(--user-bubble-bg-color);
+}
+
+/* Define assistant bubble styles */
+.chat-bubble.assistant {
+  align-self: var(--assistant-bubble-alignment);
+  background-color: var(--assistant-bubble-bg-color);
+}
+
+/* Define notification and error bubble common styles */
+.chat-bubble.notification,
+.chat-bubble.error {
+  font-family: var(--mono-font);
+  font-size: var(--small-font-size);
+  padding-top: var(--small-padding);
+  padding-bottom: var(--small-padding);
+}
+
+/* Define notification bubble styles */
+.chat-bubble.notification {
+  background-color: var(--notification-bubble-bg-color);
+}
+
+/* Define error bubble styles */
+.chat-bubble.error {
+  background-color: var(--error-bubble-bg-color);
+}
+
+/* Define selected bubble styles */
+.chat-bubble.selected {
+  box-shadow: inset 0 0 var(--selected-shadow-blur-radius) var(--selected-shadow-color);
+}
+
+/* Define last bubble styles */
+.chat-bubble.user:last-child,
+.chat-bubble.assistant:last-child,
+.chat-bubble.notification:last-child,
+.chat-bubble.error:last-child  {
+	margin-bottom: var(--top-margin);	/* To have same gap all around */
+}
+
+/* Define code block styles */
+.chat-bubble.user pre,
+.chat-bubble.assistant pre {
+	background-color: var(--body-bg-color);
+}
+
+/* Hide scrollbar for code blocks */
+.chat-bubble pre::-webkit-scrollbar {
+  display: none;
+}
+
+body {
+  background-color: var(--body-bg-color);
+}
+
+code {
+  font-family: var(--mono-font);
+  tab-size: var(--code-block-tab-size);
+}
+
+summary {
+}
+
+/* The default margins are too large */
+h1, h2, h3, h4, h5, h6 {
+  margin-top: 0;
+  margin-bottom: 0;
+}

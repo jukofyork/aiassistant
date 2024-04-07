@@ -1,0 +1,8 @@
+# Task: <taskname>
+Comprehend this source code<if(selection)> snippet<endif> from<if(selection)> <lines> of<endif> `<filename>` by analyzing its objectives and design choices:
+```<tag>
+<if(selection)><selection><else><document><endif>
+```
+<if(usertext)><usertext><else>Be prepared to discuss any aspects of the code in detail and then simply respond with 'Ready'.<endif>
+<<switch-roles>>
+<if(!usertext)>Ready<endif>
