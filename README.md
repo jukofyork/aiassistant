@@ -29,6 +29,8 @@ Fork of Wojciech Gradkowski's [AssistAI](https://github.com/gradusnikov/eclipse-
 3. Set the destination as "Install into host repositry:" and leave as default ".../org.eclipse.pde.core/install/" location.
 4. Click finish and restart the IDE when asked.
 
+---
+
 # Usage
 
 Go to *Window → Show View → Other... → AI Assistant → AI Assistant* and click Open.
@@ -88,10 +90,11 @@ You can also paste in code or documentation using the clipboard by right clickin
 - The special `<<switch-roles>>` tag can be used for delaying responses, forcing responses, multi-shot learning, etc.
 
 ---
+---
 
 ## How to fix the blank/grey SWT Browser widget bug
 
-Set the environment variables `WEBKIT_DISABLE_COMPOSITING_MODE=1` and/or `WEBKIT_DISABLE_DMABUF_RENDERER=1` before running Eclipse, eg:
+Set environment variables `WEBKIT_DISABLE_COMPOSITING_MODE=1` and/or `WEBKIT_DISABLE_DMABUF_RENDERER=1` before running Eclipse, eg:
 
 **Linux**
 ```
