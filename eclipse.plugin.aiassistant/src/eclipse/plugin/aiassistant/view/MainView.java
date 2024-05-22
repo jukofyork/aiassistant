@@ -9,7 +9,6 @@ import org.eclipse.ui.IWorkbenchWindow;
 import org.eclipse.ui.part.ViewPart;
 
 import eclipse.plugin.aiassistant.Constants;
-import eclipse.plugin.aiassistant.network.OllamaKeepAliveService;
 import eclipse.plugin.aiassistant.utility.Eclipse;
 
 import org.eclipse.swt.SWT;
@@ -26,7 +25,6 @@ public class MainView extends ViewPart {
 	public static final String ID = "eclipse.plugin.aiassistant.view.MainView";
 
 	private MainPresenter mainPresenter;	
-	private OllamaKeepAliveService keepAliveService;
 
 	private SashForm sashForm;
 	private Composite mainContainer;
@@ -43,7 +41,6 @@ public class MainView extends ViewPart {
 	@Override
 	public void createPartControl(Composite parent) {
 		mainPresenter = new MainPresenter();
-		keepAliveService = new OllamaKeepAliveService();	// Pre-loads too.
 		sashForm = new SashForm(parent, SWT.VERTICAL);
 		mainContainer = createMainContainer(sashForm);
 		chatMessageArea =  new ChatConversationArea(mainPresenter, mainContainer);
@@ -59,7 +56,7 @@ public class MainView extends ViewPart {
 	 */
 	@Override
 	public void dispose() {
-		keepAliveService.shutdown();
+		//keepAliveService.shutdown();
 		super.dispose();
 	}
 	

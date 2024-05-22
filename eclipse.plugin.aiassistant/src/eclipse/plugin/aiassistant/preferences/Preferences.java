@@ -66,24 +66,6 @@ public final class Preferences {
 	}
 
 	/**
-	 * Returns the repeat penalty value.
-	 * 
-	 * @return The repeat penalty value.
-	 */
-	public static Double getRepeatPenaltyValue() {
-		return preferenceStore.getDouble(PreferenceConstants.REPEAT_PENALTY_VALUE);
-	}
-
-	/**
-	 * Returns the repeat penalty window.
-	 * 
-	 * @return The repeat penalty window.
-	 */
-	public static Integer getRepeatPenaltyWindow() {
-		return preferenceStore.getInt(PreferenceConstants.REPEAT_PENALTY_WINDOW);
-	}
-
-	/**
 	 * Returns the chat font size.
 	 * 
 	 * @return The chat font size.
@@ -103,41 +85,12 @@ public final class Preferences {
 
 	/**
 	 * This method retrieves a boolean value from the preference store indicating
-	 * whether to use streaming.
-	 * 
-	 * @return A boolean value indicating whether to use streaming.
-	 */
-	public static boolean useStreaming() {
-		return preferenceStore.getBoolean(PreferenceConstants.USE_STREAMING);
-	}
-
-	/**
-	 * This method retrieves a boolean value from the preference store indicating
-	 * whether to use the keep-alive service.
-	 * 
-	 * @return A boolean value indicating whether to use the keep-alive service.
-	 */
-	public static boolean useKeepaliveService() {
-		return preferenceStore.getBoolean(PreferenceConstants.USE_KEEPALIVE_SERVICE);
-	}
-
-	/**
-	 * This method retrieves a boolean value from the preference store indicating
 	 * whether to disable tooltips.
 	 * 
 	 * @return A boolean value indicating whether to disable tooltips.
 	 */
 	public static boolean disableTooltips() {
 		return preferenceStore.getBoolean(PreferenceConstants.DISABLE_TOOLTIPS);
-	}
-
-	/**
-	 * Returns the last selected model name.
-	 * 
-	 * @return The last selected model name.
-	 */
-	public static String getLastSelectedModelName() {
-		return preferenceStore.getString(PreferenceConstants.LAST_SELECTED_MODEL_NAME);
 	}
 
 	/**
@@ -148,14 +101,13 @@ public final class Preferences {
 	public static URL getApiBaseUrl() {
 		return getApiEndpoint("");
 	}
-
-	/**
-	 * Returns the completion API endpoint URL.
-	 * 
-	 * @return The completion API endpoint URL.
-	 */
-	public static URL getCompletionApiEndpoint() {
-		return getApiEndpoint(Constants.COMPLETION_API_URL);
+	
+	public static String getApiKey() {
+		return preferenceStore.getString(PreferenceConstants.API_KEY);
+	}
+	
+	public static String getApiModelName() {
+		return preferenceStore.getString(PreferenceConstants.API_MODEL_NAME);
 	}
 
 	/**
@@ -165,15 +117,6 @@ public final class Preferences {
 	 */
 	public static URL getChatCompletionApiEndpoint() {
 		return getApiEndpoint(Constants.CHAT_COMPLETION_API_URL);
-	}
-
-	/**
-	 * Returns the model list API endpoint URL.
-	 * 
-	 * @return The model list API endpoint URL.
-	 */
-	public static URL getModelListApiEndpoint() {
-		return getApiEndpoint(Constants.MODEL_LIST_API_URL);
 	}
 
 	/**

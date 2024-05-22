@@ -16,8 +16,7 @@ import eclipse.plugin.aiassistant.chat.ChatMessage;
 import eclipse.plugin.aiassistant.chat.ChatRole;
 import eclipse.plugin.aiassistant.context.Context;
 import eclipse.plugin.aiassistant.jobs.StreamingChatProcessorJob;
-import eclipse.plugin.aiassistant.network.OllamaChatCompletionClient;
-import eclipse.plugin.aiassistant.network.OllamaModelManager;
+import eclipse.plugin.aiassistant.network.OpenAIChatCompletionClient;
 import eclipse.plugin.aiassistant.preferences.PreferenceConstants;
 import eclipse.plugin.aiassistant.preferences.Preferences;
 import eclipse.plugin.aiassistant.prompt.PromptLoader;
@@ -36,8 +35,7 @@ public class MainPresenter {
 	private final static UUID SCROLLED_TO_BOTTOM = new UUID(-1, -1); // at bottom, beyond the last message.
 	
 	private final ChatConversation chatConversation;
-	private final OllamaModelManager ollamaModelManager;
-	private final OllamaChatCompletionClient ollamaChatCompletionClient;
+	private final OpenAIChatCompletionClient openAIChatCompletionClient;
 	private final StreamingChatProcessorJob sendConversationJob;
 
 	private final UserMessageHistory userMessageHistory;
@@ -46,16 +44,15 @@ public class MainPresenter {
 	private UUID currentlyScrolledToMessageId = SCROLLED_TO_BOTTOM;
 
 	/**
-	 * Initializes the MainPresenter by setting up a new StreamingChatProcessorJob
-	 * and an OllamaModelManager. It also sets up a log listener to display
+	 * Initializes the MainPresenter by setting up a new StreamingChatProcessorJob.
+	 * It also sets up a log listener to display
 	 * notification messages and a property change listener to handle font size
 	 * changes and model selection.
 	 */
 	public MainPresenter() {
 		chatConversation = new ChatConversation();
-		ollamaModelManager = new OllamaModelManager();
-		ollamaChatCompletionClient = new OllamaChatCompletionClient();
-		sendConversationJob = new StreamingChatProcessorJob(this, ollamaChatCompletionClient, chatConversation);
+		openAIChatCompletionClient = new OpenAIChatCompletionClient();
+		sendConversationJob = new StreamingChatProcessorJob(this, openAIChatCompletionClient, chatConversation);
 		userMessageHistory = new UserMessageHistory();
 		setupLogListener();
 		setupPropertyChangeListener();
@@ -305,13 +302,6 @@ public class MainPresenter {
 	 * @param scheduleReply whether to schedule a reply from the assistant
 	 */
 	private void sendUserMessage(String messageString, boolean scheduleReply) {
-
-		// Check model is actually valid to use.
-		String serverStatus = ollamaModelManager.getCurrentServerStatus();
-		if (!serverStatus.equals("OK")) {
-			Logger.error(serverStatus);
-			return;
-		}
 
 		// Don't add blank messages to the chat conversation.
 		if (!messageString.trim().isEmpty()) {

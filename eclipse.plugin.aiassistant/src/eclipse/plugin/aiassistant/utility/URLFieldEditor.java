@@ -49,8 +49,8 @@ public class URLFieldEditor extends StringFieldEditor {
 		if (text != null && text.length() > 0) {
 			try {
 				URL url = new URL(text);
-				if ((url.getProtocol().equals("http") || url.getProtocol().equals("https")) && url.getPort() >= 0
-						&& url.getPort() <= 65535 && url.getFile().isEmpty()) {
+				if ((url.getProtocol().equals("http") || url.getProtocol().equals("https")) /*&& url.getPort() >= 0
+						&& url.getPort() <= 65535*/ && url.getFile().isEmpty()) {
 					return true;
 				}
 			} catch (MalformedURLException e) {

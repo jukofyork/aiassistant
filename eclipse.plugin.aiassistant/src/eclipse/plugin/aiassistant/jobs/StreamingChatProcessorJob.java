@@ -13,18 +13,18 @@ import org.eclipse.core.runtime.jobs.Job;
 import eclipse.plugin.aiassistant.Activator;
 import eclipse.plugin.aiassistant.chat.ChatConversation;
 import eclipse.plugin.aiassistant.chat.ChatMessage;
-import eclipse.plugin.aiassistant.network.OllamaChatCompletionClient;
+import eclipse.plugin.aiassistant.network.OpenAIChatCompletionClient;
 import eclipse.plugin.aiassistant.view.MainPresenter;
 
 /**
- * This class represents a job that processes streaming chat completion using
- * the Ollama API. It extends the Job class and implements the Flow.Subscriber
- * interface to handle the streamed responses from the API.
+ * Job responsible for processing streaming chat responses from the OpenAI API.
+ * It subscribes to responses and updates the UI accordingly through the MainPresenter.
+ * Implements the Subscriber interface to handle streamed data.
  */
 public class StreamingChatProcessorJob extends Job implements Subscriber<String> {
 
 	private final MainPresenter mainPresenter;
-	private final OllamaChatCompletionClient ollamaChatCompletionClient;
+	private final OpenAIChatCompletionClient openAIChatCompletionClient;
 	private final ChatConversation chatConversation;
 	
 	private ChatMessage message;
@@ -32,35 +32,32 @@ public class StreamingChatProcessorJob extends Job implements Subscriber<String>
 	private Subscription subscription;
 
 	/**
-	 * Constructs a new StreamingChatProcessorJob with the given client provider,
-	 * chat conversation manager, and chat conversation.
+	 * Initializes a new job to process chat conversations using OpenAI's API.
 	 * 
-	 * @param clientProvider          The provider of the
-	 *                                OllamaStreamingChatCompletionClient.
-	 * @param mainPresenter           The manager for the chat conversation.
-	 * @param chatConversation        The chat conversation to be processed.
+	 * @param mainPresenter           Controller for updating the chat UI.
+	 * @param openAIChatCompletionClient Client for OpenAI chat API.
+	 * @param chatConversation        The conversation context.
 	 */
-	public StreamingChatProcessorJob(MainPresenter mainPresenter, OllamaChatCompletionClient ollamaChatCompletionClient,
+	public StreamingChatProcessorJob(MainPresenter mainPresenter, OpenAIChatCompletionClient openAIChatCompletionClient,
 			ChatConversation chatConversation) {
 		super(Activator.getDefault().getBundle().getSymbolicName());
 		this.mainPresenter = mainPresenter;
-		this.ollamaChatCompletionClient = ollamaChatCompletionClient;
+		this.openAIChatCompletionClient = openAIChatCompletionClient;
 		this.chatConversation = chatConversation;
 	}
 
 	/**
-	 * Runs the job and processes the streaming chat completion using the Ollama
-	 * API.
+	 * Executes the job of subscribing to and processing chat data.
 	 * 
-	 * @param progressMonitor The progress monitor for the job.
-	 * @return The status of the job after it has finished running.
+	 * @param progressMonitor Monitors the progress of the job.
+	 * @return Status of the job execution.
 	 */
 	@Override
 	protected IStatus run(IProgressMonitor progressMonitor) {
-		ollamaChatCompletionClient.subscribe(this);
-		ollamaChatCompletionClient.setCancelProvider(() -> progressMonitor.isCanceled());
+		openAIChatCompletionClient.subscribe(this);
+		openAIChatCompletionClient.setCancelProvider(() -> progressMonitor.isCanceled());
 		try {
-			var future = CompletableFuture.runAsync(ollamaChatCompletionClient.run(chatConversation)).thenApply(v -> Status.OK_STATUS)
+			var future = CompletableFuture.runAsync(openAIChatCompletionClient.run(chatConversation)).thenApply(v -> Status.OK_STATUS)
 					.exceptionally(e -> Status.error("Unable to run the task: " + e.getMessage(), e));
 			return future.get();
 		} catch (Exception e) {
@@ -69,9 +66,9 @@ public class StreamingChatProcessorJob extends Job implements Subscriber<String>
 	}
 
 	/**
-	 * Called when a subscription is established with the publisher.
+	 * Handles the subscription setup with the publisher.
 	 * 
-	 * @param subscription The subscription to the publisher.
+	 * @param subscription The subscription to manage data flow.
 	 */
 	@Override
 	public void onSubscribe(Subscription subscription) {
@@ -81,9 +78,9 @@ public class StreamingChatProcessorJob extends Job implements Subscriber<String>
 	}
 
 	/**
-	 * Called when a new item is received from the publisher.
+	 * Processes each new message received from the OpenAI API.
 	 * 
-	 * @param item The new item received from the publisher.
+	 * @param item The message part received.
 	 */
 	@Override
 	public void onNext(String item) {
@@ -95,22 +92,22 @@ public class StreamingChatProcessorJob extends Job implements Subscriber<String>
 	}
 
 	/**
-	 * Called when an error occurs in the publisher.
+	 * Handles errors during the subscription.
 	 * 
-	 * @param throwable The error that occurred.
+	 * @param throwable The exception thrown during streaming.
 	 */
 	@Override
 	public void onError(Throwable throwable) {
-		// handle error
+		//mainPresenter.displayError("Streaming error: " + throwable.getMessage());
 	}
 
 	/**
-	 * Called when the publisher has completed sending items.
+	 * Completes the message processing and updates the UI.
 	 */
 	@Override
 	public void onComplete() {
 		mainPresenter.endMessageFromAssistant();
-		subscription.request(1);
+		subscription.cancel();
 	}
 
 }

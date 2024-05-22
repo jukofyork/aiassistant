@@ -1,7 +1,5 @@
 package eclipse.plugin.aiassistant;
 
-import java.time.Duration;
-
 public final class Constants {
 
 	/**
@@ -26,16 +24,11 @@ public final class Constants {
 	// See: https://github.com/highlightjs/highlight.js/blob/main/SUPPORTED_LANGUAGES.md
 	public static final String HIGHLIGHT_JS_LANGUAGES_FILENAMES = "language-extensions.json";
 
-	// Ollama server keep-alive interval.
-	// See: https://github.com/ollama/ollama/blob/main/server/routes.go
-	public static final Duration OLLAMA_KEEP_ALIVE_INTERVAL = Duration.ofSeconds((long) (4.5 * 60));
-
 	// API base URL and endpoints.
-	// NOTE: Also check 'OLLAMA_HOST' and 'OLLAMA_ORIGINS' environment variables
-	public static final String DEFAULT_API_BASE_URL = "http://127.0.0.1:11434";
-	public static final String COMPLETION_API_URL = "/api/generate";
-	public static final String CHAT_COMPLETION_API_URL = "/api/chat";
-	public static final String MODEL_LIST_API_URL = "/api/tags";
+	public static final String DEFAULT_API_BASE_URL = "https://api.openai.com";
+	public static final String DEFAULT_API_MODEL_NAME= "gpt-4-turbo";
+	public static final String DEFAULT_API_KEY = "";
+	public static final String CHAT_COMPLETION_API_URL = "/v1/chat/completions";
 
 	// Widget dimensions and spacing for the main view.
 	public static final int DEFAULT_EXTERNAL_MARGINS = 0;
@@ -56,20 +49,6 @@ public final class Constants {
 	public static final double MAX_TEMPERATURE = 2.0;		// Max sane value.
 	public static final double DEFAULT_TEMPERATURE = 0.0;
 
-	// Repeat penalty value.
-	// NOTE: Coding LLMs need a much lower (preferably no) repetition penalty scaler.
-	// NOTE: Increase very slowly from 1 and only if repetition problems occur.
-	public static final double MIN_REPEAT_PENALTY_VALUE = 1.0;		// No penalty.
-	public static final double MAX_REPEAT_PENALTY_VALUE = 1.5;		// Max sane value.
-	public static final double DEFAULT_REPEAT_PENALTY_VALUE = 1.0;
-	
-	// Repeat penalty window size.
-	// NOTE: Coding LLMs may sometimes need a larger repetition penalty window.
-	// NOTE: Double each time they start looping when writing out lists, etc.
-	public static final int MIN_REPEAT_PENALTY_WINDOW = -1;		// Full context.
-	public static final int MAX_REPEAT_PENALTY_WINDOW = 65536;	// Max sane value.
-	public static final int DEFAULT_REPEAT_PENALTY_WINDOW = 64;
-
 	// Font sizes.
 	// NOTE: These are just substituted in "main-style.css" using a regex currently.
 	public static final int MIN_CHAT_FONT_SIZE = 8;
@@ -80,8 +59,6 @@ public final class Constants {
 	public static final int DEFAULT_NOTIFICATION_FONT_SIZE = 10;
 
 	// Miscellaneous checkbox settings.
-	public static final boolean DEFAULT_USE_STREAMING = true;
-	public static final boolean DEFAULT_USE_KEEPALIVE_SERVICE = true;
-	public static final boolean DEFAULT_DISABLE_TOOLTIPS = false;
+	public static final boolean DEFAULT_DISABLE_TOOLTIPS = true; //false;
 
 }
