@@ -24,7 +24,7 @@ public class MarkdownParser {
 		boolean isInsideCodeBlock = false;
 		try (var scanner = new Scanner(markdownString)) {
 			scanner.useDelimiter("\n");
-			var codeBlockPattern = Pattern.compile("^```([aA-zZ]*)$");
+			var codeBlockPattern = Pattern.compile("^[ \\t]*```([aA-zZ]*)$");
 			while (scanner.hasNext()) {
 				var line = scanner.next();
 				var codeBlockMatcher = codeBlockPattern.matcher(line);				
@@ -68,32 +68,35 @@ public class MarkdownParser {
 	 *  @return The converted HTML string.
 	 */
 	private static String parseMarkdown(String input) {
-
-		// Replace headers with <h> tags.
-		// NOTE: <h1> looks too big and <h5>/<h6> look too small.
-		input = input.replaceAll("^# (.*?)$", "<h2>$1</h2>");
-		input = input.replaceAll("^## (.*?)$", "<h3>$1</h3>");
-		input = input.replaceAll("^### (.*?)$", "<h4>$1</h4>");
-
+	
+	    // Replace headers with <h> tags.
+	    // NOTE: Offset by 1 as <h1> looks too big.
+	    input = input.replaceAll("^[ \\t]*# (.*?)$", "<h1>$1</h1>");
+	    input = input.replaceAll("^[ \\t]*## (.*?)$", "<h2>$1</h2>");
+	    input = input.replaceAll("^[ \\t]*### (.*?)$", "<h3>$1</h3>");
+	    input = input.replaceAll("^[ \\t]*#### (.*?)$", "<h4>$1</h4>");
+	    input = input.replaceAll("^[ \\t]*##### (.*?)$", "<h5>$1</h5>");
+	    input = input.replaceAll("^[ \\t]*###### (.*?)$", "<h6>$1</h6>");
+	
 	    // Replace unordered lists with bullet symbols.
-		// NOTE: Using <ul> and <li> tags looks worse than this.
-		input = input.replaceAll("^[*+-] (.*?)$", "&#8226; $1");
-
-		// Replace horizontal rules with <hr> tag.
-		input = input.replaceAll("^(?:-{3,}|\\*{3,}|_{3,})$", "<hr>");
-
-		// Replace bold and italic text with <b> and <i> tags.
-		input = input.replaceAll("\\*\\*\\*(.*?)\\*\\*\\*", "<b><i>$1</i></b>");
-		input = input.replaceAll("\\*\\*(.*?)\\*\\*", "<b>$1</b>");
-		input = input.replaceAll("\\*(.*?)\\*", "<i>$1</i>");
-
-		// Replace inline code with <code> and <strong> tags.
-		input = input.replaceAll("`(.*?)`", "<code><strong>$1</strong></code>");
-
-		// Replace strikethrough text with <del> tag.
-		input = input.replaceAll("~~(.*?)~~", "<del>$1</del>");
-		
-		return input;
+	    // NOTE: Using <ul> and <li> tags looks worse than this.
+	    input = input.replaceAll("^[ \\t]*[*+-] (.*?)$", "&#8226; $1");
+	
+	    // Replace horizontal rules with <hr> tag.
+	    input = input.replaceAll("^[ \\t]*(?:-{3,}|\\*{3,}|_{3,})$", "<hr>");
+	
+	    // Replace bold and italic text with <b> and <i> tags.
+	    input = input.replaceAll("\\*\\*\\*(.*?)\\*\\*\\*", "<b><i>$1</i></b>");
+	    input = input.replaceAll("\\*\\*(.*?)\\*\\*", "<b>$1</b>");
+	    input = input.replaceAll("\\*(.*?)\\*", "<i>$1</i>");
+	
+	    // Replace strikethrough text with <del> tag.
+	    input = input.replaceAll("~~(.*?)~~", "<del>$1</del>");
+	    
+	    // Replace inline code with <code> and <strong> tags.
+	    input = input.replaceAll("`(.*?)`", "<code><strong>$1</strong></code>");
+	        
+	    return input;
 	}
 	
 	/**

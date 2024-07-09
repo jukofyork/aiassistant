@@ -128,7 +128,7 @@ public final class Preferences {
 	private static URL getApiEndpoint(String path) {
 		try {
 			URL baseUrl = new URL(preferenceStore.getString(PreferenceConstants.API_BASE_URL));
-			return new URL(baseUrl.getProtocol(), baseUrl.getHost(), baseUrl.getPort(), path);
+			return new URL(baseUrl.getProtocol(), baseUrl.getHost(), baseUrl.getPort(), baseUrl.getFile() + path);
 		} catch (MalformedURLException e) {
 			Logger.error("Invalid API URL", e);
 			throw new RuntimeException("Invalid API URL", e);

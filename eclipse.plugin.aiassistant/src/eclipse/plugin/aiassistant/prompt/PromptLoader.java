@@ -75,12 +75,12 @@ public class PromptLoader {
 	}
 
 	/**
-	 * Retrieves the system prompt text from the corresponding resource file.
+	 * Retrieves the system prompt text from the preference store.
 	 *
 	 * @return The system prompt text as a string.
 	 */
 	public static String getSystemPromptText() {
-		return getRawPrompt(Prompts.SYSTEM.getFileName());
+		return Preferences.getDefault().getString(Prompts.SYSTEM.preferenceName());
 	}
 
 	/**

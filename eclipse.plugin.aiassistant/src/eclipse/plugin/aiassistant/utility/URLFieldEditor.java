@@ -8,7 +8,7 @@ import org.eclipse.swt.widgets.Composite;
 /**
  * The `URLFieldEditor` class is a custom field editor for URL inputs in Eclipse
  * plugins. It extends the `StringFieldEditor` class and provides additional
- * functionality to validate if the input is a valid web URL with a port number.
+ * functionality to validate if the input is a valid OpenAI compatible API endpoint.
  */
 public class URLFieldEditor extends StringFieldEditor {
 
@@ -23,7 +23,7 @@ public class URLFieldEditor extends StringFieldEditor {
 	public URLFieldEditor(String name, String labelText, Composite parent) {
 		super(name, labelText, parent);
 		setEmptyStringAllowed(false);
-		setErrorMessage("Value must be a valid web URL ending with a port number.");
+		setErrorMessage("URL must be a valid OpenAI compatible API endpoint, ending with \"/v1\".");
 	}
 	
 	/**
@@ -49,8 +49,8 @@ public class URLFieldEditor extends StringFieldEditor {
 		if (text != null && text.length() > 0) {
 			try {
 				URL url = new URL(text);
-				if ((url.getProtocol().equals("http") || url.getProtocol().equals("https")) /*&& url.getPort() >= 0
-						&& url.getPort() <= 65535*/ && url.getFile().isEmpty()) {
+				if ((url.getProtocol().equals("http") || url.getProtocol().equals("https")) 
+						&& url.getFile().endsWith("/v1")) {
 					return true;
 				}
 			} catch (MalformedURLException e) {

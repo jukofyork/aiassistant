@@ -25,10 +25,10 @@ public final class Constants {
 	public static final String HIGHLIGHT_JS_LANGUAGES_FILENAMES = "language-extensions.json";
 
 	// API base URL and endpoints.
-	public static final String DEFAULT_API_BASE_URL = "https://api.openai.com";
+	public static final String DEFAULT_API_BASE_URL = "https://api.openai.com/v1";
 	public static final String DEFAULT_API_MODEL_NAME= "gpt-4-turbo";
 	public static final String DEFAULT_API_KEY = "";
-	public static final String CHAT_COMPLETION_API_URL = "/v1/chat/completions";
+	public static final String CHAT_COMPLETION_API_URL = "/chat/completions";
 
 	// Widget dimensions and spacing for the main view.
 	public static final int DEFAULT_EXTERNAL_MARGINS = 0;
