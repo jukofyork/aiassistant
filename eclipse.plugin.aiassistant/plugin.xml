@@ -2,6 +2,15 @@
 <?eclipse version="3.4"?>
 <plugin>
   <extension
+        point="org.eclipse.ui.editors">
+     <editor
+           class="eclipse.plugin.aiassistant.utility.SpellCheckedTextBox"
+           default="false"
+           id="eclipse.plugin.aiassistant.utility.SpellCheckingEditor"
+           name="SpellCheckingEditor">
+     </editor>
+  </extension>
+  <extension
     point="org.eclipse.ui.views">
     <category
       id="eclipse.plugin.aiassistant"

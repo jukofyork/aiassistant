@@ -4,18 +4,14 @@ import org.eclipse.swt.widgets.Button;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Display;
 
-import org.eclipse.swt.widgets.Text;
-
 import eclipse.plugin.aiassistant.Constants;
-import eclipse.plugin.aiassistant.preferences.Preferences;
 import eclipse.plugin.aiassistant.prompt.Prompts;
 import eclipse.plugin.aiassistant.utility.Eclipse;
+import eclipse.plugin.aiassistant.utility.SpellCheckedTextBox;
 
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.events.SelectionAdapter;
 import org.eclipse.swt.events.SelectionEvent;
-import org.eclipse.swt.events.TraverseEvent;
-import org.eclipse.swt.events.TraverseListener;
 
 /**
  * This class represents the user input area in the application, which consists
@@ -35,7 +31,7 @@ public class UserInputArea {
 	private final MainPresenter mainPresenter;
 
 	private Composite mainContainer;
-	private Text textArea;
+    private SpellCheckedTextBox spellCheckingEditor;
 	private Composite arrowButtonContainer;
 	private Button upArrowButton;
 	private Button downArrowButton;
@@ -51,7 +47,7 @@ public class UserInputArea {
 	public UserInputArea(MainPresenter mainPresenter, Composite parent) {
 		this.mainPresenter = mainPresenter;
 		mainContainer = createMainContainer(parent);
-		textArea = createTextArea(mainContainer);
+		spellCheckingEditor = createSpellCheckingEditor(mainContainer);
 		arrowButtonContainer = createArrowButtonContainer(mainContainer);
 		upArrowButton = createUpArrowButton(arrowButtonContainer);
 		downArrowButton = createDownArrowButton(arrowButtonContainer);
@@ -63,7 +59,7 @@ public class UserInputArea {
 	 * @return True if the text area is null or disposed, false otherwise.
 	 */
 	public boolean isDisposed() {
-		return (textArea == null || textArea.isDisposed());
+		return spellCheckingEditor.isDisposed();
 	}
 
 	/**
@@ -72,7 +68,7 @@ public class UserInputArea {
 	 * @return The trimmed text from the text area.
 	 */
 	public String getText() {
-		return textArea.getText().trim();
+		return spellCheckingEditor.getText();
 	}
 
 	/**
@@ -81,14 +77,14 @@ public class UserInputArea {
 	 * @param text The text to be set in the text area.
 	 */
 	public void setText(String text) {
-		Eclipse.runOnUIThreadAsync(() -> textArea.setText(text));
+		spellCheckingEditor.setText(text);;
 	}
 
 	/**
 	 * Sets the focus on the text area.
 	 */
 	public void setFocus() {
-		Eclipse.runOnUIThreadAsync(() -> textArea.setFocus());
+		spellCheckingEditor.setFocus();
 	}
 
 	/**
@@ -98,7 +94,7 @@ public class UserInputArea {
 	 */
 	public void setEnabled(boolean enabled) {
 		Eclipse.runOnUIThreadAsync(() -> {
-			textArea.setEnabled(enabled);
+			spellCheckingEditor.setEnabled(enabled);
 			upArrowButton.setEnabled(enabled);
 			downArrowButton.setEnabled(enabled);
 			mainContainer.setCursor(enabled ? null : Display.getCurrent().getSystemCursor(SWT.CURSOR_WAIT));
@@ -118,21 +114,13 @@ public class UserInputArea {
 		container.setLayoutData(Eclipse.createGridData(true, false));
 		return container;
 	}
-
-	/**
-	 * Creates the text area component for user input.
-	 *
-	 * @param parent The parent composite for the text area.
-	 * @return The created text area.
-	 */
-	private Text createTextArea(Composite parent) {
-		Text text = new Text(parent, getTextAreaStyle());
-		configureTextToolTip(text, INPUT_AREA_TOOLTIP);
-		addTraverseListener(text);
-		text.setLayoutData(Eclipse.createGridData(true, true));
-		return text;
+	
+	private SpellCheckedTextBox createSpellCheckingEditor(Composite parent) {
+	    SpellCheckedTextBox spellCheckingEditor = new SpellCheckedTextBox(parent, this::handleEnterKeyPress);
+	    spellCheckingEditor.configureTextToolTip(INPUT_AREA_TOOLTIP);    
+	    return spellCheckingEditor;
 	}
-
+    
 	/**
 	 * Creates the container for arrow buttons.
 	 *
@@ -157,7 +145,7 @@ public class UserInputArea {
 		SelectionAdapter listener = new SelectionAdapter() {
 			@Override
 			public void widgetSelected(SelectionEvent e) {
-				if (textArea.getEnabled()) {
+				if (spellCheckingEditor.getEnabled()) {
 					mainPresenter.onUpArrowClick();
 				}
 			}
@@ -175,49 +163,13 @@ public class UserInputArea {
 		SelectionAdapter listener = new SelectionAdapter() {
 			@Override
 			public void widgetSelected(SelectionEvent e) {
-				if (textArea.getEnabled()) {
+				if (spellCheckingEditor.getEnabled()) {
 					mainPresenter.onDownArrowClick();
 				}
 			}
 		};
 		return Eclipse.createButton(buttonContainer, "", ARROW_DOWN_TOOLTIP, ARROW_DOWN_ICON,
 				listener);
-	}
-
-	/**
-	 * Returns the style flags for the text area component.
-	 *
-	 * @return The style flags as an integer.
-	 */
-	private int getTextAreaStyle() {
-		return SWT.BORDER | SWT.MULTI | SWT.WRAP | SWT.V_SCROLL;
-	}
-
-	/**
-	 * Configures the tooltip for the given text component.
-	 *
-	 * @param text        The text component to configure the tooltip for.
-	 * @param tooltipText The tooltip text.
-	 */
-	private void configureTextToolTip(Text text, String tooltipText) {
-		if (!Preferences.disableTooltips()) {
-			text.setToolTipText(tooltipText);
-		}
-	}
-
-	/**
-	 * Adds a traverse listener to the given text component.
-	 *
-	 * @param text The text component to add the listener to.
-	 */
-	private void addTraverseListener(Text text) {
-		text.addTraverseListener(new TraverseListener() {
-			public void keyTraversed(TraverseEvent e) {
-				if (textArea.getEnabled() && e.detail == SWT.TRAVERSE_RETURN) {
-					handleEnterKeyPress(e.stateMask);
-				}
-			}
-		});
 	}
 
 	/**
