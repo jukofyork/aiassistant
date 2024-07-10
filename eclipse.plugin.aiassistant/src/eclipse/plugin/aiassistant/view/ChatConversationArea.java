@@ -76,7 +76,7 @@ public class ChatConversationArea {
 	 */
 	public void initialize() {
 		setText(browserScriptGenerator.generateInitialHtml());
-		executeScript("");
+		Eclipse.executeScript(browser, "");
 	}
 
 	/**
@@ -106,7 +106,7 @@ public class ChatConversationArea {
 	 */
 	public void newMessage(ChatMessage message) {
 		String script = browserScriptGenerator.generateNewMessageElementScript(message);
-		executeScript(script);
+		Eclipse.executeScript(browser, script);
 		updateMessage(message);
 	}
 
@@ -116,9 +116,9 @@ public class ChatConversationArea {
 	 * @param message The ChatMessage instance to update.
 	 */
 	public void updateMessage(ChatMessage message) {
-		String html = MarkdownParser.parseToHtml(message.getMessage(), message.getRole() == ChatRole.ASSISTANT);
+		String html = MarkdownParser.convertMarkdownToHtml(message.getMessage(), message.getRole() == ChatRole.ASSISTANT);
 		String script = browserScriptGenerator.generateUpdateMessageScript(html, message.getId());
-		executeScript(script);
+		Eclipse.executeScript(browser, script);
 	}
 
 	/**
@@ -127,7 +127,7 @@ public class ChatConversationArea {
 	 * @param messageId The UUID of the message to remove.
 	 */
 	public void removeMessage(UUID messageId) {
-		executeScript(browserScriptGenerator.generateRemoveMessageScript(messageId));
+		Eclipse.executeScript(browser, browserScriptGenerator.generateRemoveMessageScript(messageId));
 	}
 
 	/**
@@ -135,7 +135,7 @@ public class ChatConversationArea {
 	 */
 	public void scrollToTop() {
 		removeAllSelectionBorders();
-		executeScript(browserScriptGenerator.generateScrollToTopScript(useSmoothScroll));
+		Eclipse.executeScript(browser, browserScriptGenerator.generateScrollToTopScript(useSmoothScroll));
 	}
 
 	/**
@@ -143,7 +143,7 @@ public class ChatConversationArea {
 	 */
 	public void scrollToBottom() {
 		removeAllSelectionBorders();
-		executeScript(browserScriptGenerator.generateScrollToBottomScript(useSmoothScroll));
+		Eclipse.executeScript(browser, browserScriptGenerator.generateScrollToBottomScript(useSmoothScroll));
 	}
 
 	/**
@@ -154,7 +154,7 @@ public class ChatConversationArea {
 	public void scrollToMessage(UUID messageId) {
 		removeAllSelectionBorders();
 		setSelectionBorder(messageId);
-		executeScript(browserScriptGenerator.generateScrollToMessageScript(messageId, useSmoothScroll));
+		Eclipse.executeScript(browser, browserScriptGenerator.generateScrollToMessageScript(messageId, useSmoothScroll));
 	}
 
 	/**
@@ -164,7 +164,7 @@ public class ChatConversationArea {
 	 * @return True if the scrollbar is at the bottom, false otherwise.
 	 */
 	public boolean isScrollbarAtBottom() {
-		return (boolean) evaluateScript(browserScriptGenerator.generateIsScrollbarAtBottomScript());
+		return (boolean) Eclipse.evaluateScript(browser, browserScriptGenerator.generateIsScrollbarAtBottomScript());
 	}
 	
 	/**
@@ -173,14 +173,14 @@ public class ChatConversationArea {
 	 * @param messageId The UUID of the message to set the border for.
 	 */
 	public void setSelectionBorder(UUID messageId) {
-		executeScript(browserScriptGenerator.generateSetBorderScript(messageId));
+		Eclipse.executeScript(browser, browserScriptGenerator.generateSetBorderScript(messageId));
 	}
 	
 	/**
 	 * Removes all borders around messages in the chat conversation area.
 	 */
 	public void removeAllSelectionBorders() {
-		executeScript(browserScriptGenerator.generateRemoveAllBordersScript());
+		Eclipse.executeScript(browser, browserScriptGenerator.generateRemoveAllBordersScript());
 	}
 
 	/**
@@ -190,26 +190,6 @@ public class ChatConversationArea {
 	 */
 	private void setText(String html) {
 		Eclipse.runOnUIThreadAsync(() -> browser.setText(html));
-	}
-
-	/**
-	 * Executes a script in the browser widget asynchronously on the UI thread.
-	 *
-	 * @param script The script to execute.
-	 */
-	private void executeScript(String script) {
-		Eclipse.runOnUIThreadAsync(() -> browser.execute(script));
-	}
-
-	/**
-	 * Evaluates a script in the browser widget synchronously on the UI thread and
-	 * returns the result.
-	 *
-	 * @param script The script to evaluate.
-	 * @return The result of the script evaluation.
-	 */
-	private Object evaluateScript(String script) {
-		return Eclipse.runOnUIThreadSync(() -> browser.evaluate(script));
 	}
 
 	/**

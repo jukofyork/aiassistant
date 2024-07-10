@@ -158,6 +158,38 @@ public class BrowserScriptGenerator {
 				+ "for (var i = 0; i < elements.length; i++) {\n" + "    elements[i].classList.remove('selected');\n"
 				+ "}";
 	}
+	
+	/**
+	 * Generates a JavaScript script that navigates back in the browser history.
+	 * 
+	 * @return A string containing the JavaScript code to execute. This script, when
+	 *         executed in a browser context, navigates one step back in the browser's history.
+	 */
+	public String generateNavigateBackScript() {
+	    return "window.history.back();";
+	}
+
+	/**
+	 * Generates a JavaScript script that navigates forward in the browser history.
+	 * 
+	 * @return A string containing the JavaScript code to execute. This script, when
+	 *         executed in a browser context, navigates one step forward in the browser's history.
+	 */
+	public String generateNavigateForwardScript() {
+	    return "window.history.forward();";
+	}
+
+	/**
+	 * Generates a JavaScript script that retrieves the current text selection from
+	 * the browser.
+	 * 
+	 * @return A string containing the JavaScript code to execute. This script, when
+	 *         executed in a browser context, returns the currently selected text as
+	 *         a string.
+	 */
+	public String generateGetSelectionScript() {
+		return "return window.getSelection().toString();";
+	}
 
 	/**
 	 * Returns the CSS class for a given ChatMessage based on its role and content.

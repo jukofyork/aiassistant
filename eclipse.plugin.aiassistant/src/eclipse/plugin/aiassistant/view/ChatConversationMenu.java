@@ -8,16 +8,26 @@ import org.eclipse.swt.widgets.Listener;
 import org.eclipse.swt.widgets.Menu;
 import org.eclipse.swt.widgets.MenuItem;
 
+import eclipse.plugin.aiassistant.browser.BrowserScriptGenerator;
 import eclipse.plugin.aiassistant.prompt.Prompts;
 import eclipse.plugin.aiassistant.utility.Eclipse;
 
 /**
- * This class represents the chat message area menu in the application. It is
- * responsible for creating and managing the context menu that appears when the
- * user right-clicks on the chat message area.
+ * Manages the context menu for the chat conversation area within the AI
+ * Assistant plugin. This class is responsible for creating and handling
+ * interactions within the context menu that appears when the user right-clicks
+ * in the chat message area.
  */
 public class ChatConversationMenu {
-	
+
+	public static final String COPY_NAME = "Copy";
+	public static final String COPY_TOOLTIP = "Copy selected text";
+
+	public static final String FORWARD_NAME = "Forward";
+	public static final String FORWARD_TOOLTIP = "Navigate to the next session history item";
+	public static final String BACK_NAME = "Back";
+	public static final String BACK_TOOLTIP = "Navigate to the previous session history item";
+
 	public static final String PASTE_MESSAGE_NAME = "Paste To Message";
 	public static final String PASTE_MESSAGE_TOOLTIP = "Paste the Clipboard Contents as a Message";
 	public static final String PASTE_CONTEXT_NAME = "Paste As Context";
@@ -26,25 +36,29 @@ public class ChatConversationMenu {
 
 	private final MainPresenter mainPresenter;
 
+	private final BrowserScriptGenerator browserScriptGenerator;
+
 	private Menu menu;
 
 	/**
-	 * Constructs a new instance of the ChatMessageAreaMenu class with the specified
-	 * main presenter and browser.
+	 * Initializes a new instance of ChatConversationMenu with the specified main
+	 * presenter and browser.
 	 *
-	 * @param mainPresenter The main presenter of the application.
-	 * @param browser       The browser widget that displays the chat messages.
+	 * @param mainPresenter The main presenter of the application, handling core
+	 *                      functionality.
+	 * @param browser       The browser widget used to display and interact with
+	 *                      chat messages.
 	 */
 	public ChatConversationMenu(MainPresenter mainPresenter, Browser browser) {
 		this.mainPresenter = mainPresenter;
-		menu = createMenu(browser);
+		this.browserScriptGenerator = new BrowserScriptGenerator();
+		this.menu = createMenu(browser);
 	}
 
 	/**
-	 * Enables or disables the context menu for the chat message area based on the
-	 * specified boolean value.
+	 * Enables or disables the context menu.
 	 *
-	 * @param b True to enable the context menu, false to disable it.
+	 * @param enabled True to enable the context menu, false to disable it.
 	 */
 	public void setEnabled(boolean enabled) {
 		Eclipse.runOnUIThreadAsync(() -> {
@@ -54,64 +68,81 @@ public class ChatConversationMenu {
 	}
 
 	/**
-	 * Creates a context menu for the chat conversation area in the application.
+	 * Creates and returns a context menu for the chat conversation area.
 	 *
 	 * @param browser The browser widget that displays the chat messages.
-	 * @return The created menu instance.
+	 * @return The newly created menu.
 	 */
 	private Menu createMenu(Browser browser) {
 		Menu menu = new Menu(browser);
+		addMenuItem(menu, FORWARD_NAME, null, FORWARD_TOOLTIP, e -> {
+		    Eclipse.executeScript(browser, browserScriptGenerator.generateNavigateForwardScript());
+		});
+		addMenuItem(menu, BACK_NAME, null, BACK_TOOLTIP, e -> {
+		    Eclipse.executeScript(browser, browserScriptGenerator.generateNavigateBackScript());
+		});
+		new MenuItem(menu, SWT.SEPARATOR);
+		addMenuItem(menu, COPY_NAME, null, COPY_TOOLTIP, e -> copySelectedText(browser));
 		Image pasteIcon = Eclipse.loadIcon(PASTE_ICON);
-		addMenuItem(menu, PASTE_MESSAGE_NAME, pasteIcon, PASTE_MESSAGE_TOOLTIP,
-				Prompts.PASTE_MESSAGE);
-		addMenuItem(menu, PASTE_CONTEXT_NAME, pasteIcon, PASTE_CONTEXT_TOOLTIP,
-				Prompts.PASTE_CONTEXT);
+		new MenuItem(menu, SWT.SEPARATOR);
+		addMenuItem(menu, PASTE_MESSAGE_NAME, pasteIcon, PASTE_MESSAGE_TOOLTIP, this::handlePasteMessage);
+		addMenuItem(menu, PASTE_CONTEXT_NAME, pasteIcon, PASTE_CONTEXT_TOOLTIP, this::handlePasteContext);
 		browser.setMenu(menu);
 		pasteIcon.dispose();
 		return menu;
 	}
 
 	/**
-	 * Adds a new menu item to the specified menu with the given parameters.
+	 * Adds a menu item to the specified menu.
 	 *
-	 * @param menu        The menu to which the new item will be added.
-	 * @param text        The text displayed for the menu item.
-	 * @param iconImage   The image displayed for the menu item.
-	 * @param toolTipText The tooltip text displayed when hovering over the menu
-	 *                    item.
-	 * @param prompt      The predefined prompt associated with the menu item.
+	 * @param menu        The menu to which the item is added.
+	 * @param text        The text displayed on the menu item.
+	 * @param iconImage   Optional icon for the menu item.
+	 * @param toolTipText Tooltip text for the menu item.
+	 * @param listener    Listener to handle the selection event.
 	 */
-	private void addMenuItem(Menu menu, String text, Image iconImage, String toolTipText, Prompts prompt) {
+	private void addMenuItem(Menu menu, String text, Image iconImage, String toolTipText, Listener listener) {
 		MenuItem menuItem = new MenuItem(menu, SWT.PUSH);
 		menuItem.setText(text);
-		menuItem.setImage(iconImage);
+		if (iconImage != null) {
+			menuItem.setImage(iconImage);
+		}
 		menuItem.setToolTipText(toolTipText);
-		addMenuItemSelectionListener(menuItem, prompt);
+		menuItem.addListener(SWT.Selection, listener);
 	}
 
 	/**
-	 * Adds a selection listener to the specified menu item that handles the user's
-	 * selection of the item.
+	 * Handles the action to paste a predefined message into the chat.
+	 * This method triggers the main presenter to send a specific prompt defined for pasting messages.
 	 *
-	 * @param menuItem The menu item to which to add the selection listener.
-	 * @param prompt   The predefined prompt associated with the menu item.
+	 * @param e The event triggered by selecting the paste message menu item.
 	 */
-	private void addMenuItemSelectionListener(MenuItem menuItem, Prompts prompt) {
-		menuItem.addListener(SWT.Selection, new Listener() {
-			public void handleEvent(Event e) {
-				handleMenuItemSelection(prompt);
-			}
-		});
+	private void handlePasteMessage(Event e) {
+	    mainPresenter.sendPredefinedPrompt(Prompts.PASTE_MESSAGE);
 	}
-
+	
 	/**
-	 * Handles the user's selection of a menu item by sending the associated
-	 * predefined prompt.
+	 * Handles the action to paste a predefined context into the chat.
+	 * This method triggers the main presenter to send a specific prompt defined for pasting context.
 	 *
-	 * @param prompt The predefined prompt associated with the selected menu item.
+	 * @param e The event triggered by selecting the paste context menu item.
 	 */
-	private void handleMenuItemSelection(Prompts prompt) {
-		mainPresenter.sendPredefinedPrompt(prompt);
+	private void handlePasteContext(Event e) {
+	    mainPresenter.sendPredefinedPrompt(Prompts.PASTE_CONTEXT);
 	}
-
+	
+	/**
+	 * Copies the currently selected text in the browser to the system clipboard.
+	 * This method executes a JavaScript script in the browser to retrieve the selected text,
+	 * and if text is selected, it sets this text to the system clipboard.
+	 *
+	 * @param browser The browser from which the selected text is to be copied.
+	 */
+	private void copySelectedText(Browser browser) {
+		var result =  Eclipse.evaluateScript(browser, browserScriptGenerator.generateGetSelectionScript());
+	    if (result instanceof String) {
+	        Eclipse.setClipboardContents((String) result);
+	    }
+	}
+	
 }

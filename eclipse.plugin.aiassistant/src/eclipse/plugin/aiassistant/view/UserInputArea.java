@@ -78,7 +78,6 @@ public class UserInputArea {
 	 */
 	public void setText(String text) {
 		spellCheckedTextBox.setText(text);
-		;
 	}
 
 	/**
@@ -183,10 +182,11 @@ public class UserInputArea {
 	}
 
 	/**
-	 * Handles the Enter key press in the text area component. NOTE: The Enter key
-	 * is overloaded and has three different functions: - Shift+Enter : Insert
-	 * newline (default Eclipse behaviour?) - Ctrl+Enter : Send message, but don't
-	 * schedule a reply yet. - Enter : Send message and schedule a reply.
+	 * Handles the Enter key press in the text area component.
+	 * NOTE: The Enter key is overloaded and has three different functions:
+	 * - Shift+Enter : Insert newline (default Eclipse behaviour?)
+	 * - Ctrl+Enter : Send message, but don't schedule a reply yet.
+	 * - Enter : Send message and schedule a reply.
 	 *
 	 * @param stateMask The state mask of the key event.
 	 */

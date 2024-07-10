@@ -22,6 +22,7 @@ import org.eclipse.jface.text.ITextSelection;
 import org.eclipse.jface.text.TextSelection;
 import org.eclipse.jface.viewers.ISelectionProvider;
 import org.eclipse.swt.SWT;
+import org.eclipse.swt.browser.Browser;
 import org.eclipse.swt.dnd.Clipboard;
 import org.eclipse.swt.dnd.TextTransfer;
 import org.eclipse.swt.dnd.Transfer;
@@ -469,6 +470,26 @@ public class Eclipse {
 		return returnObject.get();
 	}
 
+	/**
+	 * Executes a script in the browser widget asynchronously on the UI thread.
+	 *
+	 * @param script The script to execute.
+	 */
+	public static void executeScript(Browser browser, String script) {
+		runOnUIThreadAsync(() -> browser.execute(script));
+	}
+
+	/**
+	 * Evaluates a script in the browser widget synchronously on the UI thread and
+	 * returns the result.
+	 *
+	 * @param script The script to evaluate.
+	 * @return The result of the script evaluation.
+	 */
+	public static Object evaluateScript(Browser browser, String script) {
+		return runOnUIThreadSync(() -> browser.evaluate(script));
+	}
+	
 	/**
 	 * Returns the compiler messages for the active file with the given severity.
 	 *
