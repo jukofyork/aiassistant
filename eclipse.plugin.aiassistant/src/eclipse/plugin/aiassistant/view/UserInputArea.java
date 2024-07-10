@@ -18,20 +18,20 @@ import org.eclipse.swt.events.SelectionEvent;
  * of a text area and arrow buttons for navigation.
  */
 public class UserInputArea {
-	
+
 	public static final String ARROW_UP_TOOLTIP = "Older User Messages";
 	public static final String ARROW_DOWN_TOOLTIP = "Newer User Messages";
 	public static final String ARROW_UP_ICON = "ArrowUp.png";
 	public static final String ARROW_DOWN_ICON = "ArrowDown.png";
 	public static final String INPUT_AREA_TOOLTIP = """
-			   										Ctrl+Enter: Delay the Assistant's Response
+													Ctrl+Enter: Delay the Assistant's Response
 													Shift+Enter: Insert a Newline""";
 	public static final int ARROW_BUTTONS_VERTICAL_SPACING = 0;
 
 	private final MainPresenter mainPresenter;
 
 	private Composite mainContainer;
-    private SpellCheckedTextBox spellCheckingEditor;
+	private SpellCheckedTextBox spellCheckedTextBox;
 	private Composite arrowButtonContainer;
 	private Button upArrowButton;
 	private Button downArrowButton;
@@ -47,7 +47,7 @@ public class UserInputArea {
 	public UserInputArea(MainPresenter mainPresenter, Composite parent) {
 		this.mainPresenter = mainPresenter;
 		mainContainer = createMainContainer(parent);
-		spellCheckingEditor = createSpellCheckingEditor(mainContainer);
+		spellCheckedTextBox = createSpellCheckedTextBox(mainContainer);
 		arrowButtonContainer = createArrowButtonContainer(mainContainer);
 		upArrowButton = createUpArrowButton(arrowButtonContainer);
 		downArrowButton = createDownArrowButton(arrowButtonContainer);
@@ -59,7 +59,7 @@ public class UserInputArea {
 	 * @return True if the text area is null or disposed, false otherwise.
 	 */
 	public boolean isDisposed() {
-		return spellCheckingEditor.isDisposed();
+		return spellCheckedTextBox.isDisposed();
 	}
 
 	/**
@@ -68,7 +68,7 @@ public class UserInputArea {
 	 * @return The trimmed text from the text area.
 	 */
 	public String getText() {
-		return spellCheckingEditor.getText();
+		return spellCheckedTextBox.getText();
 	}
 
 	/**
@@ -77,14 +77,15 @@ public class UserInputArea {
 	 * @param text The text to be set in the text area.
 	 */
 	public void setText(String text) {
-		spellCheckingEditor.setText(text);;
+		spellCheckedTextBox.setText(text);
+		;
 	}
 
 	/**
 	 * Sets the focus on the text area.
 	 */
 	public void setFocus() {
-		spellCheckingEditor.setFocus();
+		spellCheckedTextBox.setFocus();
 	}
 
 	/**
@@ -94,7 +95,7 @@ public class UserInputArea {
 	 */
 	public void setEnabled(boolean enabled) {
 		Eclipse.runOnUIThreadAsync(() -> {
-			spellCheckingEditor.setEnabled(enabled);
+			spellCheckedTextBox.setEnabled(enabled);
 			upArrowButton.setEnabled(enabled);
 			downArrowButton.setEnabled(enabled);
 			mainContainer.setCursor(enabled ? null : Display.getCurrent().getSystemCursor(SWT.CURSOR_WAIT));
@@ -114,13 +115,23 @@ public class UserInputArea {
 		container.setLayoutData(Eclipse.createGridData(true, false));
 		return container;
 	}
-	
-	private SpellCheckedTextBox createSpellCheckingEditor(Composite parent) {
-	    SpellCheckedTextBox spellCheckingEditor = new SpellCheckedTextBox(parent, this::handleEnterKeyPress);
-	    spellCheckingEditor.configureTextToolTip(INPUT_AREA_TOOLTIP);    
-	    return spellCheckingEditor;
+
+	/**
+	 * Creates and configures a {@link SpellCheckedTextBox} for the user input area.
+	 * This text box includes spell-checking capabilities and is configured to
+	 * handle special key press events for message sending and text manipulation.
+	 *
+	 * @param parent The parent composite where this text box will be placed. Must
+	 *               not be null.
+	 * @return A fully configured {@link SpellCheckedTextBox} ready for user
+	 *         interaction.
+	 */
+	private SpellCheckedTextBox createSpellCheckedTextBox(Composite parent) {
+		SpellCheckedTextBox spellCheckedTextBox = new SpellCheckedTextBox(parent, this::handleEnterKeyPress);
+		spellCheckedTextBox.configureTextToolTip(INPUT_AREA_TOOLTIP);
+		return spellCheckedTextBox;
 	}
-    
+
 	/**
 	 * Creates the container for arrow buttons.
 	 *
@@ -145,7 +156,7 @@ public class UserInputArea {
 		SelectionAdapter listener = new SelectionAdapter() {
 			@Override
 			public void widgetSelected(SelectionEvent e) {
-				if (spellCheckingEditor.getEnabled()) {
+				if (spellCheckedTextBox.getEnabled()) {
 					mainPresenter.onUpArrowClick();
 				}
 			}
@@ -163,21 +174,19 @@ public class UserInputArea {
 		SelectionAdapter listener = new SelectionAdapter() {
 			@Override
 			public void widgetSelected(SelectionEvent e) {
-				if (spellCheckingEditor.getEnabled()) {
+				if (spellCheckedTextBox.getEnabled()) {
 					mainPresenter.onDownArrowClick();
 				}
 			}
 		};
-		return Eclipse.createButton(buttonContainer, "", ARROW_DOWN_TOOLTIP, ARROW_DOWN_ICON,
-				listener);
+		return Eclipse.createButton(buttonContainer, "", ARROW_DOWN_TOOLTIP, ARROW_DOWN_ICON, listener);
 	}
 
 	/**
-	 * Handles the Enter key press in the text area component. 
-	 * NOTE: The Enter key is overloaded and has three different functions:
-	 *       - Shift+Enter : Insert newline (default Eclipse behaviour?)
-	 *       - Ctrl+Enter : Send message, but don't schedule a reply yet.
-	 *       - Enter : Send message and schedule a reply.
+	 * Handles the Enter key press in the text area component. NOTE: The Enter key
+	 * is overloaded and has three different functions: - Shift+Enter : Insert
+	 * newline (default Eclipse behaviour?) - Ctrl+Enter : Send message, but don't
+	 * schedule a reply yet. - Enter : Send message and schedule a reply.
 	 *
 	 * @param stateMask The state mask of the key event.
 	 */
