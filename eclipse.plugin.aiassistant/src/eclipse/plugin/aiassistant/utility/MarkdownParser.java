@@ -92,12 +92,6 @@ public class MarkdownParser {
 
 		// Replace inline code with <code> and <strong> tags.
 		markdownLine = markdownLine.replaceAll("`(.*?)`", "<code><strong>$1</strong></code>");
-		
-		// Replace links with <a> tags.
-		markdownLine = markdownLine.replaceAll("\\[(.*?)\\]\\((.*?)\\)", "<a href=\"$2\">$1</a>");
-
-		// Replace images with <img> tags.
-		markdownLine = markdownLine.replaceAll("!\\[(.*?)\\]\\((.*?)\\)", "<img src=\"$2\" alt=\"$1\">");
 
 		// Append the HTML line-break to the end of the line.
 		markdownLine += "<br/>";

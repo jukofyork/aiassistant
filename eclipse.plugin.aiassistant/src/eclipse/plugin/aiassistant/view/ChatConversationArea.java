@@ -65,7 +65,7 @@ public class ChatConversationArea {
 		configureTextToolTip(BROWSER_TOOLTIP);
 		addMouseWheelListener();
 		addShiftKeyListener();
-		browserMenu = new ChatConversationMenu(mainPresenter, browser);
+		browserMenu = new ChatConversationMenu(mainPresenter, this);
 		browserScriptGenerator = new BrowserScriptGenerator();
 		initialize();
 		setBrowserFunctions();
@@ -181,6 +181,28 @@ public class ChatConversationArea {
 	 */
 	public void removeAllSelectionBorders() {
 		Eclipse.executeScript(browser, browserScriptGenerator.generateRemoveAllBordersScript());
+	}
+	
+	public Browser getBrowser() {
+		return browser;
+	}
+	
+	public void handleCopySelection(String selectedText) {
+	    if (!selectedText.isEmpty()) {
+	        browserFunctions.get(0).function(new Object[]{selectedText});
+	    }
+	}
+	
+	public void handleReplaceSelection(String selectedText) {
+	    if (!selectedText.isEmpty()) {
+	        browserFunctions.get(1).function(new Object[]{selectedText});
+	    }
+	}
+	
+	public void handleReviewChanges(String selectedText) {
+	    if (!selectedText.isEmpty()) {
+	        browserFunctions.get(2).function(new Object[]{selectedText});
+	    }
 	}
 
 	/**
