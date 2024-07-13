@@ -1,5 +1,7 @@
 package eclipse.plugin.aiassistant.chat;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import java.util.UUID;
 
 /**
@@ -10,6 +12,18 @@ public class ChatMessage {
     private final UUID id;
     private final ChatRole role;
     private StringBuilder message;
+
+    /**
+     * JsonCreator constructor for deserialization with Jackson.
+     */
+    @JsonCreator
+    public ChatMessage(@JsonProperty("id") UUID id, 
+                       @JsonProperty("role") ChatRole role, 
+                       @JsonProperty("message") String message) {
+        this.id = id;
+        this.role = role;
+        this.message = new StringBuilder(message);
+    }
 
     /**
      * Constructs a new ChatMessage with the specified role.

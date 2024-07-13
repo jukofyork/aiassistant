@@ -1,5 +1,6 @@
 package eclipse.plugin.aiassistant.preferences;
 
+import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URL;
 
@@ -10,7 +11,9 @@ import org.eclipse.ui.dialogs.PreferencesUtil;
 import eclipse.plugin.aiassistant.Activator;
 import eclipse.plugin.aiassistant.Constants;
 import eclipse.plugin.aiassistant.Logger;
+import eclipse.plugin.aiassistant.chat.ChatConversation;
 import eclipse.plugin.aiassistant.utility.Eclipse;
+import eclipse.plugin.aiassistant.view.UserMessageHistory;
 
 /**
  * This class provides utility methods for accessing and managing preferences in
@@ -94,18 +97,28 @@ public final class Preferences {
 	}
 
 	/**
-	 * Returns the base URL of the API.
+	 * Retrieves the base URL for the API. This URL is used as the starting point for all API requests.
 	 * 
-	 * @return The base URL of the API.
+	 * @return The base URL of the API as a {@link URL} object.
 	 */
 	public static URL getApiBaseUrl() {
 		return getApiEndpoint("");
 	}
 	
+	/**
+	 * Retrieves the stored API key from the preference store. This key is used for authenticating API requests.
+	 * 
+	 * @return The API key as a {@link String}.
+	 */
 	public static String getApiKey() {
 		return preferenceStore.getString(PreferenceConstants.API_KEY);
 	}
 	
+	/**
+	 * Retrieves the model name for the API from the preference store. This name indicates which model to use in API requests.
+	 * 
+	 * @return The API model name as a {@link String}.
+	 */
 	public static String getApiModelName() {
 		return preferenceStore.getString(PreferenceConstants.API_MODEL_NAME);
 	}
@@ -118,6 +131,50 @@ public final class Preferences {
 	public static URL getChatCompletionApiEndpoint() {
 		return getApiEndpoint(Constants.CHAT_COMPLETION_API_URL);
 	}
+	
+    /**
+     * Saves the current state of a ChatConversation to the preference store.
+     *
+     * @param conversation The ChatConversation object to be saved.
+     * @throws IOException If an error occurs during the serialization process.
+     */
+    public static void saveChatConversation(ChatConversation conversation) throws IOException {
+        String serializedData = conversation.serialize();
+        preferenceStore.setValue(PreferenceConstants.CHAT_CONVERSATION, serializedData);
+    }
+
+    /**
+     * Loads a ChatConversation from the preference store.
+     *
+     * @return The deserialized ChatConversation object.
+     * @throws IOException If an error occurs during the deserialization process.
+     */
+    public static ChatConversation loadChatConversation() throws IOException {
+        String serializedData = preferenceStore.getString(PreferenceConstants.CHAT_CONVERSATION);
+        return ChatConversation.deserialize(serializedData);
+    }
+    
+    /**
+     * Saves the current state of a UserMessageHistory to the preference store.
+     *
+     * @param history The UserMessageHistory object to be saved.
+     * @throws IOException If an error occurs during the serialization process.
+     */
+    public static void saveUserMessageHistory(UserMessageHistory history) throws IOException {
+        String serializedData = history.serialize();
+        preferenceStore.setValue(PreferenceConstants.USER_MESSAGE_HISTORY, serializedData);
+    }
+
+    /**
+     * Loads a UserMessageHistory from the preference store.
+     *
+     * @return The deserialized UserMessageHistory object.
+     * @throws IOException If an error occurs during the deserialization process.
+     */
+    public static UserMessageHistory loadUserMessageHistory() throws IOException {
+        String serializedData = preferenceStore.getString(PreferenceConstants.USER_MESSAGE_HISTORY);
+        return UserMessageHistory.deserialize(serializedData);
+    }
 
 	/**
 	 * Returns the API endpoint URL for a given path.

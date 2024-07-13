@@ -26,6 +26,8 @@ public class PreferenceInitializer extends AbstractPreferenceInitializer {
         setDefaultChatFontSize();
         setDefaultNotificationFontSize();
         setDefaultDisableTooltips();
+        setDefaultChatConversation();
+        setDefaultUserMessageHistory();
         loadAndSetDefaultPrompts();
     }
 
@@ -83,6 +85,28 @@ public class PreferenceInitializer extends AbstractPreferenceInitializer {
      */
     private void setDefaultDisableTooltips() {
         Preferences.getDefault().setDefault(PreferenceConstants.DISABLE_TOOLTIPS, Constants.DEFAULT_DISABLE_TOOLTIPS);
+    }
+    
+    /**
+     * Sets the default value for the chat conversation in the preferences.
+     * This method initializes the chat conversation setting to an empty string,
+     * which might be used to represent no initial conversation history.
+     *
+     * @see Preferences#setDefault(String, String)
+     */
+    private void setDefaultChatConversation() {
+        Preferences.getDefault().setDefault(PreferenceConstants.CHAT_CONVERSATION, "");
+    }
+    
+    /**
+     * Sets the default value for the user message history in the preferences.
+     * This method initializes the user message history to an empty string,
+     * indicating that there is no previous user message history by default.
+     *
+     * @see Preferences#setDefault(String, String)
+     */
+    private void setDefaultUserMessageHistory() {
+        Preferences.getDefault().setDefault(PreferenceConstants.USER_MESSAGE_HISTORY, "");
     }
 
     /**

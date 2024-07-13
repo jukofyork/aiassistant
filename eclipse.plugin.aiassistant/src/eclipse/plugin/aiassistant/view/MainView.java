@@ -15,63 +15,61 @@ import org.eclipse.swt.SWT;
 import org.eclipse.swt.custom.SashForm;
 
 /**
- * This class represents a view part that displays a chat conversation. It
- * includes various buttons for user interaction, such as stopping the AI,
- * clearing the chat history, toggling context, and opening settings.
+ * MainView is responsible for displaying the AI assistant's chat interface
+ * within the Eclipse IDE. It manages user interactions and integrates different
+ * UI components such as the chat area, input area, and button bar.
  */
 public class MainView extends ViewPart {
 
-	/** The ID of the view as specified by the extension. */
+	/** The unique identifier for this view within the Eclipse plugin framework. */
 	public static final String ID = "eclipse.plugin.aiassistant.view.MainView";
 
-	private MainPresenter mainPresenter;	
+	private MainPresenter mainPresenter;
 
 	private SashForm sashForm;
 	private Composite mainContainer;
 	private ChatConversationArea chatMessageArea;
 	private UserInputArea userInputArea;
 	private ButtonBarArea buttonBarArea;
-		
+
 	/**
-	 * Creates the part control for the view. This includes creating the main
-	 * container, chat view, user input area, and buttons.
+	 * Initializes the view components and sets up the presenter.
 	 * 
-	 * @param parent the parent composite
+	 * @param parent The parent composite on which this view is built.
 	 */
 	@Override
 	public void createPartControl(Composite parent) {
 		mainPresenter = new MainPresenter();
 		sashForm = new SashForm(parent, SWT.VERTICAL);
 		mainContainer = createMainContainer(sashForm);
-		chatMessageArea =  new ChatConversationArea(mainPresenter, mainContainer);
+		chatMessageArea = new ChatConversationArea(mainPresenter, mainContainer);
 		userInputArea = new UserInputArea(mainPresenter, mainContainer);
 		buttonBarArea = new ButtonBarArea(mainPresenter, mainContainer);
 		setInputEnabled(true); // Will turn off stop and set everything else on.
+		mainPresenter.loadStateFromPreferenceStore(); // Runs asynchronously on UI thread.
 	}
-	
+
 	/**
-	 * This method is called when the view is being disposed. It shuts down the keepAliveService,
-	 * which is a service that keeps the AI assistant alive by sending periodic requests to the server.
-	 * It also calls the superclass's dispose() method to perform any necessary cleanup.
+	 * Saves the current state when the view is disposed.
 	 */
 	@Override
 	public void dispose() {
-		//keepAliveService.shutdown();
 		super.dispose();
+		mainPresenter.saveStateToPreferenceStore(); // Runs synchronously on UI thread.
 	}
-	
+
 	/**
-	 * This method is used by the AbstractPromptHandler to get the MainPresenter instance.
-	 * The MainPresenter is responsible for handling the presentation logic of the main view.
+	 * Provides access to the MainPresenter which handles the logic for user
+	 * interactions.
 	 * 
-	 * @return The MainPresenter instance.
+	 * @return The MainPresenter instance managing this view.
 	 */
 	public MainPresenter getMainPresenter() {
 		return mainPresenter;
 	}
 
 	/**
-	 * Sets the focus on the UserInputArea component of this view.
+	 * Sets the focus to the user input area when the view gains focus.
 	 */
 	@Override
 	public void setFocus() {
@@ -79,63 +77,66 @@ public class MainView extends ViewPart {
 	}
 
 	/**
-	 * Checks if the SashForm component of this view is disposed.
+	 * Checks if the main SashForm component is disposed.
 	 * 
-	 * @return true if the SashForm is disposed, false otherwise
+	 * @return true if the SashForm is disposed, otherwise false.
 	 */
 	public boolean isDisposed() {
 		return (sashForm == null || sashForm.isDisposed());
 	}
 
 	/**
-	 * Retrieves the ChatMessageArea component of this view.
+	 * Retrieves the ChatMessageArea component.
 	 * 
-	 * @return the ChatMessageArea component of this view
+	 * @return The ChatMessageArea component used for displaying messages.
 	 */
 	public ChatConversationArea getChatMessageArea() {
 		return chatMessageArea;
 	}
 
 	/**
-	 * Retrieves the UserInputArea component of this view.
+	 * Retrieves the UserInputArea component.
 	 * 
-	 * @return the UserInputArea component of this view
+	 * @return The UserInputArea component used for user input.
 	 */
 	public UserInputArea getUserInputArea() {
 		return userInputArea;
 	}
-	
+
 	/**
-	 * Enables or disables the UserInputArea, ChatMessageArea, and all buttons in
-	 * this view. If disabled, the cursor changes to a wait cursor and only the Stop
-	 * button is clickable.
+	 * Enables or disables user interaction components based on the specified flag.
 	 * 
-	 * @param b true to enable the input and buttons, false to disable them
+	 * @param enabled true to enable interaction, false to disable it.
 	 */
 	public void setInputEnabled(boolean enabled) {
 		Eclipse.runOnUIThreadAsync(() -> {
-			chatMessageArea.setEnabled(enabled);	// Blocks Javascript callbacks.
+			chatMessageArea.setEnabled(enabled); // Blocks Javascript callbacks.
 			userInputArea.setEnabled(enabled);
 			buttonBarArea.setInputEnabled(enabled);
 		});
 	}
 
+	/**
+	 * Creates and configures the main container for this view.
+	 * 
+	 * @param parent The parent composite to which this new container will be added. It provides a context
+	 *               in which the new composite will be displayed.
+	 * @return A newly created and configured Composite instance that serves as the main container for other
+	 *         UI components in this view.
+	 */
 	private Composite createMainContainer(Composite parent) {
 		Composite container = new Composite(parent, SWT.NONE);
 		container.setLayout(Eclipse.createGridLayout(1, false, Constants.DEFAULT_EXTERNAL_MARGINS,
-				Constants.DEFAULT_EXTERNAL_MARGINS, -1, Constants.DEFAULT_INTERNAL_SPACING ));
+				Constants.DEFAULT_EXTERNAL_MARGINS, -1, Constants.DEFAULT_INTERNAL_SPACING));
 		return container;
 	}
-	
+
 	/**
-	 * Finds the MainView in the application model by its element ID.
+	 * Attempts to find an instance of MainView in the active workbench window.
 	 * 
-	 * This method attempts to retrieve the MainView from the active workbench
-	 * window and page. If the MainView does not exist or has been disposed of, an
-	 * empty Optional is returned.
-	 * 
-	 * @return An Optional containing the MainView if it exists and has not been
-	 *         disposed of, otherwise an empty Optional.
+	 * @return An Optional containing the MainView if available and not disposed,
+	 *         otherwise an empty Optional.
+	 * @throws IllegalStateException if no active workbench window can be found.
 	 */
 	public static Optional<MainView> findMainView() {
 

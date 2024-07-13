@@ -1,5 +1,8 @@
 package eclipse.plugin.aiassistant.chat;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Stack;
@@ -9,6 +12,8 @@ import java.util.UUID;
  * This class represents a chat conversation.
  */
 public class ChatConversation {
+	
+	private static final ObjectMapper objectMapper = new ObjectMapper();
 
 	private final Stack<ChatMessage> messages = new Stack<>();
 
@@ -53,7 +58,7 @@ public class ChatConversation {
 	    }
 	    return false;
 	}
-
+	
 	/**
 	 * Returns the first message in the conversation that is not a notification.
 	 * 
@@ -183,5 +188,29 @@ public class ChatConversation {
 		}
 		return false;
 	}
+	
+    /**
+     * Serializes this ChatConversation to a JSON string.
+     *
+     * @return a JSON string representing this conversation
+     * @throws IOException if an input/output exception occurs
+     */
+    public synchronized String serialize() throws IOException {
+        return objectMapper.writeValueAsString(messages);
+    }
+
+    /**
+     * Deserializes a JSON string to a ChatConversation.
+     *
+     * @param json the JSON string representing a conversation
+     * @return a ChatConversation object
+     * @throws IOException if an input/output exception occurs
+     */
+    public static ChatConversation deserialize(String json) throws IOException {
+        Stack<ChatMessage> messageStack = objectMapper.readValue(json, new TypeReference<Stack<ChatMessage>>() {});
+        ChatConversation conversation = new ChatConversation();
+        conversation.messages.addAll(messageStack);
+        return conversation;
+    }
 
 }
