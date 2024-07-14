@@ -25,6 +25,8 @@ import org.eclipse.ui.texteditor.SourceViewerDecorationSupport;
 import eclipse.plugin.aiassistant.preferences.Preferences;
 
 import org.eclipse.swt.SWT;
+import org.eclipse.swt.events.KeyAdapter;
+import org.eclipse.swt.events.KeyEvent;
 import org.eclipse.swt.events.TraverseEvent;
 import org.eclipse.swt.events.TraverseListener;
 
@@ -59,6 +61,7 @@ public class SpellCheckedTextBox {
 		this.enterKeyPressHandler = handler;
 		initializeSourceViewer(parent);
 		addTraverseListener();
+		addKeyListener();
 	}
 
 	/**
@@ -155,10 +158,14 @@ public class SpellCheckedTextBox {
 	 */
 	private void initializeContextMenu() {
 		MenuManager menuManager = new MenuManager();
-		Object[][] operations = { { "Undo", ITextOperationTarget.UNDO }, { "Redo", ITextOperationTarget.REDO },
+		Object[][] operations = {
+				{ "Undo", ITextOperationTarget.UNDO },
+				{ "Redo", ITextOperationTarget.REDO },
 				{ "", -1 }, // separator
-				{ "Cut", ITextOperationTarget.CUT }, { "Copy", ITextOperationTarget.COPY },
-				{ "Paste", ITextOperationTarget.PASTE }, { "", -1 }, // separator
+				{ "Cut", ITextOperationTarget.CUT },
+				{ "Copy", ITextOperationTarget.COPY },
+				{ "Paste", ITextOperationTarget.PASTE },
+				{ "", -1 }, // separator
 				{ "Select All", ITextOperationTarget.SELECT_ALL } };
 
 		for (Object[] operation : operations) {
@@ -195,17 +202,41 @@ public class SpellCheckedTextBox {
 
 	/**
 	 * Adds a listener to handle key traversal events in the text widget.
-	 * Specifically handles the Enter key press to trigger custom actions.
+	 * This method specifically handles the Enter key press to trigger custom actions
+	 * when the text widget is enabled.
 	 */
 	private void addTraverseListener() {
-		sourceViewer.getTextWidget().addTraverseListener(new TraverseListener() {
-			public void keyTraversed(TraverseEvent e) {
-				if (getEnabled() && e.detail == SWT.TRAVERSE_RETURN) {
-					enterKeyPressHandler.handleEnterKeyPress(e.stateMask);
-				}
-			}
-		});
+	    sourceViewer.getTextWidget().addTraverseListener(new TraverseListener() {
+	        public void keyTraversed(TraverseEvent e) {
+	            if (getEnabled()) {
+	                if (e.detail == SWT.TRAVERSE_RETURN) {
+	                    enterKeyPressHandler.handleEnterKeyPress(e.stateMask);
+	                }
+	            }
+	        }
+	    });
 	}
+	
+    /**
+     * Adds a key listener to the text widget to handle specific key events for undo and redo operations.
+     * This method listens for 'z' key presses combined with modifier keys to execute undo and redo.
+     */
+    private void addKeyListener() {
+        sourceViewer.getTextWidget().addKeyListener(new KeyAdapter() {
+            @Override
+            public void keyPressed(KeyEvent e) {
+                if (getEnabled()) {
+                    if (e.keyCode == 'z') {
+                        if ((e.stateMask & SWT.MODIFIER_MASK) == SWT.MOD1) {
+                            executeEditorOperation(ITextOperationTarget.UNDO);
+                        } else if ((e.stateMask & SWT.MODIFIER_MASK) == (SWT.MOD1 | SWT.MOD2)) {
+                            executeEditorOperation(ITextOperationTarget.REDO);
+                        }
+                    }
+                }
+            }
+        });
+    }
 
 	/**
 	 * Custom configuration for the source viewer, handling preferences and text
