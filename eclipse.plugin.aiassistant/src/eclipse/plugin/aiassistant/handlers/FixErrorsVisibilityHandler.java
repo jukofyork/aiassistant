@@ -32,7 +32,7 @@ public class FixErrorsVisibilityHandler extends PropertyTester{
     		ITextEditor textEditor = Eclipse.getActiveTextEditor();
     		if (textEditor != null) {
     			IFile activeFile = Eclipse.getActiveFile(textEditor);
-    			return !Eclipse.getCompilerErrors(activeFile).isEmpty();
+    			return activeFile != null && !Eclipse.getCompilerErrors(activeFile).isEmpty();
     		}
     		return false;
         }

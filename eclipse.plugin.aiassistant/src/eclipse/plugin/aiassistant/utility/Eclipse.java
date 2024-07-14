@@ -15,6 +15,7 @@ import org.eclipse.core.resources.IResource;
 import org.eclipse.core.resources.IWorkspaceRoot;
 import org.eclipse.core.resources.ResourcesPlugin;
 import org.eclipse.core.runtime.CoreException;
+import org.eclipse.core.runtime.IPath;
 import org.eclipse.jface.resource.ImageDescriptor;
 import org.eclipse.jface.text.BadLocationException;
 import org.eclipse.jface.text.IDocument;
@@ -34,7 +35,9 @@ import org.eclipse.swt.widgets.Button;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.widgets.Shell;
+import org.eclipse.ui.IEditorInput;
 import org.eclipse.ui.IEditorPart;
+import org.eclipse.ui.IPathEditorInput;
 import org.eclipse.ui.IWorkbench;
 import org.eclipse.ui.IWorkbenchPage;
 import org.eclipse.ui.IWorkbenchPart;
@@ -162,7 +165,7 @@ public class Eclipse {
 	public static IProject getActiveProject(ITextEditor textEditor) {
 		return getActiveFile(textEditor).getProject();
 	}
-
+	
 	/**
 	 * Returns the selected text in the active text editor.
 	 *
@@ -208,6 +211,31 @@ public class Eclipse {
 		} catch (IOException e) {
 			throw new RuntimeException(e);
 		}
+	}
+	
+	/**
+	 * Returns the text of the active file (used as a fallback for reading non-workspace files).
+	 *
+	 * @param textEditor the active file
+	 * @return the text of the active file
+	 */
+	public static String getEditorText(ITextEditor textEditor) {
+	    IDocument document = textEditor.getDocumentProvider().getDocument(textEditor.getEditorInput());
+	    if (document != null) {
+	        return document.get();
+	    } else {
+	        throw new IllegalStateException("Cannot retrieve document from the editor.");
+	    }
+	}
+	
+	/**
+	 * Returns the title of the active editor.
+	 *
+	 * @param textEditor the active file
+	 * @return the text of the active file
+	 */
+	public static String getEditorTitle(ITextEditor textEditor) {
+		return textEditor.getTitle();
 	}
 
 	/**

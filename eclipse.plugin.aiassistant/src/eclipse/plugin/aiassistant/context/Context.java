@@ -47,12 +47,18 @@ public class Context {
 			Eclipse.saveAllEditors(false);
 			
 			IFile activeFile = Eclipse.getActiveFile(textEditor);
-			this.filename = activeFile.getProjectRelativePath().toString();
-			this.language = LanguageFileExtensions.getLanguageName(filename);
-			this.tag = LanguageFileExtensions.getMarkdownTag(filename);
-			this.compilerWarnings = Eclipse.getCompilerWarnings(activeFile);
-			this.compilerErrors = Eclipse.getCompilerErrors(activeFile);
-			this.documentText = Eclipse.getEditorText(activeFile);
+			if (activeFile != null) {
+				this.filename = activeFile.getProjectRelativePath().toString();
+				this.language = LanguageFileExtensions.getLanguageName(filename);
+				this.tag = LanguageFileExtensions.getMarkdownTag(filename);
+				this.compilerWarnings = Eclipse.getCompilerWarnings(activeFile);
+				this.compilerErrors = Eclipse.getCompilerErrors(activeFile);
+				this.documentText = Eclipse.getEditorText(activeFile);
+			}
+			else {
+				this.filename = Eclipse.getEditorTitle(textEditor); // Fallback method.
+				this.documentText = Eclipse.getEditorText(textEditor); // Fallback method.
+			}
 	
 			// NOTE: Deliberately not trimming to not effect line numbers and indentation.
 			this.selectionText = Eclipse.getSelectedText(textEditor);
@@ -72,6 +78,9 @@ public class Context {
 			}
 			else if (language.equals("C++")) {
 				documentationGenerator = "Doxygen (@see, @param, @return, @throws, etc)";
+			}
+			else if (language.equals("Python")) {
+			    documentationGenerator = "Sphinx (:param, :type, :return:, :rtype:, etc)";
 			}
 			
 		}

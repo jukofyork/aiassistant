@@ -32,7 +32,7 @@ public class FixWarningsVisibilityHandler extends PropertyTester {
     		ITextEditor textEditor = Eclipse.getActiveTextEditor();
     		if (textEditor != null) {
     			IFile activeFile = Eclipse.getActiveFile(textEditor);
-    			return !Eclipse.getCompilerWarnings(activeFile).isEmpty();
+    			return activeFile != null && !Eclipse.getCompilerWarnings(activeFile).isEmpty();
     		}
     		return false;
         }
