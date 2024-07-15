@@ -185,14 +185,22 @@ public class MainPresenter {
 	 * reflect the changes.
 	 */
 	public void onUndo() {
-		onStop(); // Not really needed as we block undo button now when running...
-		List<UUID> removedIds = chatConversation.undo();
-		performOnMainView(mainView -> {
-			for (UUID id : removedIds) {
-				mainView.getChatMessageArea().removeMessage(id);
+		if (!chatConversation.isEmpty()) {
+			onStop(); // Not really needed as we block undo button now when running...
+			List<UUID> removedIds = chatConversation.undo();
+			if (chatConversation.isEmpty()) {
+				saveStateToPreferenceStore(); // So further "Undo" doesn't resurrect the old chat.
 			}
-		});
-		onScrollToBottom();
+			performOnMainView(mainView -> {
+				for (UUID id : removedIds) {
+					mainView.getChatMessageArea().removeMessage(id);
+				}
+			});
+			onScrollToBottom();
+		}
+		else {
+			loadStateFromPreferenceStore(); // To revert a misclicked "Clear".
+		}
 	}
 
 	/**
@@ -200,12 +208,15 @@ public class MainPresenter {
 	 * changes.
 	 */
 	public void onClear() {
-		onStop(); // Not really needed as we block clear button now when running...
-		chatConversation.clear();
-		performOnMainView(mainView -> {
-			Eclipse.runOnUIThreadAsync(() -> mainView.getChatMessageArea().initialize());
-		});
-		onScrollToBottom();
+		if (!chatConversation.isEmpty()) {
+			onStop(); // Not really needed as we block clear button now when running...
+			saveStateToPreferenceStore(); // To allow us to revert a misclicked "Clear" via "Undo".
+			chatConversation.clear();
+			performOnMainView(mainView -> {
+				Eclipse.runOnUIThreadAsync(() -> mainView.getChatMessageArea().initialize());
+			});
+			onScrollToBottom();
+		}
 	}
 
 	/**
