@@ -19,7 +19,7 @@ import eclipse.plugin.aiassistant.chat.ChatMessage;
 import eclipse.plugin.aiassistant.chat.ChatRole;
 import eclipse.plugin.aiassistant.context.Context;
 import eclipse.plugin.aiassistant.jobs.StreamingChatProcessorJob;
-import eclipse.plugin.aiassistant.network.OpenAIChatCompletionClient;
+import eclipse.plugin.aiassistant.network.OpenAiApiClient;
 import eclipse.plugin.aiassistant.preferences.PreferenceConstants;
 import eclipse.plugin.aiassistant.preferences.Preferences;
 import eclipse.plugin.aiassistant.prompt.PromptLoader;
@@ -38,7 +38,7 @@ public class MainPresenter {
 	private final static UUID SCROLLED_TO_BOTTOM = new UUID(-1, -1); // at bottom, beyond the last message.
 	
 	private final ChatConversation chatConversation;
-	private final OpenAIChatCompletionClient openAIChatCompletionClient;
+	private final OpenAiApiClient openAiApiClient;
 	private final StreamingChatProcessorJob sendConversationJob;
 
 	private UserMessageHistory userMessageHistory;
@@ -54,8 +54,8 @@ public class MainPresenter {
 	 */
 	public MainPresenter() {
 	    chatConversation = new ChatConversation();
-	    openAIChatCompletionClient = new OpenAIChatCompletionClient();
-	    sendConversationJob = new StreamingChatProcessorJob(this, openAIChatCompletionClient, chatConversation);
+	    openAiApiClient = new OpenAiApiClient();
+	    sendConversationJob = new StreamingChatProcessorJob(this, openAiApiClient, chatConversation);
 	    userMessageHistory = new UserMessageHistory();
 	    setupLogListener();
 	    setupPropertyChangeListener();
@@ -382,6 +382,15 @@ public class MainPresenter {
 	 */
 	private void sendUserMessage(String messageString, boolean scheduleReply) {
 
+		// Check model is valid to use if we are going to schedule the reply.
+		if (scheduleReply && chatConversation.hasUnsentUserMessages()) {
+			String serverStatus = openAiApiClient.getCurrentServerStatus();
+			if (!serverStatus.equals("OK")) {
+				Logger.error(serverStatus);
+				return;
+			}
+		}
+			
 		// Don't add blank messages to the chat conversation.
 		if (!messageString.trim().isEmpty()) {
 			ChatMessage message = new ChatMessage(ChatRole.USER, messageString);

@@ -1,6 +1,7 @@
 package eclipse.plugin.aiassistant.jobs;
 
 import java.util.Objects;
+import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Flow.Subscriber;
 import java.util.concurrent.Flow.Subscription;
@@ -11,9 +12,10 @@ import org.eclipse.core.runtime.Status;
 import org.eclipse.core.runtime.jobs.Job;
 
 import eclipse.plugin.aiassistant.Activator;
+import eclipse.plugin.aiassistant.Logger;
 import eclipse.plugin.aiassistant.chat.ChatConversation;
 import eclipse.plugin.aiassistant.chat.ChatMessage;
-import eclipse.plugin.aiassistant.network.OpenAIChatCompletionClient;
+import eclipse.plugin.aiassistant.network.OpenAiApiClient;
 import eclipse.plugin.aiassistant.view.MainPresenter;
 
 /**
@@ -24,7 +26,7 @@ import eclipse.plugin.aiassistant.view.MainPresenter;
 public class StreamingChatProcessorJob extends Job implements Subscriber<String> {
 
 	private final MainPresenter mainPresenter;
-	private final OpenAIChatCompletionClient openAIChatCompletionClient;
+	private final OpenAiApiClient openAiApiClient;
 	private final ChatConversation chatConversation;
 	
 	private ChatMessage message;
@@ -35,14 +37,14 @@ public class StreamingChatProcessorJob extends Job implements Subscriber<String>
 	 * Initializes a new job to process chat conversations using OpenAI's API.
 	 * 
 	 * @param mainPresenter           Controller for updating the chat UI.
-	 * @param openAIChatCompletionClient Client for OpenAI chat API.
+	 * @param openAiApiClient Client for OpenAI chat API.
 	 * @param chatConversation        The conversation context.
 	 */
-	public StreamingChatProcessorJob(MainPresenter mainPresenter, OpenAIChatCompletionClient openAIChatCompletionClient,
+	public StreamingChatProcessorJob(MainPresenter mainPresenter, OpenAiApiClient openAiApiClient,
 			ChatConversation chatConversation) {
 		super(Activator.getDefault().getBundle().getSymbolicName());
 		this.mainPresenter = mainPresenter;
-		this.openAIChatCompletionClient = openAIChatCompletionClient;
+		this.openAiApiClient = openAiApiClient;
 		this.chatConversation = chatConversation;
 	}
 
@@ -54,10 +56,10 @@ public class StreamingChatProcessorJob extends Job implements Subscriber<String>
 	 */
 	@Override
 	protected IStatus run(IProgressMonitor progressMonitor) {
-		openAIChatCompletionClient.subscribe(this);
-		openAIChatCompletionClient.setCancelProvider(() -> progressMonitor.isCanceled());
+		openAiApiClient.subscribe(this);
+		openAiApiClient.setCancelProvider(() -> progressMonitor.isCanceled());
 		try {
-			var future = CompletableFuture.runAsync(openAIChatCompletionClient.run(chatConversation)).thenApply(v -> Status.OK_STATUS)
+			var future = CompletableFuture.runAsync(openAiApiClient.run(chatConversation)).thenApply(v -> Status.OK_STATUS)
 					.exceptionally(e -> Status.error("Unable to run the task: " + e.getMessage(), e));
 			return future.get();
 		} catch (Exception e) {
@@ -98,7 +100,14 @@ public class StreamingChatProcessorJob extends Job implements Subscriber<String>
 	 */
 	@Override
 	public void onError(Throwable throwable) {
-		//mainPresenter.displayError("Streaming error: " + throwable.getMessage());
+	    mainPresenter.endMessageFromAssistant();
+	    subscription.cancel();
+	    if (throwable instanceof CancellationException) {
+	    	Logger.info("CANCELLED");
+	    }
+	    else {
+	    	Logger.error(throwable.getMessage());
+	    }
 	}
 
 	/**

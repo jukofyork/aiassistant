@@ -26,8 +26,8 @@ public final class Constants {
 
 	// API base URL and endpoints.
 	public static final String DEFAULT_API_BASE_URL = "https://api.openai.com/v1";
-	public static final String DEFAULT_API_MODEL_NAME= "gpt-4-turbo";
 	public static final String DEFAULT_API_KEY = "";
+	public static final String MODEL_LIST_API_URL = "/models";
 	public static final String CHAT_COMPLETION_API_URL = "/chat/completions";
 
 	// Widget dimensions and spacing for the main view.
@@ -59,6 +59,7 @@ public final class Constants {
 	public static final int DEFAULT_NOTIFICATION_FONT_SIZE = 10;
 
 	// Miscellaneous checkbox settings.
-	public static final boolean DEFAULT_DISABLE_TOOLTIPS = true; //false;
+	public static final boolean DEFAULT_USE_STREAMING = true;
+	public static final boolean DEFAULT_DISABLE_TOOLTIPS = true;
 
 }

@@ -88,6 +88,16 @@ public final class Preferences {
 
 	/**
 	 * This method retrieves a boolean value from the preference store indicating
+	 * whether to use streaming.
+	 * 
+	 * @return A boolean value indicating whether to use streaming.
+	 */
+	public static boolean useStreaming() {
+		return preferenceStore.getBoolean(PreferenceConstants.USE_STREAMING);
+	}
+
+	/**
+	 * This method retrieves a boolean value from the preference store indicating
 	 * whether to disable tooltips.
 	 * 
 	 * @return A boolean value indicating whether to disable tooltips.
@@ -113,14 +123,14 @@ public final class Preferences {
 	public static String getApiKey() {
 		return preferenceStore.getString(PreferenceConstants.API_KEY);
 	}
-	
+
 	/**
-	 * Retrieves the model name for the API from the preference store. This name indicates which model to use in API requests.
+	 * Returns the model list API endpoint URL.
 	 * 
-	 * @return The API model name as a {@link String}.
+	 * @return The model list API endpoint URL.
 	 */
-	public static String getApiModelName() {
-		return preferenceStore.getString(PreferenceConstants.API_MODEL_NAME);
+	public static URL getModelsListApiEndpoint() {
+		return getApiEndpoint(Constants.MODEL_LIST_API_URL);
 	}
 
 	/**
@@ -175,6 +185,15 @@ public final class Preferences {
         String serializedData = preferenceStore.getString(PreferenceConstants.USER_MESSAGE_HISTORY);
         return UserMessageHistory.deserialize(serializedData);
     }
+    
+	/**
+	 * Returns the last selected model ID.
+	 * 
+	 * @return The last selected model ID.
+	 */
+	public static String getLastSelectedModelId() {
+		return preferenceStore.getString(PreferenceConstants.LAST_SELECTED_MODEL_ID);
+	}
 
 	/**
 	 * Returns the API endpoint URL for a given path.

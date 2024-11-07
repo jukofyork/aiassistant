@@ -19,15 +19,16 @@ public class PreferenceInitializer extends AbstractPreferenceInitializer {
     @Override
     public void initializeDefaultPreferences() {
         setDefaultAPIBaseURL();
-        setDefaultAPIModelName();
         setDefaultAPIKey();
         setDefaultConnectionTimeout();
         setDefaultTemperature();
         setDefaultChatFontSize();
         setDefaultNotificationFontSize();
+        setDefaultUseStreaming();
         setDefaultDisableTooltips();
         setDefaultChatConversation();
         setDefaultUserMessageHistory();
+        setDefaultLastSelectedModelId();
         loadAndSetDefaultPrompts();
     }
 
@@ -36,13 +37,6 @@ public class PreferenceInitializer extends AbstractPreferenceInitializer {
      */
     private void setDefaultAPIBaseURL() {
         Preferences.getDefault().setDefault(PreferenceConstants.API_BASE_URL, Constants.DEFAULT_API_BASE_URL);
-    }
-
-    /**
-     * Sets the default model name for the AI API in the preference store.
-     */
-    private void setDefaultAPIModelName() {
-        Preferences.getDefault().setDefault(PreferenceConstants.API_MODEL_NAME, Constants.DEFAULT_API_MODEL_NAME);
     }
     
     /**
@@ -81,6 +75,13 @@ public class PreferenceInitializer extends AbstractPreferenceInitializer {
     }
 
     /**
+     * Sets the default value for using streaming.
+     */
+    private void setDefaultUseStreaming() {
+        Preferences.getDefault().setDefault(PreferenceConstants.USE_STREAMING, Constants.DEFAULT_USE_STREAMING);
+    }
+
+    /**
      * Sets whether tooltips should be disabled across the application.
      */
     private void setDefaultDisableTooltips() {
@@ -107,6 +108,13 @@ public class PreferenceInitializer extends AbstractPreferenceInitializer {
      */
     private void setDefaultUserMessageHistory() {
         Preferences.getDefault().setDefault(PreferenceConstants.USER_MESSAGE_HISTORY, "");
+    }
+    
+    /**
+     * Sets the default last selected model ID to "" (ie: none).
+     */
+    private void setDefaultLastSelectedModelId() {
+        Preferences.getDefault().setDefault(PreferenceConstants.LAST_SELECTED_MODEL_ID, "");
     }
 
     /**

@@ -5,21 +5,23 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.net.URI;
-import java.net.http.HttpClient;
-import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
-import java.time.Duration;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.Flow;
 import java.util.concurrent.SubmissionPublisher;
 import java.util.function.Supplier;
+import java.util.stream.Collectors;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import eclipse.plugin.aiassistant.Constants;
 import eclipse.plugin.aiassistant.Logger;
 import eclipse.plugin.aiassistant.chat.ChatConversation;
 import eclipse.plugin.aiassistant.chat.ChatMessage;
@@ -27,20 +29,78 @@ import eclipse.plugin.aiassistant.chat.ChatRole;
 import eclipse.plugin.aiassistant.preferences.Preferences;
 import eclipse.plugin.aiassistant.prompt.PromptLoader;
 
-public class OpenAIChatCompletionClient {
-
-	private final HttpClient httpClient;
+public class OpenAiApiClient {
+	
+	private final HttpClientWrapper httpClientWrapper;
 	
 	// Created on call to subscribe() and set null after closing.
 	private SubmissionPublisher<String> streamingResponsePublisher = null;
 
 	private Supplier<Boolean> isCancelled = () -> false;
 
-	public OpenAIChatCompletionClient() {
-		this.httpClient = HttpClient.newBuilder().connectTimeout(Duration.ofMillis(Preferences.getConnectionTimeout()))
-				.build();
+	public OpenAiApiClient() {
+		this.httpClientWrapper = new HttpClientWrapper();
 	}
-		
+
+    /**
+     * Returns the current server status. If there is no server running or no model
+     * selected, it returns an error message. Otherwise, it returns "OK".
+     *
+     * @return The current server status.
+     */
+    public String getCurrentServerStatus() {
+        if (!httpClientWrapper.isAddressReachable(URI.create(Preferences.getModelsListApiEndpoint().toString()))) {
+            return "No OpenAI compatible '" + Constants.MODEL_LIST_API_URL + "' endpoint found at '"
+            		+ Preferences.getModelsListApiEndpoint().toString() + "'... Check Base Address and/or Key.";
+        }
+        if (getLastSelectedModelId().isEmpty()) {
+            return "No model selected. Check settings...";
+        }
+        return "OK";
+    }
+
+    /**
+     * Fetches the list of model IDs from the OpenAI API and returns them.
+     * 
+     * @return A list of model IDs.
+     */
+    public List<String> fetchModelIds() {
+        List<String> modelIds = new ArrayList<>();
+        try {
+            URI uri = Preferences.getModelsListApiEndpoint().toURI();
+            HttpResponse<InputStream> response = httpClientWrapper.sendRequest(uri, null);
+            InputStream responseBody = response.body();
+            ObjectMapper objectMapper = new ObjectMapper();
+            JsonNode rootNode = objectMapper.readTree(responseBody);
+            if (rootNode.has("data") && rootNode.get("data").isArray()) {
+                for (JsonNode modelNode : rootNode.get("data")) {
+                    if (modelNode.has("id")) {
+                        modelIds.add(modelNode.get("id").asText());
+                    }
+                }
+            }
+            Collections.sort(modelIds); // Sort the list alphabetically
+        } catch (Exception e) {
+            modelIds.clear();
+        }
+        return modelIds;
+    }
+
+	/**
+	 * Returns the ID of the last selected model. If the model is not available, it
+	 * returns an empty string.
+	 *
+	 * @return The ID of the last selected model.
+	 */
+	public String getLastSelectedModelId() {
+		String modelId = Preferences.getLastSelectedModelId();
+		List<String> availableModelIds = fetchModelIds();
+		if (availableModelIds.contains(modelId)) {
+			return modelId;
+		}
+		return "";
+	}
+
 	/**
 	 * Subscribes a subscriber to receive streaming String data the OpenAI API.
 	 * 
@@ -74,13 +134,24 @@ public class OpenAIChatCompletionClient {
 	public Runnable run(ChatConversation chatConversation) {
 		return () -> {
 			try {
-				HttpResponse<InputStream> streamingResponse = sendChatCompletionRequest(chatConversation);
-				processStreamingResponse(streamingResponse);
+				String modelId = getLastSelectedModelId();
+				if (modelId.isEmpty()) {
+					throw new Exception("No model selected.");
+				}			
+				HttpResponse<InputStream> streamingResponse = httpClientWrapper.sendRequest(
+						Preferences.getChatCompletionApiEndpoint().toURI(),
+						buildChatCompletionRequestBody(modelId, chatConversation));
+				// NOTE: We can't use streaming for "o1-mini" or "o1-preview" models.
+				if (!Preferences.useStreaming() || modelId.contains("o1-mini") || modelId.contains("o1-preview")) {
+					processResponse(streamingResponse);
+				}
+				else {
+					processStreamingResponse(streamingResponse);
+				}
 			} catch (Exception e) {
 				if (streamingResponsePublisher != null)
 					streamingResponsePublisher.closeExceptionally(e);
 				streamingResponsePublisher = null;
-				throw new RuntimeException(e);
 			} finally {
 				if (streamingResponsePublisher != null)
 					streamingResponsePublisher.close();
@@ -90,42 +161,29 @@ public class OpenAIChatCompletionClient {
 	}
 
 	/**
-	 * Sends a chat completion request to the OpenAI API with the given conversation
-	 * prompt.
-	 * 
-	 * @param chatConversation The conversation to be sent to the OpenAI API.
-	 * @return The HTTP response from the OpenAI API.
-	 * @throws Exception If an error occurs while sending the request.
-	 */
-	private HttpResponse<InputStream> sendChatCompletionRequest(ChatConversation chatConversation) {
-		try {
-			return sendRequest(Preferences.getChatCompletionApiEndpoint().toURI(),
-					buildChatCompletionRequestBody(chatConversation));
-		} catch (Exception e) {
-			throw new RuntimeException(e);
-		}
-	}
-
-	/**
 	 * Builds the request body for the chat completion request to the OpenAI API.
 	 * 
 	 * @param chatConversation The conversation to be sent to the OpenAI API.
 	 * @return The request body as a string.
+	 * @throws JsonProcessingException If an error occurs while building the request.
 	 */
-	private String buildChatCompletionRequestBody(ChatConversation chatConversation) {
+	private String buildChatCompletionRequestBody(String modelId, ChatConversation chatConversation) throws Exception {
 		try {
 			var objectMapper = new ObjectMapper();
 			var requestBody = objectMapper.createObjectNode();
 			var jsonMessages = objectMapper.createArrayNode();
 
-			// Add the model name first.
-			requestBody.put("model", Preferences.getApiModelName());
+			// Add the model ID first.
+			requestBody.put("model", modelId);
 
 			// Add the message history so far.
-			var systemMessage = objectMapper.createObjectNode();
-			systemMessage.put("role", "system");
-			systemMessage.put("content", PromptLoader.getSystemPromptText());
-			jsonMessages.add(systemMessage);
+			// NOTE: We can't use a system message for "o1-mini" or "o1-preview" models.
+			if (!modelId.contains("o1-mini") && !modelId.contains("o1-preview")) {
+				var systemMessage = objectMapper.createObjectNode();
+				systemMessage.put("role", "system");
+				systemMessage.put("content", PromptLoader.getSystemPromptText());
+				jsonMessages.add(systemMessage);
+			}
 			for (ChatMessage message : chatConversation.messages()) {
 				if (Objects.nonNull(message.getMessage())) {
 					var jsonMessage = objectMapper.createObjectNode();
@@ -155,23 +213,85 @@ public class OpenAIChatCompletionClient {
 			requestBody.set("messages", jsonMessages);
 
 			// Add the temperature to the request.
-			requestBody.put("temperature", Preferences.getTemperature());
+			// NOTE: We can't set temperature for "o1-mini" or "o1-preview" models.
+			if (!modelId.contains("o1-mini") && !modelId.contains("o1-preview")) {
+				requestBody.put("temperature", Preferences.getTemperature());
+			}
 
 			// Set the streaming flag.
-			requestBody.put("stream", true);
-			
-			// Set the flag to get the usage statistics.
-			var node = objectMapper.createObjectNode();
-			node.put("include_usage", true);
-			requestBody.putPOJO("stream_options", node);
+			// NOTE: We can't use streaming for "o1-mini" or "o1-preview" models.
+			if (!Preferences.useStreaming() || modelId.contains("o1-mini") || modelId.contains("o1-preview")) {
+				requestBody.put("stream", false);
+			} else {
+				requestBody.put("stream", true);
+				var node = objectMapper.createObjectNode();
+				node.put("include_usage", true);
+				requestBody.putPOJO("stream_options", node);
+			}
 			
 			return objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(requestBody);
 			
 		} catch (JsonProcessingException e) {
-			throw new RuntimeException(e);
+			throw new Exception("Failed to build chat completione request body", e);
 		}
 	}
 
+	/**
+	 * Processes the (non-streaming) response from the OpenAI API.
+	 * 
+	 * @param response The HTTP response from the OpenAI API.
+	 * @throws IOException If an error occurs while processing the response.
+	 */
+	private void processResponse(HttpResponse<InputStream> response) throws IOException {
+	    String modelName = "";
+	    String finishReason = "";
+	    String usageStatistics = "";
+	
+	    try (var inputStream = response.body();
+	         var reader = new InputStreamReader(inputStream, StandardCharsets.UTF_8);
+	         var bufferedReader = new BufferedReader(reader)) {
+	
+	        // Read the entire response into a single string
+	        String result = bufferedReader.lines().collect(Collectors.joining("\n"));
+	        //Logger.info(result);
+	
+	        // Parse the JSON from the complete response
+	        ObjectMapper mapper = new ObjectMapper();
+	        JsonNode jsonTree = mapper.readTree(result);
+	
+	        // Extract data from the JSON tree
+	        if (jsonTree.has("model")) {
+	            modelName = "Model: " + jsonTree.get("model").asText();
+	        }
+	
+	        if (jsonTree.has("choices") && jsonTree.get("choices").has(0)) {
+	            JsonNode choiceNode = jsonTree.get("choices").get(0);
+	            if (choiceNode.has("finish_reason")) {
+	                finishReason = "Finish: " + choiceNode.get("finish_reason").asText();
+	            }
+	            if (choiceNode.has("message") && choiceNode.get("message").has("content")) {
+	            	String responseContent = choiceNode.get("message").get("content").asText();
+	                streamingResponsePublisher.submit(responseContent.toString());
+	            }
+	        }
+	
+	        if (jsonTree.has("usage")) {
+	            JsonNode usageNode = jsonTree.get("usage");
+	            usageStatistics = generateUsageStatistics(usageNode);
+	        }
+	
+	    } catch (IOException e) {
+	        throw new IOException("Failed to process the response", e);
+	    }
+	
+	    // Log the extracted information
+	    if (isCancelled.get()) {
+	    	streamingResponsePublisher.closeExceptionally(new CancellationException());
+	    } else {
+	    	Logger.info(modelName+"\n"+finishReason+"\n"+usageStatistics);
+	    }
+	}
+	
 	/**
 	 * Processes the streaming response from the OpenAI API.
 	 * 
@@ -254,7 +374,6 @@ public class OpenAIChatCompletionClient {
 
 		}
 		if (isCancelled.get()) {
-			Logger.info("CANCELLED");
 			streamingResponsePublisher.closeExceptionally(new CancellationException());
 		}
 		else {
@@ -298,55 +417,4 @@ public class OpenAIChatCompletionClient {
 		return usageNode.has("completion_tokens") && usageNode.has("prompt_tokens") && usageNode.has("total_tokens");
 	}
 
-	/**
-	 * Sends an HTTP request with a specified URI and body.
-	 * 
-	 * @param uri  The URI of the request.
-	 * @param body The body of the request, or null if no body is required.
-	 * @return The HttpResponse object containing the response data.
-	 * @throws IOException If an error occurs while sending the request.
-	 */
-	private HttpResponse<InputStream> sendRequest(URI uri, String body) throws IOException {
-		try {
-			HttpRequest request = buildRequest(uri, body);
-			HttpResponse<InputStream> response = httpClient.send(request, HttpResponse.BodyHandlers.ofInputStream());
-			if (response.statusCode() == 200) {
-				return response;
-			} else {
-				Logger.warning("Request failed with status code " + response.statusCode());
-			}
-		} catch (Exception e) {
-			Logger.error("Failed to send request", e);
-		}
-		throw new IOException("Failed to send request");
-	}
-
-	/**
-	 * Builds an HttpRequest object with the specified URI and body.
-	 * 
-	 * @param uri  The URI of the request.
-	 * @param body The body of the request, or null if no body is required.
-	 * @return The built HttpRequest object.
-	 * @throws IOException If an error occurs while building the request.
-	 */
-	private HttpRequest buildRequest(URI uri, String body) throws IOException {
-		HttpRequest request;
-		try {
-			HttpRequest.Builder requestBuilder = HttpRequest.newBuilder().uri(uri)// .timeout(REQUEST_TIMEOUT)
-					.version(HttpClient.Version.HTTP_1_1)
-					.header("Authorization", "Bearer " + Preferences.getApiKey())
-					.header("Accept", "text/event-stream")
-					.header("Content-Type", "application/json");
-			if (body == null || body.isEmpty()) {
-				requestBuilder.GET();
-			} else {
-				requestBuilder.POST(HttpRequest.BodyPublishers.ofString(body));
-			}
-			request = requestBuilder.build();
-		} catch (Exception e) {
-			Logger.warning("Could not build the request", e);
-			throw new IOException("Could not build the request");
-		}
-		return request;
-	}
 }
