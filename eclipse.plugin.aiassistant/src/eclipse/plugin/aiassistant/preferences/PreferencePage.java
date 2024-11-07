@@ -149,7 +149,7 @@ public class PreferencePage extends FieldEditorPreferencePage implements IWorkbe
         Composite listComposite = new Composite(getFieldEditorParent(), SWT.NONE);
         GridLayout gridLayout = new GridLayout(NUM_LIST_COLUMNS, true);
         listComposite.setLayout(gridLayout);
-        listComposite.setLayoutData(new GridData(SWT.FILL, SWT.FILL, true, false, 2, 1));
+        listComposite.setLayoutData(new GridData(SWT.FILL, SWT.FILL, true, true, 2, 1));
 
         SelectionAdapter selectionListener = new SelectionAdapter() {
             @Override
