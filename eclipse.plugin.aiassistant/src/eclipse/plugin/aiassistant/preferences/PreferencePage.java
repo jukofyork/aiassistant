@@ -28,7 +28,7 @@ import eclipse.plugin.aiassistant.utility.URLFieldEditor;
  */
 public class PreferencePage extends FieldEditorPreferencePage implements IWorkbenchPreferencePage {
 
-	private static final int NUM_LIST_COLUMNS = 4;
+	private static final int NUM_LIST_COLUMNS = 1;
 	
     private static final String API_BASE_URL_LABEL = "OpenAI API Base Address";
     private static final String API_KEY_LABEL = "OpenAI API Key";
