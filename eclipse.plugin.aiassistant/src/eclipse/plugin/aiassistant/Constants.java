@@ -1,5 +1,11 @@
 package eclipse.plugin.aiassistant;
 
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+
+import eclipse.plugin.aiassistant.preferences.BookmarkedApiSettings;
+
 public final class Constants {
 
 	/**
@@ -30,6 +36,15 @@ public final class Constants {
 	public static final String DEFAULT_API_KEY = "<YOUR KEY HERE>";
 	public static final String MODEL_LIST_API_URL = "/models";
 	public static final String CHAT_COMPLETION_API_URL = "/chat/completions";
+	
+	// Default bookmarked settings, showing 5 of the most common OpenAI compatible end-points.
+	public static final List<BookmarkedApiSettings> DEFAULT_BOOKMARKED_API_SETTINGS = new ArrayList<>(Arrays.asList(
+		new BookmarkedApiSettings("gpt-4-turbo", "https://api.openai.com/v1", "<YOUR API KEY>", 0.0),
+		new BookmarkedApiSettings("anthropic/claude-3.5-sonnet", "https://openrouter.ai/api/v1","<YOUR API KEY>", 0.0),
+		new BookmarkedApiSettings("<LLAMA.CPP MODEL NAME>", "http://localhost:8080/v1", "none", 0.0),
+		new BookmarkedApiSettings("<OLLAMA MODEL NAME>", "http://localhost:11434/v1", "none", 0.0),
+		new BookmarkedApiSettings("<TABBYAPI MODEL NAME>", "http://localhost:5000/v1", "none", 0.0)
+	));
 
 	// Widget dimensions and spacing for the main view.
 	public static final int DEFAULT_EXTERNAL_MARGINS = 0;
@@ -37,9 +52,12 @@ public final class Constants {
 
 	// =============================================================================
 
+	// Response timeout.
+	// NOTE: Needs to be really high as slow models (like `o1-preview`, etc) can take ages to reply.
+	public static final int DEFAULT_REQUEST_TIMEOUT = 10*60*1000;  // 10 minutes for `o1-preview` seems OK 
+	
 	// Connection timeout.
 	// NOTE: A short connection timeout stops the preference page from stalling.
-	// NOTE: A general timeout not used as slow models can take ages to reply.
 	public static final int MIN_CONNECTION_TIMEOUT = 500;
 	public static final int MAX_CONNECTION_TIMEOUT = 10000;
 	public static final int DEFAULT_CONNECTION_TIMEOUT = 1000;

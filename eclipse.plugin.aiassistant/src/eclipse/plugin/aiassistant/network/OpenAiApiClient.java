@@ -4,9 +4,11 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.net.URI;
+import java.net.MalformedURLException;
+import java.net.URL;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -29,78 +31,97 @@ import eclipse.plugin.aiassistant.chat.ChatRole;
 import eclipse.plugin.aiassistant.preferences.Preferences;
 import eclipse.plugin.aiassistant.prompt.PromptLoader;
 
+/**
+ * Client for interacting with OpenAI-compatible APIs to handle chat completions.
+ * Supports both streaming and non-streaming responses, with configurable models
+ * and parameters. Implements the publisher-subscriber pattern for streaming responses.
+ */
 public class OpenAiApiClient {
-	
-	private final HttpClientWrapper httpClientWrapper;
-	
-	// Created on call to subscribe() and set null after closing.
+		
+	/** Publisher for streaming API responses. Created on subscribe() and cleared after closing. */
 	private SubmissionPublisher<String> streamingResponsePublisher = null;
 
+	/** Callback to check if the current operation should be cancelled */
 	private Supplier<Boolean> isCancelled = () -> false;
 
 	public OpenAiApiClient() {
-		this.httpClientWrapper = new HttpClientWrapper();
 	}
 
     /**
-     * Returns the current server status. If there is no server running or no model
-     * selected, it returns an error message. Otherwise, it returns "OK".
+     * Tests API connectivity and retrieves available models.
      *
-     * @return The current server status.
+     * @param apiUrl Base URL of the API endpoint
+     * @param apiKey Authentication key for API access
+     * @return "OK" if API is accessible, otherwise an error message
      */
-    public String getCurrentServerStatus() {
-        if (!httpClientWrapper.isAddressReachable(URI.create(Preferences.getModelsListApiEndpoint().toString()))) {
-            return "No OpenAI compatible '" + Constants.MODEL_LIST_API_URL + "' endpoint found at '"
-            		+ Preferences.getModelsListApiEndpoint().toString() + "'... Check Base Address and/or Key.";
-        }
-        if (getCurrentModelName().isEmpty()) {
-            return "No model selected. Check settings...";
-        }
-        return "OK";
-    }
-
+	public static String getApiStatus(String apiUrl, String apiKey) {
+		try {
+        	new HttpClientWrapper(
+    				getApiEndpoint(apiUrl, Constants.CHAT_COMPLETION_API_URL).toURI(),
+    				apiKey,
+        			Duration.ofMillis(1000),
+        			Duration.ofMillis(1000));
+		} catch (Exception e) {
+			return "No OpenAI compatible API found at '" + apiUrl + "'... Check URL and/or Key.";
+		}
+		return "OK";
+	}
+	
     /**
-     * Fetches the list of model IDs from the OpenAI API and returns them.
-     * 
-     * @return A list of model IDs.
+     * Retrieves the list of available models from the API.
+     *
+     * @param baseUrlString Base URL of the API endpoint
+     * @param apiKey Authentication key for API access
+     * @return List of model names, empty list if request fails
      */
-    public List<String> fetchModelIds() {
-        List<String> modelIds = new ArrayList<>();
+    public static List<String> fetchAvailableModelNames(String baseUrlString, String apiKey) {
+        List<String> modelNames = new ArrayList<>();
         try {
-            URI uri = Preferences.getModelsListApiEndpoint().toURI();
-            HttpResponse<InputStream> response = httpClientWrapper.sendRequest(uri, null);
+        	HttpClientWrapper client = new HttpClientWrapper(
+    				getApiEndpoint(baseUrlString, Constants.MODEL_LIST_API_URL).toURI(),
+    				apiKey,
+        			Duration.ofMillis(1000),
+        			Duration.ofMillis(1000));
+            HttpResponse<InputStream> response = client.sendRequest( null);
             InputStream responseBody = response.body();
             ObjectMapper objectMapper = new ObjectMapper();
             JsonNode rootNode = objectMapper.readTree(responseBody);
             if (rootNode.has("data") && rootNode.get("data").isArray()) {
                 for (JsonNode modelNode : rootNode.get("data")) {
                     if (modelNode.has("id")) {
-                        modelIds.add(modelNode.get("id").asText());
+                        modelNames.add(modelNode.get("id").asText());
                     }
                 }
             }
-            Collections.sort(modelIds); // Sort the list alphabetically
+            Collections.sort(modelNames);
         } catch (Exception e) {
-            modelIds.clear();
+            modelNames.clear();
         }
-        return modelIds;
+        return modelNames;
     }
-
-	/**
-	 * Returns the ID of the last selected model. If the model is not available, it
-	 * returns an empty string.
-	 *
-	 * @return The ID of the last selected model.
-	 */
-	public String getCurrentModelName() {
-		String modelId = Preferences.getCurrentModelName();
-		List<String> availableModelIds = fetchModelIds();
-		if (availableModelIds.contains(modelId)) {
-			return modelId;
+    
+    /**
+     * Validates the current model configuration and API connectivity.
+     * 
+     * @return "OK" if configuration is valid, otherwise returns an error message
+     */
+	public String checkCurrentModelStatus() {
+		if (Preferences.getCurrentModelName().isEmpty()) {
+			return "No model selected. Check settings...";
 		}
-		return "";
+		String status = getApiStatus(Preferences.getCurrentApiUrl(), Preferences.getCurrentApiKey());
+		if (!status.equals("OK")) {
+			return status;
+		}
+		List<String> modelNames = fetchAvailableModelNames(Preferences.getCurrentApiUrl(),
+				Preferences.getCurrentApiKey());
+		if (!modelNames.contains(Preferences.getCurrentModelName())) {
+			return "No model named '" + Preferences.getCurrentModelName() + "' available at '"
+					+ Preferences.getCurrentApiUrl() + "'. Check settings...";
+		}
+		return "OK";
 	}
-
+    	
 	/**
 	 * Subscribes a subscriber to receive streaming String data the OpenAI API.
 	 * 
@@ -123,26 +144,31 @@ public class OpenAiApiClient {
 		this.isCancelled = isCancelled;
 	}
 
-	/**
-	 * Creates and returns a Runnable that will execute the HTTP request to OpenAI
-	 * API with the given conversation prompt and process the responses.
-	 * 
-	 * @param prompt The conversation to be sent to the OpenAI API.
-	 * @return A Runnable that performs the HTTP request and processes the
-	 *         responses.
-	 */
+    /**
+     * Executes a chat completion request with the provided conversation.
+     * Handles both streaming and non-streaming responses based on preferences
+     * and model capabilities.
+     *
+     * @param chatConversation The conversation history and current prompt
+     * @return A Runnable that executes the API request when run
+     */
 	public Runnable run(ChatConversation chatConversation) {
 		return () -> {
 			try {
-				String modelId = getCurrentModelName();
-				if (modelId.isEmpty()) {
-					throw new Exception("No model selected.");
-				}			
+				String modelStatus = checkCurrentModelStatus();
+				if (!modelStatus.equals("OK")) {
+					throw new Exception(modelStatus);
+				}
+				String modelName = Preferences.getCurrentModelName();
+				HttpClientWrapper httpClientWrapper = new HttpClientWrapper(
+						getApiEndpoint(Preferences.getCurrentApiUrl(), Constants.CHAT_COMPLETION_API_URL).toURI(),
+						Preferences.getCurrentApiKey(),
+						Duration.ofMillis(Preferences.getConnectionTimeout()),
+						Duration.ofMinutes(Constants.DEFAULT_REQUEST_TIMEOUT));
 				HttpResponse<InputStream> streamingResponse = httpClientWrapper.sendRequest(
-						Preferences.getChatCompletionApiEndpoint().toURI(),
-						buildChatCompletionRequestBody(modelId, chatConversation));
+						buildChatCompletionRequestBody(modelName, chatConversation));
 				// NOTE: We can't use streaming for "o1-mini" or "o1-preview" models.
-				if (!Preferences.useStreaming() || modelId.contains("o1-mini") || modelId.contains("o1-preview")) {
+				if (!Preferences.useStreaming() || modelName.contains("o1-mini") || modelName.contains("o1-preview")) {
 					processResponse(streamingResponse);
 				}
 				else {
@@ -159,26 +185,29 @@ public class OpenAiApiClient {
 			}
 		};
 	}
-
-	/**
-	 * Builds the request body for the chat completion request to the OpenAI API.
-	 * 
-	 * @param chatConversation The conversation to be sent to the OpenAI API.
-	 * @return The request body as a string.
-	 * @throws JsonProcessingException If an error occurs while building the request.
-	 */
-	private String buildChatCompletionRequestBody(String modelId, ChatConversation chatConversation) throws Exception {
+	
+    /**
+     * Constructs the JSON request body for the chat completion API.
+     * Handles special cases for different model types and includes
+     * appropriate configuration based on model capabilities.
+     *
+     * @param modelName The name of the model to use
+     * @param chatConversation The conversation to process
+     * @return JSON string containing the request body
+     * @throws Exception if request body creation fails
+     */
+	private String buildChatCompletionRequestBody(String modelName, ChatConversation chatConversation) throws Exception {
 		try {
 			var objectMapper = new ObjectMapper();
 			var requestBody = objectMapper.createObjectNode();
 			var jsonMessages = objectMapper.createArrayNode();
 
 			// Add the model ID first.
-			requestBody.put("model", modelId);
+			requestBody.put("model", modelName);
 
 			// Add the message history so far.
 			// NOTE: We can't use a system message for "o1-mini" or "o1-preview" models.
-			if (!modelId.contains("o1-mini") && !modelId.contains("o1-preview")) {
+			if (!modelName.contains("o1-mini") && !modelName.contains("o1-preview")) {
 				var systemMessage = objectMapper.createObjectNode();
 				systemMessage.put("role", "system");
 				systemMessage.put("content", PromptLoader.getSystemPromptText());
@@ -214,13 +243,13 @@ public class OpenAiApiClient {
 
 			// Add the temperature to the request.
 			// NOTE: We can't set temperature for "o1-mini" or "o1-preview" models.
-			if (!modelId.contains("o1-mini") && !modelId.contains("o1-preview")) {
+			if (!modelName.contains("o1-mini") && !modelName.contains("o1-preview")) {
 				requestBody.put("temperature", Preferences.getCurrentTemperature());
 			}
 
 			// Set the streaming flag.
 			// NOTE: We can't use streaming for "o1-mini" or "o1-preview" models.
-			if (!Preferences.useStreaming() || modelId.contains("o1-mini") || modelId.contains("o1-preview")) {
+			if (!Preferences.useStreaming() || modelName.contains("o1-mini") || modelName.contains("o1-preview")) {
 				requestBody.put("stream", false);
 			} else {
 				requestBody.put("stream", true);
@@ -415,6 +444,24 @@ public class OpenAiApiClient {
 	 */
 	private boolean verifyAllRequiredFieldsExist(JsonNode usageNode) {
 		return usageNode.has("completion_tokens") && usageNode.has("prompt_tokens") && usageNode.has("total_tokens");
+	}
+
+    /**
+     * Constructs the complete API endpoint URL by combining base URL and path.
+     *
+     * @param apiUrl Base URL of the API
+     * @param path API endpoint path to append
+     * @return Complete URL for the API endpoint
+     * @throws RuntimeException if URL is malformed
+     */
+	private static URL getApiEndpoint(String apiUrl, String path) {
+		try {
+			URL baseUrl = new URL(apiUrl);
+			return new URL(baseUrl.getProtocol(), baseUrl.getHost(), baseUrl.getPort(), baseUrl.getFile() + path);
+		} catch (MalformedURLException e) {
+			Logger.error("Invalid API base URL", e);
+			throw new RuntimeException("Invalid API base URL", e);
+		}
 	}
 
 }

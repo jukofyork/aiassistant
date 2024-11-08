@@ -384,9 +384,9 @@ public class MainPresenter {
 
 		// Check model is valid to use if we are going to schedule the reply.
 		if (scheduleReply && chatConversation.hasUnsentUserMessages()) {
-			String serverStatus = openAiApiClient.getCurrentServerStatus();
-			if (!serverStatus.equals("OK")) {
-				Logger.error(serverStatus);
+			String modelStatus = openAiApiClient.checkCurrentModelStatus();
+			if (!modelStatus.equals("OK")) {
+				Logger.error(modelStatus);
 				return;
 			}
 		}

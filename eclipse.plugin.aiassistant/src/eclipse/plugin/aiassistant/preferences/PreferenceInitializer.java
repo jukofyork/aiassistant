@@ -1,9 +1,6 @@
 package eclipse.plugin.aiassistant.preferences;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
 
 import org.eclipse.core.runtime.preferences.AbstractPreferenceInitializer;
 
@@ -106,15 +103,12 @@ public class PreferenceInitializer extends AbstractPreferenceInitializer {
      * Sets the default bookmarked API settings to a few useful examples.
      */
 	private void setDefaultBookmarkedApiSettings() {
-		List<BookmarkedApiSettings> bookmarkedApiSettings = new ArrayList<>(Arrays.asList(
-			new BookmarkedApiSettings("gpt-4-turbo", "https://api.openai.com/v1", "<YOUR KEY HERE>", 0.0),
-			new BookmarkedApiSettings("anthropic/claude-3.5-sonnet", "https://openrouter.ai/api/v1","<YOUR KEY HERE>", 0.0),
-			new BookmarkedApiSettings("llama.cpp", "http://localhost:8080/v1", "none", 0.0)));
-        try {
-        	Preferences.saveBookmarkedApiSettings(bookmarkedApiSettings);
-        } catch (IOException e) {
-            Logger.warning("Failed to set default bookmarked API settings: " + e.getMessage());
-        }	
+	    try {
+	        String serializedSettings = Preferences.serializeBookmarkedApiSettings(Constants.DEFAULT_BOOKMARKED_API_SETTINGS);
+	        Preferences.getDefault().setDefault(PreferenceConstants.BOOKMARKED_API_SETTINGS, serializedSettings);
+	    } catch (IOException e) {
+	        Logger.warning("Failed to set default bookmarked API settings: " + e.getMessage());
+	    }
 	}
     
     /**

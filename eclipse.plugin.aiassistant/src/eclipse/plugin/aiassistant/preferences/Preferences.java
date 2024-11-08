@@ -5,7 +5,6 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
-import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.Base64;
@@ -13,12 +12,9 @@ import java.util.List;
 
 import org.eclipse.jface.preference.IPreferenceStore;
 import org.eclipse.jface.preference.PreferenceDialog;
-import org.eclipse.swt.widgets.Table;
 import org.eclipse.ui.dialogs.PreferencesUtil;
 
 import eclipse.plugin.aiassistant.Activator;
-import eclipse.plugin.aiassistant.Constants;
-import eclipse.plugin.aiassistant.Logger;
 import eclipse.plugin.aiassistant.chat.ChatConversation;
 import eclipse.plugin.aiassistant.utility.Eclipse;
 import eclipse.plugin.aiassistant.view.UserMessageHistory;
@@ -119,8 +115,8 @@ public final class Preferences {
 	 * 
 	 * @return The base URL of the API as a {@link URL} object.
 	 */
-	public static URL getCurrentApiUrl() {
-		return getApiEndpoint("");
+	public static String getCurrentApiUrl() {
+		return preferenceStore.getString(PreferenceConstants.CURRENT_API_URL);
 	}
 	
 	/**
@@ -140,25 +136,43 @@ public final class Preferences {
 	public static Double getCurrentTemperature() {
 		return preferenceStore.getDouble(PreferenceConstants.CURRENT_TEMPERATURE);
 	}
-	
-	/**
-	 * Returns the model list API endpoint URL.
-	 * 
-	 * @return The model list API endpoint URL.
-	 */
-	public static URL getModelsListApiEndpoint() {
-		return getApiEndpoint(Constants.MODEL_LIST_API_URL);
-	}
-
-	/**
-	 * Returns the chat completion API endpoint URL.
-	 * 
-	 * @return The chat completion API endpoint URL.
-	 */
-	public static URL getChatCompletionApiEndpoint() {
-		return getApiEndpoint(Constants.CHAT_COMPLETION_API_URL);
-	}
-	
+		
+    /**
+     * Serializes a list of BookmarkedApiSettings to a Base64 encoded string.
+     *
+     * @param bookmarkedApiSettings The list of settings to serialize
+     * @return Base64 encoded string representation
+     * @throws IOException If serialization fails
+     */
+    public static String serializeBookmarkedApiSettings(List<BookmarkedApiSettings> bookmarkedApiSettings) throws IOException {
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        try (ObjectOutputStream oos = new ObjectOutputStream(baos)) {
+            oos.writeObject(bookmarkedApiSettings);
+        }
+        return Base64.getEncoder().encodeToString(baos.toByteArray());
+    }
+    
+    /**
+     * Deserializes a Base64 encoded string back to a list of BookmarkedApiSettings.
+     *
+     * @param serializedData Base64 encoded string to deserialize
+     * @return The deserialized list of BookmarkedApiSettings
+     * @throws IOException If deserialization fails
+     * @throws ClassNotFoundException If the BookmarkedApiSettings class cannot be found
+     */
+    @SuppressWarnings("unchecked")
+    public static List<BookmarkedApiSettings> deserializeBookmarkedApiSettings(String serializedData) 
+            throws IOException, ClassNotFoundException {
+        if (serializedData == null || serializedData.isEmpty()) {
+            return new ArrayList<>();
+        }
+        
+        byte[] data = Base64.getDecoder().decode(serializedData);
+        try (ObjectInputStream ois = new ObjectInputStream(new ByteArrayInputStream(data))) {
+            return (List<BookmarkedApiSettings>) ois.readObject();
+        }
+    }
+    
     /**
      * Saves the current state of the bookmarked API settings to the preference store.
      *
@@ -166,11 +180,7 @@ public final class Preferences {
      * @throws IOException If an error occurs during the serialization process.
      */
     public static void saveBookmarkedApiSettings(List<BookmarkedApiSettings> bookmarkedApiSettings) throws IOException {
-        ByteArrayOutputStream baos = new ByteArrayOutputStream();
-        try (ObjectOutputStream oos = new ObjectOutputStream(baos)) {
-            oos.writeObject(bookmarkedApiSettings);
-        }
-        String serializedData = Base64.getEncoder().encodeToString(baos.toByteArray());
+        String serializedData = serializeBookmarkedApiSettings(bookmarkedApiSettings);
         preferenceStore.setValue(PreferenceConstants.BOOKMARKED_API_SETTINGS, serializedData);
     }
     
@@ -181,17 +191,9 @@ public final class Preferences {
      * @throws IOException If an error occurs during the deserialization process.
      * @throws ClassNotFoundException If the class of a serialized object cannot be found.
      */
-    @SuppressWarnings("unchecked")
     public static List<BookmarkedApiSettings> loadBookmarkedApiSettings() throws IOException, ClassNotFoundException {
         String serializedData = preferenceStore.getString(PreferenceConstants.BOOKMARKED_API_SETTINGS);
-        if (serializedData == null || serializedData.isEmpty()) {
-            return new ArrayList<>();
-        }
-        
-        byte[] data = Base64.getDecoder().decode(serializedData);
-        try (ObjectInputStream ois = new ObjectInputStream(new ByteArrayInputStream(data))) {
-            return (List<BookmarkedApiSettings>) ois.readObject();
-        }
+        return deserializeBookmarkedApiSettings(serializedData);
     }
     
     /**
@@ -238,20 +240,4 @@ public final class Preferences {
         return UserMessageHistory.deserialize(serializedData);
     }
     
-	/**
-	 * Returns the API endpoint URL for a given path.
-	 * 
-	 * @param path The path to append to the base API URL.
-	 * @return The API endpoint URL.
-	 */
-	private static URL getApiEndpoint(String path) {
-		try {
-			URL baseUrl = new URL(preferenceStore.getString(PreferenceConstants.CURRENT_API_URL));
-			return new URL(baseUrl.getProtocol(), baseUrl.getHost(), baseUrl.getPort(), baseUrl.getFile() + path);
-		} catch (MalformedURLException e) {
-			Logger.error("Invalid API URL", e);
-			throw new RuntimeException("Invalid API URL", e);
-		}
-	}
-
 }
