@@ -86,7 +86,7 @@ public class HttpClientWrapper {
 		HttpRequest request;
 		try {
 			HttpRequest.Builder requestBuilder = HttpRequest.newBuilder().uri(uri)// .timeout(REQUEST_TIMEOUT)
-					.version(HttpClient.Version.HTTP_1_1).header("Authorization", "Bearer " + Preferences.getApiKey())
+					.version(HttpClient.Version.HTTP_1_1).header("Authorization", "Bearer " + Preferences.getCurrentApiKey())
 					.header("Accept", "text/event-stream").header("Content-Type", "application/json");
 			if (body == null || body.isEmpty()) {
 				requestBuilder.GET();

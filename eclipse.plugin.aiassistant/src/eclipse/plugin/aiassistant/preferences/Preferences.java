@@ -1,11 +1,19 @@
 package eclipse.plugin.aiassistant.preferences;
 
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.util.ArrayList;
+import java.util.Base64;
+import java.util.List;
 
 import org.eclipse.jface.preference.IPreferenceStore;
 import org.eclipse.jface.preference.PreferenceDialog;
+import org.eclipse.swt.widgets.Table;
 import org.eclipse.ui.dialogs.PreferencesUtil;
 
 import eclipse.plugin.aiassistant.Activator;
@@ -49,7 +57,7 @@ public final class Preferences {
 	public static IPreferenceStore getDefault() {
 		return preferenceStore;
 	}
-
+	
 	/**
 	 * Returns the connection timeout value.
 	 * 
@@ -57,15 +65,6 @@ public final class Preferences {
 	 */
 	public static Integer getConnectionTimeout() {
 		return preferenceStore.getInt(PreferenceConstants.CONNECTION_TIMEOUT);
-	}
-
-	/**
-	 * Returns the temperature value.
-	 * 
-	 * @return The temperature value.
-	 */
-	public static Double getTemperature() {
-		return preferenceStore.getDouble(PreferenceConstants.TEMPERATURE);
 	}
 
 	/**
@@ -107,23 +106,41 @@ public final class Preferences {
 	}
 
 	/**
-	 * Retrieves the base URL for the API. This URL is used as the starting point for all API requests.
+	 * Returns the currently selected model name from the preference store.
+	 * 
+	 * @return The currently selected model name.
+	 */
+	public static String getCurrentModelName() {
+		return preferenceStore.getString(PreferenceConstants.CURRENT_MODEL_NAME);
+	}
+	
+	/**
+	 * Retrieves the currently selected API URL from the preference store.
 	 * 
 	 * @return The base URL of the API as a {@link URL} object.
 	 */
-	public static URL getApiBaseUrl() {
+	public static URL getCurrentApiUrl() {
 		return getApiEndpoint("");
 	}
 	
 	/**
-	 * Retrieves the stored API key from the preference store. This key is used for authenticating API requests.
+	 * Retrieves the currently selected API key from the preference store.
 	 * 
 	 * @return The API key as a {@link String}.
 	 */
-	public static String getApiKey() {
-		return preferenceStore.getString(PreferenceConstants.API_KEY);
+	public static String getCurrentApiKey() {
+		return preferenceStore.getString(PreferenceConstants.CURRENT_API_KEY);
 	}
 
+	/**
+	 * Returns the currently selected temperature from the preference store.
+	 * 
+	 * @return The temperature value.
+	 */
+	public static Double getCurrentTemperature() {
+		return preferenceStore.getDouble(PreferenceConstants.CURRENT_TEMPERATURE);
+	}
+	
 	/**
 	 * Returns the model list API endpoint URL.
 	 * 
@@ -142,6 +159,41 @@ public final class Preferences {
 		return getApiEndpoint(Constants.CHAT_COMPLETION_API_URL);
 	}
 	
+    /**
+     * Saves the current state of the bookmarked API settings to the preference store.
+     *
+     * @param bookmarkedApiSettings The list of settings to be saved.
+     * @throws IOException If an error occurs during the serialization process.
+     */
+    public static void saveBookmarkedApiSettings(List<BookmarkedApiSettings> bookmarkedApiSettings) throws IOException {
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        try (ObjectOutputStream oos = new ObjectOutputStream(baos)) {
+            oos.writeObject(bookmarkedApiSettings);
+        }
+        String serializedData = Base64.getEncoder().encodeToString(baos.toByteArray());
+        preferenceStore.setValue(PreferenceConstants.BOOKMARKED_API_SETTINGS, serializedData);
+    }
+    
+    /**
+     * Loads a set of bookmarked API settings from the preference store.
+     *
+     * @return The deserialized list of BookmarkedApiSettings.
+     * @throws IOException If an error occurs during the deserialization process.
+     * @throws ClassNotFoundException If the class of a serialized object cannot be found.
+     */
+    @SuppressWarnings("unchecked")
+    public static List<BookmarkedApiSettings> loadBookmarkedApiSettings() throws IOException, ClassNotFoundException {
+        String serializedData = preferenceStore.getString(PreferenceConstants.BOOKMARKED_API_SETTINGS);
+        if (serializedData == null || serializedData.isEmpty()) {
+            return new ArrayList<>();
+        }
+        
+        byte[] data = Base64.getDecoder().decode(serializedData);
+        try (ObjectInputStream ois = new ObjectInputStream(new ByteArrayInputStream(data))) {
+            return (List<BookmarkedApiSettings>) ois.readObject();
+        }
+    }
+    
     /**
      * Saves the current state of a ChatConversation to the preference store.
      *
@@ -187,15 +239,6 @@ public final class Preferences {
     }
     
 	/**
-	 * Returns the last selected model ID.
-	 * 
-	 * @return The last selected model ID.
-	 */
-	public static String getLastSelectedModelId() {
-		return preferenceStore.getString(PreferenceConstants.LAST_SELECTED_MODEL_ID);
-	}
-
-	/**
 	 * Returns the API endpoint URL for a given path.
 	 * 
 	 * @param path The path to append to the base API URL.
@@ -203,7 +246,7 @@ public final class Preferences {
 	 */
 	private static URL getApiEndpoint(String path) {
 		try {
-			URL baseUrl = new URL(preferenceStore.getString(PreferenceConstants.API_BASE_URL));
+			URL baseUrl = new URL(preferenceStore.getString(PreferenceConstants.CURRENT_API_URL));
 			return new URL(baseUrl.getProtocol(), baseUrl.getHost(), baseUrl.getPort(), baseUrl.getFile() + path);
 		} catch (MalformedURLException e) {
 			Logger.error("Invalid API URL", e);

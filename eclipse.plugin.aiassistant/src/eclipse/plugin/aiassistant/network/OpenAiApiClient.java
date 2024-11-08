@@ -53,7 +53,7 @@ public class OpenAiApiClient {
             return "No OpenAI compatible '" + Constants.MODEL_LIST_API_URL + "' endpoint found at '"
             		+ Preferences.getModelsListApiEndpoint().toString() + "'... Check Base Address and/or Key.";
         }
-        if (getLastSelectedModelId().isEmpty()) {
+        if (getCurrentModelName().isEmpty()) {
             return "No model selected. Check settings...";
         }
         return "OK";
@@ -92,8 +92,8 @@ public class OpenAiApiClient {
 	 *
 	 * @return The ID of the last selected model.
 	 */
-	public String getLastSelectedModelId() {
-		String modelId = Preferences.getLastSelectedModelId();
+	public String getCurrentModelName() {
+		String modelId = Preferences.getCurrentModelName();
 		List<String> availableModelIds = fetchModelIds();
 		if (availableModelIds.contains(modelId)) {
 			return modelId;
@@ -134,7 +134,7 @@ public class OpenAiApiClient {
 	public Runnable run(ChatConversation chatConversation) {
 		return () -> {
 			try {
-				String modelId = getLastSelectedModelId();
+				String modelId = getCurrentModelName();
 				if (modelId.isEmpty()) {
 					throw new Exception("No model selected.");
 				}			
@@ -215,7 +215,7 @@ public class OpenAiApiClient {
 			// Add the temperature to the request.
 			// NOTE: We can't set temperature for "o1-mini" or "o1-preview" models.
 			if (!modelId.contains("o1-mini") && !modelId.contains("o1-preview")) {
-				requestBody.put("temperature", Preferences.getTemperature());
+				requestBody.put("temperature", Preferences.getCurrentTemperature());
 			}
 
 			// Set the streaming flag.
