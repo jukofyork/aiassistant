@@ -388,6 +388,7 @@ public class PreferencePage extends FieldEditorPreferencePage implements IWorkbe
 	    super.performDefaults();
 	    bookmarkedApiSettings = Constants.DEFAULT_BOOKMARKED_API_SETTINGS;
 	    tableViewer.setInput(bookmarkedApiSettings);
+	    tableViewer.refresh();
 	}
 
 }
