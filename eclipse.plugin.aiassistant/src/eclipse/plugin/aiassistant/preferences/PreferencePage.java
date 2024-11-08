@@ -385,14 +385,9 @@ public class PreferencePage extends FieldEditorPreferencePage implements IWorkbe
      */
 	@Override
 	protected void performDefaults() {
-		super.performDefaults();
-		bookmarkedApiSettings = Constants.DEFAULT_BOOKMARKED_API_SETTINGS;
-		try {
-			Preferences.saveBookmarkedApiSettings(bookmarkedApiSettings);
-		} catch (IOException e) {
-			Logger.warning("Failed to set default bookmarked API settings: " + e.getMessage());
-		}
-		tableViewer.setInput(bookmarkedApiSettings);
+	    super.performDefaults();
+	    bookmarkedApiSettings = Constants.DEFAULT_BOOKMARKED_API_SETTINGS;
+	    tableViewer.setInput(bookmarkedApiSettings);
 	}
 
 }
