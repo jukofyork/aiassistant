@@ -289,10 +289,10 @@ public class MainPresenter {
 		                }
 		            }
 		    		performOnMainView(mainView -> {
+		    			mainView.getChatMessageArea().scrollToBottom();
 		    			mainView.getChatMessageArea().setVisible(true);
 		    			mainView.getChatMessageArea().setEnabled(true);
 		    		});
-		    		onScrollToBottom();
 	            }
 	    		try {
 	                userMessageHistory = Preferences.loadUserMessageHistory();
