@@ -98,6 +98,15 @@ public class ChatConversationArea {
 		browserMenu.setEnabled(enabled);
 		useSmoothScroll = enabled;
 	}
+	
+	/**
+	 * Sets the visible state of the chat conversation area.
+	 *
+	 * @param enabled True to enable, false to disable.
+	 */
+	public void setVisible(boolean enabled) {
+		browser.setVisible(enabled);
+	}
 
 	/**
 	 * Adds a new message to the chat conversation area.
