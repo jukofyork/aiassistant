@@ -22,6 +22,7 @@ public class PreferenceInitializer extends AbstractPreferenceInitializer {
     @Override
     public void initializeDefaultPreferences() {
         setDefaultConnectionTimeout();
+        setDefaultRequestTimeout();
         setDefaultChatFontSize();
         setDefaultNotificationFontSize();
         setDefaultUseStreaming();
@@ -41,6 +42,13 @@ public class PreferenceInitializer extends AbstractPreferenceInitializer {
      */
     private void setDefaultConnectionTimeout() {
         Preferences.getDefault().setDefault(PreferenceConstants.CONNECTION_TIMEOUT, Constants.DEFAULT_CONNECTION_TIMEOUT);
+    }
+    
+    /**
+     * Sets the default request timeout for API requests.
+     */
+    private void setDefaultRequestTimeout() {
+        Preferences.getDefault().setDefault(PreferenceConstants.REQUEST_TIMEOUT, Constants.DEFAULT_REQUEST_TIMEOUT);
     }
 
     /**

@@ -5,6 +5,7 @@ package eclipse.plugin.aiassistant.preferences;
  */
 public class PreferenceConstants {	
 	public static final String CONNECTION_TIMEOUT = "CONNECTION_TIMEOUT";
+	public static final String REQUEST_TIMEOUT = "REQUEST_TIMEOUT";
 	public static final String CHAT_FONT_SIZE = "CHAT_FONT_SIZE";
 	public static final String NOTIFICATION_FONT_SIZE = "NOTIFICATION_FONT_SIZE";
 	public static final String USE_STREAMING = "USE_STREAMING";

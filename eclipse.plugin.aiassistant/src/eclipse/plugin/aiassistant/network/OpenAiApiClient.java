@@ -164,11 +164,11 @@ public class OpenAiApiClient {
 						getApiEndpoint(Preferences.getCurrentApiUrl(), Constants.CHAT_COMPLETION_API_URL).toURI(),
 						Preferences.getCurrentApiKey(),
 						Duration.ofMillis(Preferences.getConnectionTimeout()),
-						Duration.ofMinutes(Constants.DEFAULT_REQUEST_TIMEOUT));
+						Duration.ofMillis(Preferences.getRequestTimeout()));
 				HttpResponse<InputStream> streamingResponse = httpClientWrapper.sendRequest(
 						buildChatCompletionRequestBody(modelName, chatConversation));
-				// NOTE: We can't use streaming for "o1-mini" or "o1-preview" models.
-				if (!Preferences.useStreaming() || modelName.contains("o1-mini") || modelName.contains("o1-preview")) {
+				// NOTE: We can't use streaming for 'o1-mini' or 'o1-preview' models.
+				if (!Preferences.useStreaming() || isO1Model(modelName)) {
 					processResponse(streamingResponse);
 				}
 				else {
@@ -206,8 +206,8 @@ public class OpenAiApiClient {
 			requestBody.put("model", modelName);
 
 			// Add the message history so far.
-			// NOTE: We can't use a system message for "o1-mini" or "o1-preview" models.
-			if (!modelName.contains("o1-mini") && !modelName.contains("o1-preview")) {
+			// NOTE: We can't use a system message for 'o1-mini' or 'o1-preview' models.
+			if (!isO1Model(modelName)) {
 				var systemMessage = objectMapper.createObjectNode();
 				systemMessage.put("role", "system");
 				systemMessage.put("content", PromptLoader.getSystemPromptText());
@@ -242,14 +242,14 @@ public class OpenAiApiClient {
 			requestBody.set("messages", jsonMessages);
 
 			// Add the temperature to the request.
-			// NOTE: We can't set temperature for "o1-mini" or "o1-preview" models.
-			if (!modelName.contains("o1-mini") && !modelName.contains("o1-preview")) {
+			// NOTE: We can't set temperature for 'o1-mini' or 'o1-preview' models.
+			if (!isO1Model(modelName)) {
 				requestBody.put("temperature", Preferences.getCurrentTemperature());
 			}
 
 			// Set the streaming flag.
-			// NOTE: We can't use streaming for "o1-mini" or "o1-preview" models.
-			if (!Preferences.useStreaming() || modelName.contains("o1-mini") || modelName.contains("o1-preview")) {
+			// NOTE: We can't use streaming for 'o1-mini' or 'o1-preview' models.
+			if (!Preferences.useStreaming() || isO1Model(modelName)) {
 				requestBody.put("stream", false);
 			} else {
 				requestBody.put("stream", true);
@@ -462,6 +462,20 @@ public class OpenAiApiClient {
 			Logger.error("Invalid API base URL", e);
 			throw new RuntimeException("Invalid API base URL", e);
 		}
+	}
+	
+	/**
+	 * Determines if the given model is an O1-series model with limited capabilities.
+	 * O1 models have specific restrictions: they cannot use streaming responses,
+	 * do not support system messages, and cannot have their temperature parameter modified.
+	 *
+	 * @param modelName the name of the OpenAI model to check
+	 * @return true if the model is an O1-series model (o1-mini or o1-preview),
+	 *         false otherwise
+	 * @since 1.0
+	 */
+	private static boolean isO1Model(String modelName) {
+	    return modelName.contains("o1-mini") || modelName.contains("o1-preview");
 	}
 
 }

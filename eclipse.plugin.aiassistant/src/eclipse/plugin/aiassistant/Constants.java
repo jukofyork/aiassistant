@@ -51,16 +51,18 @@ public final class Constants {
 	public static final int DEFAULT_INTERNAL_SPACING = 2;
 
 	// =============================================================================
-
-	// Response timeout.
-	// NOTE: Needs to be really high as slow models (like `o1-preview`, etc) can take ages to reply.
-	public static final int DEFAULT_REQUEST_TIMEOUT = 10*60*1000;  // 10 minutes for `o1-preview` seems OK 
 	
 	// Connection timeout.
 	// NOTE: A short connection timeout stops the preference page from stalling.
 	public static final int MIN_CONNECTION_TIMEOUT = 500;
 	public static final int MAX_CONNECTION_TIMEOUT = 10000;
 	public static final int DEFAULT_CONNECTION_TIMEOUT = 1000;
+
+	// Response timeout.
+	// NOTE: The new `o1` models can take ages to reply... 60 seconds should hopefully be enough.
+	public static final int MIN_REQUEST_TIMEOUT = 5000;
+	public static final int MAX_REQUEST_TIMEOUT = 600000;
+	public static final int DEFAULT_REQUEST_TIMEOUT = 60000;
 
 	// Temperature value.
 	// NOTE: Coding LLMs need a much lower (preferably zero) temperature vs chat LLMs.

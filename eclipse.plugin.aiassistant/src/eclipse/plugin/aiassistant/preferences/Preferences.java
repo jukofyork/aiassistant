@@ -62,6 +62,15 @@ public final class Preferences {
 	public static Integer getConnectionTimeout() {
 		return preferenceStore.getInt(PreferenceConstants.CONNECTION_TIMEOUT);
 	}
+	
+	/**
+	 * Returns the request timeout value.
+	 * 
+	 * @return The request timeout value.
+	 */
+	public static Integer getRequestTimeout() {
+		return preferenceStore.getInt(PreferenceConstants.REQUEST_TIMEOUT);
+	}
 
 	/**
 	 * Returns the chat font size.

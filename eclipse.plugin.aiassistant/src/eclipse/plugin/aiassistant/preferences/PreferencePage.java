@@ -49,6 +49,7 @@ public class PreferencePage extends FieldEditorPreferencePage implements IWorkbe
 
 	 /** Field editors for general plugin settings */
 	private IntegerFieldEditor connectionTimeoutEditor;
+	private IntegerFieldEditor requestTimeoutEditor;
 	private IntegerFieldEditor chatFontSizeEditor;
 	private IntegerFieldEditor notificationFontSizeEditor;
 	private BooleanFieldEditor streamingEditor;
@@ -119,6 +120,10 @@ public class PreferencePage extends FieldEditorPreferencePage implements IWorkbe
 		connectionTimeoutEditor = new IntegerFieldEditor(PreferenceConstants.CONNECTION_TIMEOUT,
 				"Connection Timeout (ms):", parent);
 		connectionTimeoutEditor.setValidRange(Constants.MIN_CONNECTION_TIMEOUT, Constants.MAX_CONNECTION_TIMEOUT);
+		
+		requestTimeoutEditor = new IntegerFieldEditor(PreferenceConstants.REQUEST_TIMEOUT,
+				"Request Timeout (ms):", parent);
+		requestTimeoutEditor.setValidRange(Constants.MIN_REQUEST_TIMEOUT, Constants.MAX_REQUEST_TIMEOUT);
 
 		chatFontSizeEditor = new IntegerFieldEditor(PreferenceConstants.CHAT_FONT_SIZE, "Chat Font Size:", parent);
 		chatFontSizeEditor.setValidRange(Constants.MIN_CHAT_FONT_SIZE, Constants.MAX_CHAT_FONT_SIZE);
@@ -135,6 +140,7 @@ public class PreferencePage extends FieldEditorPreferencePage implements IWorkbe
 				BooleanFieldEditor.SEPARATE_LABEL, parent);
 
 		addField(connectionTimeoutEditor);
+		addField(requestTimeoutEditor);
 		addField(chatFontSizeEditor);
 		addField(notificationFontSizeEditor);
 		addField(streamingEditor);
