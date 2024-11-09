@@ -270,28 +270,30 @@ public class MainPresenter {
 	                Logger.warning("Failed to load chat conversation: " + e.getMessage());
 	                tempConversation = new ChatConversation(); // Fallback to an empty conversation
 	            }
-	    		performOnMainView(mainView -> {
-	    			mainView.getChatMessageArea().setEnabled(false);
-	    			mainView.getChatMessageArea().setVisible(false);
-	    		});
-	            for (ChatMessage message : tempConversation.messages()) {
-	                switch (message.getRole()) {
-	                    case USER:
-	                        sendUserMessage(message.getMessage(), false);
-	                        break;
-	                    case ASSISTANT:
-	                        sendAutoReplyAssistantMessage(message.getMessage());
-	                        break;
-	                    case NOTIFICATION:
-	                        displayNotificationMessage(message.getMessage());
-	                        break;
-	                }
+	            if (!tempConversation.isEmpty()) {
+		    		performOnMainView(mainView -> {
+		    			mainView.getChatMessageArea().setEnabled(false);
+		    			mainView.getChatMessageArea().setVisible(false);
+		    		});
+		            for (ChatMessage message : tempConversation.messages()) {
+		                switch (message.getRole()) {
+		                    case USER:
+		                        sendUserMessage(message.getMessage(), false);
+		                        break;
+		                    case ASSISTANT:
+		                        sendAutoReplyAssistantMessage(message.getMessage());
+		                        break;
+		                    case NOTIFICATION:
+		                        displayNotificationMessage(message.getMessage());
+		                        break;
+		                }
+		            }
+		    		performOnMainView(mainView -> {
+		    			mainView.getChatMessageArea().setVisible(true);
+		    			mainView.getChatMessageArea().setEnabled(true);
+		    		});
+		    		onScrollToBottom();
 	            }
-	    		performOnMainView(mainView -> {
-	    			mainView.getChatMessageArea().setVisible(true);
-	    			mainView.getChatMessageArea().setEnabled(true);
-	    		});
-	    		onScrollToBottom(); // Ensures the view is scrolled to the bottom after loading messages
 	    		try {
 	                userMessageHistory = Preferences.loadUserMessageHistory();
 	            } catch (IOException e) {
