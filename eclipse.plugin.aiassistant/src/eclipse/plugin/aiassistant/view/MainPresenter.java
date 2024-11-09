@@ -273,7 +273,6 @@ public class MainPresenter {
 	            if (!tempConversation.isEmpty()) {
 		    		performOnMainView(mainView -> {
 		    			mainView.getChatMessageArea().setEnabled(false);
-		    			//mainView.getChatMessageArea().setVisible(false);
 		    		});
 		            for (ChatMessage message : tempConversation.messages()) {
 		                switch (message.getRole()) {
@@ -290,7 +289,6 @@ public class MainPresenter {
 		            }
 		    		performOnMainView(mainView -> {
 		    			mainView.getChatMessageArea().scrollToBottom();
-		    			//mainView.getChatMessageArea().setVisible(true);
 		    			mainView.getChatMessageArea().setEnabled(true);
 		    		});
 	            }
