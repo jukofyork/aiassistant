@@ -24,7 +24,7 @@ public final class Constants {
 
 	// The CSS and JS files we will load to initialise the browser.
 	public static final String[] CSS_FILENAMES = { "main-style.css", "code-block-header.css", "code-block-style.css" };
-	public static final String[] JS_FILENAMES = { "highlight.min.js" };
+	public static final String[] JS_FILENAMES = { "mathjax/es5/tex-mml-chtml.js", "highlight.min.js", "latex-renderer.js" };
 	
 	// Contains all highlight.js's supported languages and file extensions.
 	// See: https://github.com/highlightjs/highlight.js/blob/main/SUPPORTED_LANGUAGES.md

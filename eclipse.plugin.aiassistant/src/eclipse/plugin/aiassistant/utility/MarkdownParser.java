@@ -20,46 +20,114 @@ public class MarkdownParser {
 	 * @return An HTML formatted string representation of the Markdown text.
 	 */
 	public static String convertMarkdownToHtml(String markdownText, boolean includeCodeBlockButtons) {
-		markdownText = StringUtils.stripStart(markdownText, " "); // Strip leading spaces.
-
-		StringBuilder htmlOutput = new StringBuilder();
-
-		boolean isInsideCodeBlock = false;
-
-		final Pattern codeBlockPattern = Pattern.compile("^[ \\t]*```([a-zA-Z]*)[ \\t]*$");
-
-		try (Scanner scanner = new Scanner(markdownText)) {
-			scanner.useDelimiter("\n");
-
-			while (scanner.hasNext()) {
-				String line = scanner.next();
-				Matcher codeBlockMatcher = codeBlockPattern.matcher(line);
-				if (!isInsideCodeBlock) {
-					if (codeBlockMatcher.find()) {
-						String language = codeBlockMatcher.group(1);
-						appendOpenCodeBlock(htmlOutput, language, includeCodeBlockButtons);
-						isInsideCodeBlock = true;
-					} else {
-						htmlOutput.append(convertMarkdownLineToHtml(StringEscapeUtils.escapeHtml4(line)));
-					}
-				} else {
-					if (codeBlockMatcher.find()) {
-						appendCloseCodeBlock(htmlOutput);
-						isInsideCodeBlock = false;
-					} else {
-						htmlOutput.append(convertToEscapedHtmlLine(line));
-					}
-				}
-			}
-		}
-
-		if (isInsideCodeBlock) {
-			appendCloseCodeBlock(htmlOutput);
-		}
-
-		return replaceEscapeCodes(replaceLineBreaks(htmlOutput.toString()));
+	    markdownText = StringUtils.stripStart(markdownText, " ");
+	    StringBuilder htmlOutput = new StringBuilder();
+	
+	    // Track which block we entered first (if nested)
+	    enum BlockType { NONE, CODE, LATEX }
+	    BlockType currentBlock = BlockType.NONE;
+	
+	    final Pattern codeBlockPattern = Pattern.compile("^[ \\t]*```([a-zA-Z]*)[ \\t]*$");
+	    final Pattern latexOpenPattern = Pattern.compile(
+	            "^[ \\t]*(?:" +
+	            "\\$\\$|" +                           // $$ syntax
+	            "\\\\\\[|" +                          // \[ syntax
+	            "\\\\begin\\{(?:equation|align|gather|multline)\\*?\\}" + // \begin{...} syntax
+	            ")[ \\t]*$"
+	    );
+	    final Pattern latexClosePattern = Pattern.compile(
+	            "^[ \\t]*(?:" +
+	            "\\$\\$|" +                           // closing $$ syntax
+	            "\\\\\\]|" +                          // closing \] syntax
+	            "\\\\end\\{(?:equation|align|gather|multline)\\*?\\}" +   // \end{...} syntax
+	            ")[ \\t]*$"
+	    );
+	
+	    try (Scanner scanner = new Scanner(markdownText)) {
+	        scanner.useDelimiter("\n");
+	
+	        while (scanner.hasNext()) {
+	            String line = scanner.next();
+	            Matcher codeBlockMatcher = codeBlockPattern.matcher(line);
+	            Matcher latexOpenMatcher = latexOpenPattern.matcher(line);
+	            Matcher latexCloseMatcher = latexClosePattern.matcher(line);
+	            
+	            switch (currentBlock) {
+	                case NONE:
+	                    if (codeBlockMatcher.find()) {
+	                        String language = codeBlockMatcher.group(1);
+	                        appendOpenCodeBlock(htmlOutput, language, includeCodeBlockButtons);
+	                        currentBlock = BlockType.CODE;
+	                    } else if (latexOpenMatcher.find()) {
+	                        appendOpenLatexBlock(htmlOutput);
+	                        currentBlock = BlockType.LATEX;
+	                    } else {
+	                        htmlOutput.append(convertLineToHtml(StringEscapeUtils.escapeHtml4(line)));
+	                    }
+	                    break;
+	            
+	                case CODE:
+	                    if (codeBlockMatcher.find()) {
+	                        appendCloseCodeBlock(htmlOutput);
+	                        currentBlock = BlockType.NONE;
+	                    } else {
+	                        htmlOutput.append(convertToEscapedHtmlLine(line));
+	                    }
+	                    break;
+	            
+	                case LATEX:
+	                    if (latexCloseMatcher.find()) {
+	                        appendCloseLatexBlock(htmlOutput);
+	                        currentBlock = BlockType.NONE;
+	                    } else {
+	                        htmlOutput.append(convertToEscapedHtmlLine(line));
+	                    }
+	                    break;
+	            }
+	        }
+	    }
+	
+	    // Handle unclosed blocks
+	    switch (currentBlock) {
+	        case CODE:
+	            appendCloseCodeBlock(htmlOutput);
+	            break;
+	        case LATEX:
+	            appendCloseLatexBlock(htmlOutput);
+	            break;
+	        default:
+	            break;
+	    }
+	
+	    return replaceEscapeCodes(replaceLineBreaks(htmlOutput.toString()));
 	}
 
+	private static String convertLineToHtml(String line) {
+	    return convertMarkdownLineToHtml(convertInlineLatexToHtml(line));
+	}
+
+	private static String convertInlineLatexToHtml(String line) {
+	    String inlineLatexPatterns = 
+	        // Single $ pairs (same open/close)
+	        "\\$(.*?)\\$|" +
+	        // \( \) pairs
+	        "\\\\\\((.*?)\\\\\\)|" +
+	        // \begin{...} \end{...} inline pairs
+	        "\\\\begin\\{(math|inline)\\}(.*?)\\\\end\\{\\3\\}";
+	    
+	    Pattern inlineLatexPattern = Pattern.compile(inlineLatexPatterns);
+	    return inlineLatexPattern.matcher(line).replaceAll(match -> {
+	        // Check each capture group since we don't know which pattern matched
+	        for (int i = 1; i <= match.groupCount(); i++) {
+	            String content = match.group(i);
+	            if (content != null) {
+	                return "<INLINE_LATEX>" + content + "</INLINE_LATEX>";
+	            }
+	        }
+	        return match.group(); // fallback, shouldn't happen
+	    });
+	}
+	
 	/**
 	 * Converts a single line of Markdown to HTML.
 	 *
@@ -144,6 +212,14 @@ public class MarkdownParser {
 	 */
 	private static void appendCloseCodeBlock(StringBuilder htmlOutput) {
 		htmlOutput.append("</code></pre>").append("\n");
+	}
+	
+	private static void appendOpenLatexBlock(StringBuilder htmlOutput) {
+	    htmlOutput.append("<BLOCK_LATEX>");
+	}
+
+	private static void appendCloseLatexBlock(StringBuilder htmlOutput) {
+	    htmlOutput.append("</BLOCK_LATEX>");
 	}
 
 	/**

@@ -65,8 +65,8 @@ public class BrowserScriptGenerator {
 	 *         chat message element.
 	 */
 	public String generateUpdateMessageScript(String html, UUID messageId) {
-		return "document.getElementById(\"message-" + messageId.toString() + "\").innerHTML = '" + html
-				+ "';hljs.highlightAll();";
+	    return "document.getElementById(\"message-" + messageId.toString() + 
+	           "\").innerHTML = '" + html + "';hljs.highlightAll();renderLatex();";
 	}
 
 	/**
