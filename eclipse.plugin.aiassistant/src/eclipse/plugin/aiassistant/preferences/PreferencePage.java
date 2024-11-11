@@ -142,11 +142,11 @@ public class PreferencePage extends FieldEditorPreferencePage implements IWorkbe
      */
 	private void createGlobalSettingsGroup(Composite parent) {
 		connectionTimeoutEditor = new IntegerFieldEditor(PreferenceConstants.CONNECTION_TIMEOUT,
-				"Connection Timeout (ms):", parent);
+				"Connection Timeout (s):", parent);
 		connectionTimeoutEditor.setValidRange(Constants.MIN_CONNECTION_TIMEOUT, Constants.MAX_CONNECTION_TIMEOUT);
 		
 		requestTimeoutEditor = new IntegerFieldEditor(PreferenceConstants.REQUEST_TIMEOUT,
-				"Request Timeout (ms):", parent);
+				"Request Timeout (s):", parent);
 		requestTimeoutEditor.setValidRange(Constants.MIN_REQUEST_TIMEOUT, Constants.MAX_REQUEST_TIMEOUT);
 
 		chatFontSizeEditor = new IntegerFieldEditor(PreferenceConstants.CHAT_FONT_SIZE, "Chat Font Size:", parent);

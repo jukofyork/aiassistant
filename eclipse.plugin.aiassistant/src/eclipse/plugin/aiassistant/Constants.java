@@ -54,15 +54,15 @@ public final class Constants {
 	
 	// Connection timeout.
 	// NOTE: A short connection timeout stops the preference page from stalling.
-	public static final int MIN_CONNECTION_TIMEOUT = 500;
-	public static final int MAX_CONNECTION_TIMEOUT = 10000;
-	public static final int DEFAULT_CONNECTION_TIMEOUT = 1000;
+	public static final int MIN_CONNECTION_TIMEOUT = 1;
+	public static final int MAX_CONNECTION_TIMEOUT = 10;
+	public static final int DEFAULT_CONNECTION_TIMEOUT = 1;
 
 	// Response timeout.
-	// NOTE: The new `o1` models can take ages to reply... 60 seconds should hopefully be enough.
-	public static final int MIN_REQUEST_TIMEOUT = 5000;
-	public static final int MAX_REQUEST_TIMEOUT = 600000;
-	public static final int DEFAULT_REQUEST_TIMEOUT = 60000;
+	// NOTE: The new `o1` models can take ages to reply... 5 minutes should hopefully be enough.
+	public static final int MIN_REQUEST_TIMEOUT = 5;
+	public static final int MAX_REQUEST_TIMEOUT = Integer.MAX_VALUE;
+	public static final int DEFAULT_REQUEST_TIMEOUT = 300;
 
 	// Temperature value.
 	// NOTE: Coding LLMs need a much lower (preferably zero) temperature vs chat LLMs.

@@ -163,8 +163,8 @@ public class OpenAiApiClient {
 				HttpClientWrapper httpClientWrapper = new HttpClientWrapper(
 						getApiEndpoint(Preferences.getCurrentApiUrl(), Constants.CHAT_COMPLETION_API_URL).toURI(),
 						Preferences.getCurrentApiKey(),
-						Duration.ofMillis(Preferences.getConnectionTimeout()),
-						Duration.ofMillis(Preferences.getRequestTimeout()));
+						Duration.ofSeconds(Preferences.getConnectionTimeout()),
+						Duration.ofSeconds(Preferences.getRequestTimeout()));
 				HttpResponse<InputStream> streamingResponse = httpClientWrapper.sendRequest(
 						buildChatCompletionRequestBody(modelName, chatConversation));
 				// NOTE: We can't use streaming for 'o1-mini' or 'o1-preview' models.
