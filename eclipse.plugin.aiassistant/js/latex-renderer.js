@@ -1,14 +1,15 @@
 function renderLatex() {
     // Convert block latex tags
-    document.querySelectorAll('BLOCK_LATEX').forEach(elem => {
-        elem.outerHTML = '\\[' + elem.innerHTML + '\\]';
+    document.querySelectorAll('.block-latex').forEach(elem => {
+        let decodedLatex = atob(elem.innerHTML);
+        elem.outerHTML = '\\\[' + decodedLatex + '\\\]';
     });
     
     // Convert inline latex tags
-    document.querySelectorAll('INLINE_LATEX').forEach(elem => {
-        elem.outerHTML = '\\(' + elem.innerHTML + '\\)';
+    document.querySelectorAll('.inline-latex').forEach(elem => {
+        let decodedLatex = atob(elem.innerHTML);
+        elem.outerHTML = '\\\(' + decodedLatex + '\\\)';
     });
     
-    // Trigger MathJax rendering
     MathJax.typeset();
 }

@@ -1,5 +1,6 @@
 package eclipse.plugin.aiassistant.utility;
 
+import java.util.Base64;
 import java.util.Scanner;
 import java.util.UUID;
 import java.util.regex.Matcher;
@@ -29,20 +30,15 @@ public class MarkdownParser {
 	
 	    final Pattern codeBlockPattern = Pattern.compile("^[ \\t]*```([a-zA-Z]*)[ \\t]*$");
 	    final Pattern latexOpenPattern = Pattern.compile(
-	            "^[ \\t]*(?:" +
-	            "\\$\\$|" +                           // $$ syntax
-	            "\\\\\\[|" +                          // \[ syntax
-	            "\\\\begin\\{(?:equation|align|gather|multline)\\*?\\}" + // \begin{...} syntax
-	            ")[ \\t]*$"
+            "^[ \\t]*(?:" +
+            "\\$\\$(?!.*\\$\\$)|" +                           // $$ syntax without closing on same line
+            "\\\\\\[(?!.*\\\\\\])" +                          // \[ syntax without closing on same line
+            ").*$"
 	    );
-	    final Pattern latexClosePattern = Pattern.compile(
-	            "^[ \\t]*(?:" +
-	            "\\$\\$|" +                           // closing $$ syntax
-	            "\\\\\\]|" +                          // closing \] syntax
-	            "\\\\end\\{(?:equation|align|gather|multline)\\*?\\}" +   // \end{...} syntax
-	            ")[ \\t]*$"
-	    );
-	
+	    final Pattern latexClosePattern = Pattern.compile("^.*?(\\$\\$|\\\\\\])[ \\t]*$");
+	    
+	    StringBuilder latexBuffer = new StringBuilder();
+	    	
 	    try (Scanner scanner = new Scanner(markdownText)) {
 	        scanner.useDelimiter("\n");
 	
@@ -60,6 +56,8 @@ public class MarkdownParser {
 	                        currentBlock = BlockType.CODE;
 	                    } else if (latexOpenMatcher.find()) {
 	                        appendOpenLatexBlock(htmlOutput);
+	                        String lineWithoutDelimite = line.replaceFirst("^\\s*(\\$\\$|\\\\\\[)\\s*", "");
+	                        latexBuffer.append(lineWithoutDelimite);
 	                        currentBlock = BlockType.LATEX;
 	                    } else {
 	                        htmlOutput.append(convertLineToHtml(StringEscapeUtils.escapeHtml4(line)));
@@ -77,10 +75,14 @@ public class MarkdownParser {
 	            
 	                case LATEX:
 	                    if (latexCloseMatcher.find()) {
+	                    	String lineWithoutDelimiter = line.replaceAll("\\s*(\\$\\$|\\\\\\])$", "");
+	                        latexBuffer.append(lineWithoutDelimiter);
+	                        htmlOutput.append(Base64.getEncoder().encodeToString(latexBuffer.toString().getBytes()));
+	                        latexBuffer.setLength(0);
 	                        appendCloseLatexBlock(htmlOutput);
 	                        currentBlock = BlockType.NONE;
 	                    } else {
-	                        htmlOutput.append(convertToEscapedHtmlLine(line));
+	                        latexBuffer.append(line).append("\n");
 	                    }
 	                    break;
 	            }
@@ -93,6 +95,7 @@ public class MarkdownParser {
 	            appendCloseCodeBlock(htmlOutput);
 	            break;
 	        case LATEX:
+	        	htmlOutput.append(Base64.getEncoder().encodeToString(latexBuffer.toString().getBytes()));
 	            appendCloseLatexBlock(htmlOutput);
 	            break;
 	        default:
@@ -103,17 +106,32 @@ public class MarkdownParser {
 	}
 
 	private static String convertLineToHtml(String line) {
-	    return convertMarkdownLineToHtml(convertInlineLatexToHtml(line));
+	    return convertMarkdownLineToHtml(convertSingleLineInLineLatexToHtml(convertSingleLineBlockLatexToHtml(line)));
 	}
 
-	private static String convertInlineLatexToHtml(String line) {
-	    String inlineLatexPatterns = 
-	        // Single $ pairs (same open/close)
-	        "\\$(.*?)\\$|" +
-	        // \( \) pairs
-	        "\\\\\\((.*?)\\\\\\)|" +
-	        // \begin{...} \end{...} inline pairs
-	        "\\\\begin\\{(math|inline)\\}(.*?)\\\\end\\{\\3\\}";
+	private static String convertSingleLineBlockLatexToHtml(String line) {
+		String singleLineBlockLatexPatterns = 
+		        "\\$\\$(.*?)\\$\\$|" +                           // Double $$ pairs
+		        "\\\\\\[(.*?)\\\\\\]";                           // \[ \] pairs
+	    
+	    Pattern singleLineBlockLatexPattern = Pattern.compile(singleLineBlockLatexPatterns);
+	    return singleLineBlockLatexPattern.matcher(line).replaceAll(match -> {
+	        // Check each capture group since we don't know which pattern matched
+	        for (int i = 1; i <= match.groupCount(); i++) {
+	            String content = match.group(i);
+	            if (content != null) {
+	                String base64Content = Base64.getEncoder().encodeToString(content.getBytes());
+	                return "<span class=\"block-latex\">" + base64Content + "</span>";
+	            }
+	        }
+	        return match.group(); // fallback, shouldn't happen
+	    });
+	}
+
+	private static String convertSingleLineInLineLatexToHtml(String line) {
+		String inlineLatexPatterns = 
+		        "\\$(.*?)\\$|" +                                 // Single $ pairs
+		        "\\\\\\((.*?)\\\\\\)";                          // \( \) pairs
 	    
 	    Pattern inlineLatexPattern = Pattern.compile(inlineLatexPatterns);
 	    return inlineLatexPattern.matcher(line).replaceAll(match -> {
@@ -121,7 +139,8 @@ public class MarkdownParser {
 	        for (int i = 1; i <= match.groupCount(); i++) {
 	            String content = match.group(i);
 	            if (content != null) {
-	                return "<INLINE_LATEX>" + content + "</INLINE_LATEX>";
+	                String base64Content = Base64.getEncoder().encodeToString(content.getBytes());
+	                return "<span class=\"inline-latex\">" + base64Content + "</span>";
 	            }
 	        }
 	        return match.group(); // fallback, shouldn't happen
@@ -215,11 +234,12 @@ public class MarkdownParser {
 	}
 	
 	private static void appendOpenLatexBlock(StringBuilder htmlOutput) {
-	    htmlOutput.append("<BLOCK_LATEX>");
+	    htmlOutput.append("<span class=\"block-latex\">");
 	}
-
+	
+	// For the appendCloseLatexBlock method:
 	private static void appendCloseLatexBlock(StringBuilder htmlOutput) {
-	    htmlOutput.append("</BLOCK_LATEX>");
+	    htmlOutput.append("</span>\n");
 	}
 
 	/**
