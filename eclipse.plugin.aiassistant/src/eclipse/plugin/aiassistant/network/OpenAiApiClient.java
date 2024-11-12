@@ -59,8 +59,8 @@ public class OpenAiApiClient {
         	new HttpClientWrapper(
     				getApiEndpoint(apiUrl, Constants.CHAT_COMPLETION_API_URL).toURI(),
     				apiKey,
-        			Duration.ofMillis(1000),
-        			Duration.ofMillis(1000));
+					Duration.ofSeconds(Preferences.getConnectionTimeout()),
+					Duration.ofSeconds(Preferences.getRequestTimeout()));
 		} catch (Exception e) {
 			return "No OpenAI compatible API found at '" + apiUrl + "'... Check URL and/or Key.";
 		}
@@ -80,8 +80,8 @@ public class OpenAiApiClient {
         	HttpClientWrapper client = new HttpClientWrapper(
     				getApiEndpoint(baseUrlString, Constants.MODEL_LIST_API_URL).toURI(),
     				apiKey,
-        			Duration.ofMillis(1000),
-        			Duration.ofMillis(1000));
+					Duration.ofSeconds(Preferences.getConnectionTimeout()),
+					Duration.ofSeconds(Preferences.getRequestTimeout()));
             HttpResponse<InputStream> response = client.sendRequest( null);
             InputStream responseBody = response.body();
             ObjectMapper objectMapper = new ObjectMapper();
