@@ -112,18 +112,7 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 /* MathJax styling */
-.MathJax {
+.MathJax, .MathJax_Display  {
   font-size: var(--default-font-size) !important;
   color: var(--text-color) !important;
-}
-
-/* For block equations */
-.MathJax_Display {
-  font-size: var(--default-font-size) !important;
-  color: var(--text-color) !important;
-}
-
-/* For SVG output mode */
-.MathJax svg {
-  fill: var(--text-color) !important;
 }
