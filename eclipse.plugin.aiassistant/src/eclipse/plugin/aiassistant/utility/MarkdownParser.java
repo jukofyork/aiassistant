@@ -11,25 +11,21 @@ import org.apache.commons.text.StringEscapeUtils;
 
 /**
  * Utility class for converting Markdown text to HTML format.
- * Supports advanced features such as:
- * <ul>
- *   <li>Code blocks with language-specific syntax highlighting</li>
- *   <li>LaTeX mathematical expressions (inline and block)</li>
- *   <li>Standard Markdown formatting (headers, lists, bold, italic, etc.)</li>
- * </ul>
- * 
- * The parser handles nested blocks and ensures proper HTML escaping of content.
- * It also provides options for including interactive buttons for code blocks.
+ * This class supports advanced features such as code blocks with syntax highlighting,
+ * LaTeX mathematical expressions (both inline and block), and standard Markdown elements
+ * like headers, lists, bold, and italic text. It handles nested blocks and ensures proper
+ * HTML escaping to prevent XSS vulnerabilities.
  */
 public class MarkdownParser {
 
     /**
-     * Converts Markdown formatted text to HTML with optional code block interaction buttons.
+     * Converts Markdown formatted text to HTML. This method also allows for the inclusion
+     * of interactive buttons within code blocks, such as copy, paste, and review changes.
      *
-     * @param markdownText The Markdown text to convert
-     * @param includeCodeBlockButtons Whether to include copy/paste/review buttons for code blocks
-     * @return HTML formatted string with preserved Markdown styling
-     * @throws IllegalStateException If the scanner encounters errors while processing input
+     * @param markdownText The Markdown text to be converted.
+     * @param includeCodeBlockButtons Flag to determine whether interactive buttons should be included.
+     * @return A string representing the HTML formatted text.
+     * @throws IllegalStateException If an error occurs during parsing, typically from malformed input.
      */
     public static String convertMarkdownToHtml(String markdownText, boolean includeCodeBlockButtons) {
         markdownText = StringUtils.stripStart(markdownText, " ");
@@ -39,7 +35,7 @@ public class MarkdownParser {
         enum BlockType { NONE, CODE, LATEX }
         BlockType currentBlock = BlockType.NONE;
 
-        // Regex patterns for identifying different block types
+        // Patterns to identify and process different types of blocks in Markdown.
         final Pattern codeBlockPattern = Pattern.compile("^[ \\t]*```([a-zA-Z]*)[ \\t]*$");
         final Pattern latexMultilineBlockOpenPattern = Pattern.compile(
             "^[ \\t]*(?:" +
@@ -55,7 +51,7 @@ public class MarkdownParser {
         );
         final Pattern latexBlockClosePattern = Pattern.compile("^.*?(\\$\\$|\\\\\\])[ \\t]*$");
 
-        StringBuilder latexBuffer = new StringBuilder();
+        StringBuilder latexBlockBuffer = new StringBuilder();
 
         try (Scanner scanner = new Scanner(markdownText)) {
             scanner.useDelimiter("\n");
@@ -68,7 +64,6 @@ public class MarkdownParser {
                 Matcher latexSinglelineBlockOpennMatcher = latexSinglelineBlockOpenPattern.matcher(line);
                 Matcher latexCloseMatcher = latexBlockClosePattern.matcher(line);
                 
-                // Process the line based on the current block type
                 switch (currentBlock) {
                     case NONE:
                         if (codeBlockMatcher.find()) {
@@ -76,16 +71,14 @@ public class MarkdownParser {
                             appendOpenCodeBlock(htmlOutput, language, includeCodeBlockButtons);
                             currentBlock = BlockType.CODE;
                         } else if (latexMultilineBlockOpenMatcher.find()) {
-                            appendOpenLatexBlock(htmlOutput);
-                            String trimmedLine = line.replaceFirst("^\\s*(\\$\\$|\\\\\\[)\\s*", "");
-                            latexBuffer.append(trimmedLine);
+                            String latexLine = line.replaceFirst("^\\s*(\\$\\$|\\\\\\[)\\s*", "");
+                            latexBlockBuffer.append(latexLine);
                             currentBlock = BlockType.LATEX;                        
                         } else if (latexSinglelineBlockOpennMatcher.find()) {
-                            appendOpenLatexBlock(htmlOutput);
-                            String trimmedLine = line.replaceFirst("^\\s*(\\$\\$|\\\\\\[)\\s*", "")
+                            String latexLine = line.replaceFirst("^\\s*(\\$\\$|\\\\\\[)\\s*", "")
                                     .replaceAll("\\s*(\\$\\$|\\\\\\])$", "");
-                            latexBuffer.append(trimmedLine);
-                            appendLatexBufferAndClose(htmlOutput, latexBuffer);
+                            latexBlockBuffer.append(latexLine);
+                            flushLatexBlockBuffer(latexBlockBuffer, htmlOutput);
                         } else {
                             htmlOutput.append(convertLineToHtml(StringEscapeUtils.escapeHtml4(line)));
                         }
@@ -102,12 +95,12 @@ public class MarkdownParser {
                 
                     case LATEX:
                         if (latexCloseMatcher.find()) {
-                            String trimmedLine = line.replaceAll("\\s*(\\$\\$|\\\\\\])$", "");
-                            latexBuffer.append(trimmedLine);
-                            appendLatexBufferAndClose(htmlOutput, latexBuffer);
+                            String latexLine = line.replaceAll("\\s*(\\$\\$|\\\\\\])$", "");
+                            latexBlockBuffer.append(latexLine);
+                            flushLatexBlockBuffer(latexBlockBuffer, htmlOutput);
                             currentBlock = BlockType.NONE;
                         } else {
-                            latexBuffer.append(line).append("\n");
+                        	latexBlockBuffer.append(line + "\n");
                         }
                         break;
                 }
@@ -115,15 +108,9 @@ public class MarkdownParser {
         }
 
         // Handle unclosed blocks at the end of the input
-        switch (currentBlock) {
-            case CODE:
-                appendCloseCodeBlock(htmlOutput);
-                break;
-            case LATEX:
-                appendLatexBufferAndClose(htmlOutput, latexBuffer);
-                break;
-            default:
-                break;
+        // NOTE: Don't auto-close LaTeX here - it causes flicker/errors in output.
+        if (currentBlock == BlockType.CODE) {
+        	appendCloseCodeBlock(htmlOutput);
         }
 
         return replaceEscapeCodes(replaceLineBreaks(htmlOutput.toString()));
@@ -248,28 +235,23 @@ public class MarkdownParser {
     private static void appendCloseCodeBlock(StringBuilder htmlOutput) {
         htmlOutput.append("</code></pre>").append("\n");
     }
-    
+        
     /**
-     * Appends the opening tag for a LaTeX block to the output.
+     * Flushes the accumulated LaTeX content from the buffer into the HTML output.
+     * This method wraps the LaTeX content in a {@code <span>} element with a class for styling.
+     * The content is Base64 encoded to ensure that any special characters are preserved
+     * and do not interfere with the HTML structure.
      *
-     * @param htmlOutput The StringBuilder object to append the opening tag to
+     * @param latexBlockBuffer The buffer containing the accumulated LaTeX content.
+     * @param htmlOutput The StringBuilder to which the HTML content is appended.
      */
-    private static void appendOpenLatexBlock(StringBuilder htmlOutput) {
-        htmlOutput.append("<span class=\"block-latex\">");
-    }
-    
-    /**
-     * Appends the base64 encoded LaTeX content and closing tag to the output.
-     *
-     * @param htmlOutput The StringBuilder object to append the content and closing tag to
-     * @param latexBuffer The StringBuilder containing the LaTeX content
-     */
-    private static void appendLatexBufferAndClose(StringBuilder htmlOutput, StringBuilder latexBuffer) {
-        if (latexBuffer.length() > 0) {
-            htmlOutput.append(Base64.getEncoder().encodeToString(latexBuffer.toString().getBytes()));
-            latexBuffer.setLength(0);
+    private static void flushLatexBlockBuffer(StringBuilder latexBlockBuffer, StringBuilder htmlOutput) {
+        if (latexBlockBuffer.length() > 0) {
+            htmlOutput.append("<span class=\"block-latex\">");
+            htmlOutput.append(Base64.getEncoder().encodeToString(latexBlockBuffer.toString().getBytes()));
+            htmlOutput.append("</span>\n");
+            latexBlockBuffer.setLength(0);  // Clear the buffer after processing to avoid duplicate content.
         }
-        htmlOutput.append("</span>\n");
     }
 
     /**
