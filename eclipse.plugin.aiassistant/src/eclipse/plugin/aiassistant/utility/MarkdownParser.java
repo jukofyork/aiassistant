@@ -117,13 +117,34 @@ public class MarkdownParser {
     }
 
     /**
-     * Converts a single line of text to HTML, handling both inline LaTeX and Markdown formatting.
+     * Converts a single line of text to HTML, processing inline elements in a specific order:
+     * inline code first, then LaTeX expressions, and finally Markdown formatting. This order
+     * prevents interference between different syntax patterns and ensures proper escaping.
      *
-     * @param line The input line to convert
-     * @return The converted HTML line
+     * @param line The input line containing any combination of inline code (`code`),
+     *             LaTeX ($math$), and Markdown formatting
+     * @return The HTML-formatted line with all inline elements converted to appropriate
+     *         HTML spans with base64 encoded content
      */
     private static String convertLineToHtml(String line) {
-        return convertMarkdownLineToHtml(convertInLineLatexToHtml(line));
+        return convertMarkdownLineToHtml(convertInLineLatexToHtml(convertInlineCodeToHtml(line)));
+    }
+
+    /**
+     * Converts Markdown inline code segments to HTML spans with base64 encoded content.
+     * Processes text enclosed in single backticks (`code`) and transforms them into
+     * HTML spans with the content base64 encoded to preserve special characters.
+     *
+     * @param line Text line potentially containing inline code segments
+     * @return Line with inline code converted to HTML spans containing base64 encoded content
+     */
+    private static String convertInlineCodeToHtml(String line) {
+        Pattern inlineCodePattern = Pattern.compile("`(.*?)`");
+        return inlineCodePattern.matcher(line).replaceAll(match -> {
+            String content = match.group(1);
+            String base64Content = Base64.getEncoder().encodeToString(content.getBytes());
+            return "<span class=\"inline-code\">" + base64Content + "</span>";
+        });
     }
 
     /**
@@ -154,7 +175,7 @@ public class MarkdownParser {
     
     /**
      * Converts a single line of Markdown to HTML.
-     * Handles headers, unordered lists, horizontal rules, bold, italic, strikethrough, and inline code.
+     * Handles headers, unordered lists, horizontal rules, bold, italic and strikethrough.
      *
      * @param markdownLine The input Markdown line
      * @return The converted HTML line
@@ -182,9 +203,6 @@ public class MarkdownParser {
 
         // Convert strikethrough
         markdownLine = markdownLine.replaceAll("~~(.*?)~~", "<del>$1</del>");
-
-        // Convert inline code
-        markdownLine = markdownLine.replaceAll("`(.*?)`", "<code><strong>$1</strong></code>");
 
         // Add line break
         markdownLine += "<br/>";

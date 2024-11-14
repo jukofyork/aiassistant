@@ -99,7 +99,12 @@ body {
 
 code {
   font-family: var(--mono-font);
+  font-weight: bold;
   tab-size: var(--code-block-tab-size);
+}
+
+pre code {
+  font-weight: inherit;
 }
 
 summary {

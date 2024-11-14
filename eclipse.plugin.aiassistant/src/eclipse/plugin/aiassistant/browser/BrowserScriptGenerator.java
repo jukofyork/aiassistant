@@ -66,7 +66,7 @@ public class BrowserScriptGenerator {
 	 */
 	public String generateUpdateMessageScript(String html, UUID messageId) {
 	    return "document.getElementById(\"message-" + messageId.toString() + 
-	           "\").innerHTML = '" + html + "';hljs.highlightAll();renderLatex();";
+	           "\").innerHTML = '" + html + "';renderInlineCode();renderLatex();";
 	}
 
 	/**
