@@ -30,11 +30,13 @@ import eclipse.plugin.aiassistant.chat.ChatMessage;
 import eclipse.plugin.aiassistant.chat.ChatRole;
 import eclipse.plugin.aiassistant.preferences.Preferences;
 import eclipse.plugin.aiassistant.prompt.PromptLoader;
+import eclipse.plugin.aiassistant.utility.ApiModelData;
 
 /**
  * Client for interacting with OpenAI-compatible APIs to handle chat completions.
  * Supports both streaming and non-streaming responses, with configurable models
  * and parameters. Implements the publisher-subscriber pattern for streaming responses.
+ * Utilizes ApiModelData to retrieve model-specific information for usage reporting.
  */
 public class OpenAiApiClient {
 		
@@ -274,7 +276,7 @@ public class OpenAiApiClient {
 	private void processResponse(HttpResponse<InputStream> response) throws IOException {
 	    String modelName = "";
 	    String finishReason = "";
-	    String usageStatistics = "";
+	    String usageReport = "";
 	
 	    try (var inputStream = response.body();
 	         var reader = new InputStreamReader(inputStream, StandardCharsets.UTF_8);
@@ -306,7 +308,7 @@ public class OpenAiApiClient {
 	
 	        if (jsonTree.has("usage")) {
 	            JsonNode usageNode = jsonTree.get("usage");
-	            usageStatistics = generateUsageStatistics(usageNode);
+	            usageReport = generateUsageReport(modelName, finishReason, usageNode);
 	        }
 	
 	    } catch (IOException e) {
@@ -317,7 +319,7 @@ public class OpenAiApiClient {
 	    if (isCancelled.get()) {
 	    	streamingResponsePublisher.closeExceptionally(new CancellationException());
 	    } else {
-	    	Logger.info(modelName+"\n"+finishReason+"\n"+usageStatistics);
+	    	Logger.info(usageReport);
 	    }
 	}
 	
@@ -331,7 +333,7 @@ public class OpenAiApiClient {
 
 		String modelName = "";
 		String finishReason = "";
-		String usageStatistics = "";
+		String usageReport = "";
 
 		try (var inputStream = response.body();
 				var streamingInputStreamReader = new InputStreamReader(inputStream, StandardCharsets.UTF_8);
@@ -383,7 +385,7 @@ public class OpenAiApiClient {
 						// Get the usage stats.
 						if (jsonTree.has("usage")) {
 							var usageNode = jsonTree.get("usage");
-							usageStatistics = generateUsageStatistics(usageNode);
+							usageReport = generateUsageReport(modelName, finishReason, usageNode);
 						}
 												
 					}
@@ -406,35 +408,88 @@ public class OpenAiApiClient {
 			streamingResponsePublisher.closeExceptionally(new CancellationException());
 		}
 		else {
-			Logger.info(modelName+"\n"+finishReason+"\n"+usageStatistics);
+			Logger.info(usageReport);
 		}
 	}
 
 	/**
-	 * Generates response statistics from a JSON tree.
+	 * Generates a detailed usage report based on the API response and model data.
 	 * 
-	 * @param jsonTree The JSON tree to generate the statistics from.
-	 * @return The response statistics as a string.
+	 * @param modelName The name of the model used for the request.
+	 * @param finishReason The reason for finishing the request.
+	 * @param usageNode The JSON node containing usage information.
+	 * @return A formatted string containing the usage report.
 	 */
-	private String generateUsageStatistics(JsonNode usageNode) {
-		StringBuilder responseStatistics = new StringBuilder();
-		if (verifyAllRequiredFieldsExist(usageNode)) {
-			long promptTokens = usageNode.get("prompt_tokens").asLong();
-			long completionTokens = usageNode.get("completion_tokens").asLong();
-			long totalTokens = usageNode.get("total_tokens").asLong();
-			responseStatistics
-					.append("Prompt : ")
-					.append(promptTokens)
-					.append(" tokens\n")					
-					.append("Response : ")
-					.append(completionTokens)
-					.append(" tokens\n")
-					.append("Total : ")
-					.append(totalTokens)
-					.append(" tokens\n");
-		}
-		return responseStatistics.toString();
+	private String generateUsageReport(String modelName, String finishReason, JsonNode usageNode) {
+	    StringBuilder responseStatistics = new StringBuilder();
+	    if (!verifyAllRequiredFieldsExist(usageNode)) {
+	        return responseStatistics.toString();
+	    }
+	
+	    // Extract the actual model name from the full string
+	    String actualModelName = modelName.startsWith("Model: ") ? 
+	        modelName.substring("Model: ".length()) : modelName;
+	
+	    long promptTokens = usageNode.get("prompt_tokens").asLong();
+	    long completionTokens = usageNode.get("completion_tokens").asLong();
+	    long totalTokens = usageNode.get("total_tokens").asLong();
+	
+	    // Retrieve model-specific data from ApiModelData
+	    String provider = ""; // Empty provider will match any provider in ApiModelData
+	    int maxInputTokens = ApiModelData.getMaxInputTokens(actualModelName, provider);
+	    int maxOutputTokens = ApiModelData.getMaxOutputTokens(actualModelName, provider);
+	    double inputCost = ApiModelData.getInputCostPerToken(actualModelName, provider);
+	    double outputCost = ApiModelData.getOutputCostPerToken(actualModelName, provider);
+	
+	    responseStatistics.append(modelName).append("\n")
+	                     .append(finishReason).append("\n");
+	
+	    // Include percentages and costs if model data is available
+	    if (maxInputTokens > 0 || maxOutputTokens > 0) {
+	        appendTokenStats(responseStatistics, "Prompt", promptTokens, maxInputTokens, promptTokens * inputCost);
+	        appendTokenStats(responseStatistics, "Response", completionTokens, maxOutputTokens,
+	                completionTokens * outputCost);
+	        appendTokenStats(responseStatistics, "Total", totalTokens, maxInputTokens,
+	                promptTokens * inputCost + completionTokens * outputCost);
+	    } else {
+	        // Fallback to basic format if no model data found
+	        responseStatistics.append("Prompt: ").append(promptTokens).append(" tokens\n")
+	                         .append("Response: ").append(completionTokens).append(" tokens\n")
+	                         .append("Total: ").append(totalTokens).append(" tokens\n");
+	    }
+	
+	    return responseStatistics.toString();
 	}
+	
+    /**
+     * Appends token statistics to the given StringBuilder.
+     * 
+     * @param sb The StringBuilder to append to.
+     * @param label The label for the statistic (e.g., "Prompt", "Response").
+     * @param tokens The number of tokens used.
+     * @param maxTokens The maximum number of tokens allowed (if available).
+     * @param cost The cost associated with the tokens (if available).
+     */
+	private void appendTokenStats(StringBuilder sb, String label, long tokens, int maxTokens, double cost) {
+	    sb.append(label).append(": ").append(tokens).append(" tokens");
+	    
+	    if (maxTokens > 0 || cost > 0) {
+	        sb.append(" [");
+	        if (cost > 0) {
+                int decimalPlaces = Math.max(2, -1 * (int)Math.floor(Math.log10(cost)) + 1);
+                sb.append(String.format("$%." + decimalPlaces + "f", cost));
+	        }
+	        if (maxTokens > 0) {
+	        	if (cost > 0) {
+	        		sb.append(", ");
+	        	}
+	            sb.append(String.format(" %.1f%%", (tokens * 100.0) / maxTokens));
+	        }
+	        sb.append("]");
+	    }
+	    sb.append("\n");
+	}
+	
 
 	/**
 	 * Verifies that all required fields exist in a JSON tree.

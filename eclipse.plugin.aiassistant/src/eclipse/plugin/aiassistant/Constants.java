@@ -37,6 +37,10 @@ public final class Constants {
 	// Contains all highlight.js's supported languages and file extensions.
 	// See: https://github.com/highlightjs/highlight.js/blob/main/SUPPORTED_LANGUAGES.md
 	public static final String HIGHLIGHT_JS_LANGUAGES_FILENAMES = "language-extensions.json";
+	
+	// Contains the model prices,context_window, etc.
+	// See: https://raw.githubusercontent.com/BerriAI/litellm/main/model_prices_and_context_window.json
+	public static final String API_MODEL_DATA = "model_prices_and_context_window.json";
 
 	// API base URL and endpoints.
 	public static final String DEFAULT_MODEL_NAME = "gpt-4-turbo";
