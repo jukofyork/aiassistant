@@ -50,8 +50,16 @@ public class MarkdownParser {
             ").*$"
         );
         final Pattern latexBlockClosePattern = Pattern.compile("^.*?(\\$\\$|\\\\\\])[ \\t]*$");
+        
+        final Pattern thinkingBlockOpenPattern = Pattern.compile("<thinking>");
+        final Pattern thinkingBlockClosePattern = Pattern.compile("</thinking>");
+        
+        final Pattern reflectionBlockOpenPattern = Pattern.compile("<reflection>");
+        final Pattern reflectionBlockClosePattern = Pattern.compile("</reflection>");
 
         StringBuilder latexBlockBuffer = new StringBuilder();
+        
+        int summaryBlockCount = 0;
 
         try (Scanner scanner = new Scanner(markdownText)) {
             scanner.useDelimiter("\n");
@@ -59,13 +67,42 @@ public class MarkdownParser {
             while (scanner.hasNext()) {
                 String line = scanner.next();
                 
-                Matcher codeBlockMatcher = codeBlockPattern.matcher(line);
-                Matcher latexMultilineBlockOpenMatcher = latexMultilineBlockOpenPattern.matcher(line);            
-                Matcher latexSinglelineBlockOpennMatcher = latexSinglelineBlockOpenPattern.matcher(line);
-                Matcher latexCloseMatcher = latexBlockClosePattern.matcher(line);
+            	Matcher thinkingOpenMatcher = thinkingBlockOpenPattern.matcher(line);
+            	Matcher thinkingCloseMatcher = thinkingBlockClosePattern.matcher(line);
+            	Matcher reflectionOpenMatcher = reflectionBlockOpenPattern.matcher(line);
+            	Matcher reflectionCloseMatcher = reflectionBlockClosePattern.matcher(line);
+            	
+				Matcher codeBlockMatcher = codeBlockPattern.matcher(line);
+				Matcher latexMultilineBlockOpenMatcher = latexMultilineBlockOpenPattern.matcher(line);            
+				Matcher latexSinglelineBlockOpennMatcher = latexSinglelineBlockOpenPattern.matcher(line);
+				Matcher latexCloseMatcher = latexBlockClosePattern.matcher(line);
                 
                 switch (currentBlock) {
                     case NONE:
+                    	while (thinkingOpenMatcher.find()) {
+                    	    htmlOutput.append(getSummaryOpeningHtml("Thinking"));
+                    	    line = thinkingOpenMatcher.replaceFirst("");
+                    	    thinkingOpenMatcher = thinkingBlockOpenPattern.matcher(line);
+                    		summaryBlockCount++;
+                    	}
+                    	while (thinkingCloseMatcher.find()) {
+                    	    htmlOutput.append(getSummaryClosingHtml());
+                    	    line = thinkingCloseMatcher.replaceFirst("");
+                    	    thinkingCloseMatcher = thinkingBlockClosePattern.matcher(line);
+                    		summaryBlockCount++;
+                    	}
+                    	while (reflectionOpenMatcher.find()) {
+                    	    htmlOutput.append(getSummaryOpeningHtml("Reflection")); 
+                    	    line = reflectionOpenMatcher.replaceFirst("");
+                    	    reflectionOpenMatcher = reflectionBlockOpenPattern.matcher(line);
+                    		summaryBlockCount++;
+                    	}
+                    	while (reflectionCloseMatcher.find()) {
+                    	    htmlOutput.append(getSummaryClosingHtml());
+                    	    line = reflectionCloseMatcher.replaceFirst("");
+                    	    reflectionCloseMatcher = reflectionBlockClosePattern.matcher(line);
+                    		summaryBlockCount++;
+                    	}
                         if (codeBlockMatcher.find()) {
                             String language = codeBlockMatcher.group(1);
                             appendOpenCodeBlock(htmlOutput, language, includeCodeBlockButtons);
@@ -112,8 +149,37 @@ public class MarkdownParser {
         if (currentBlock == BlockType.CODE) {
         	appendCloseCodeBlock(htmlOutput);
         }
+        
+        // Close any unclosed thinking blocks
+        while (summaryBlockCount > 0) {
+        	htmlOutput.append(getSummaryClosingHtml());
+        	summaryBlockCount--;
+        }
 
         return replaceEscapeCodes(replaceLineBreaks(htmlOutput.toString()));
+    }
+    
+    /**
+     * Generates the opening HTML markup for a collapsible summary section.
+     * Creates a div with the specified tag name as its class (lowercase) and
+     * a nested details/summary structure for collapsible content.
+     * 
+     * @param tagName The name of the tag (e.g., "Thinking" or "Reflection") used for
+     *               both the CSS class name (lowercase) and display text
+     * @return HTML string containing opening div, details, and summary elements
+     */
+    private static String getSummaryOpeningHtml(String tagName) {
+        return "<div class=\"" + tagName.toLowerCase() + "\"><details>\n<summary>" + tagName + "</summary>\n";
+    }
+    
+    /**
+     * Generates the closing HTML markup for a collapsible summary section.
+     * Provides the matching closing tags for the structure created by getSummaryOpeningHtml.
+     * 
+     * @return HTML string containing closing details and div tags
+     */
+    private static String getSummaryClosingHtml() {
+        return "</details></div>";
     }
 
     /**

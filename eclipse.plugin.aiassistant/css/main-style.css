@@ -108,6 +108,24 @@ pre code {
 }
 
 summary {
+    font-weight: bold;
+    font-size: calc(var(--default-font-size) + 2px);
+}
+
+.thinking summary {
+    color: #3f8;
+}
+
+.reflection summary {
+    color: #f83;
+}
+
+.reflection .thinking summary {
+    color: #3f8;
+}
+
+.thinking .reflection summary {
+    color: #f83;
 }
 
 /* The default margins are too large */
