@@ -13,8 +13,8 @@
   --notification-bubble-bg-color: #225;
   --error-bubble-bg-color: #522;
   --selected-shadow-color: #00f;
-  --thinking-color: #3f8;
-  --reflection-color: #f83;
+  --thinking-color: #0c4;
+  --reflection-color: #c40;
   --selected-shadow-blur-radius: 15px;
   --default-margin: 0.5rem;
   --top-margin: 1rem;
@@ -111,7 +111,7 @@ pre code {
 
 summary {
     font-weight: bold;
-    font-size: calc(var(--default-font-size) + 2px);
+    font-size: calc(var(--default-font-size) + 4px);
 }
 
 .thinking summary {

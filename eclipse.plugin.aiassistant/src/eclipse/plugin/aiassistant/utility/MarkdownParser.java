@@ -147,7 +147,7 @@ public class MarkdownParser {
         	summaryBlockCount--;
         }
 
-        return replaceEscapeCodes(replaceLineBreaks(htmlOutput.toString()));
+        return replaceEscapeCodes(removeWhitespaceAfterSummary(replaceLineBreaks(htmlOutput.toString())));
     }
     
     /**
@@ -171,6 +171,20 @@ public class MarkdownParser {
      */
     private static String getSummaryClosingHtml() {
         return "</details></div>";
+    }
+    
+    /**
+     * Removes excessive whitespace and line breaks between collapsible summary blocks
+     * (thinking/reflection sections) and subsequent content. This ensures consistent
+     * spacing in the rendered HTML output by replacing any combination of whitespace
+     * and break tags with a single break tag.
+     * 
+     * @param html The HTML string containing potentially multiple summary blocks
+     * @return The HTML string with normalized spacing after summary blocks, preserving
+     *         a single <br/> tag for visual separation
+     */
+    private static String removeWhitespaceAfterSummary(String html) {
+        return html.replaceAll("</details>\\s*</div>(?:\\s|<br/>)+", "</details></div><br/>");
     }
 
     /**
