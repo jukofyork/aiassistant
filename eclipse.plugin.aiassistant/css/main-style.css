@@ -12,6 +12,7 @@
   --assistant-bubble-bg-color: #444;
   --notification-bubble-bg-color: #225;
   --error-bubble-bg-color: #522;
+  --broswer-selection-bg-color: rgba(96, 96, 96, 0.8);  /* Gray with 80% opacity */
   --selected-shadow-color: #00f;
   --thinking-color: #0c4;
   --reflection-color: #c40;
@@ -24,6 +25,11 @@
   --bubble-radius: 0.5rem;
   --line-height: 150%;
   --code-block-tab-size: 4;		/* To match Eclipse (TODO: add a preference property change listener) */
+}
+
+/* Controls the appearance of selected text in the browser widget */
+::selection {
+  background-color: var(--broswer-selection-bg-color);
 }
 
 /* Define common styles */
