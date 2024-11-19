@@ -32,7 +32,9 @@ public final class Constants {
 		"mathjax/es5/tex-mml-chtml.js",
 		"highlight.min.js",
 		"inline-code-renderer.js",
-		"latex-renderer.js" };
+		"latex-renderer.js",
+		"get-selected-text.js"
+	};
 	
 	// Contains all highlight.js's supported languages and file extensions.
 	// See: https://github.com/highlightjs/highlight.js/blob/main/SUPPORTED_LANGUAGES.md
