@@ -150,7 +150,7 @@ pre code {
 
 summary {
     font-weight: bold;
-    font-size: calc(var(--default-font-size) + 4px);
+    font-size: calc(var(--default-font-size) + 2px);
 }
 
 .thinking summary {
