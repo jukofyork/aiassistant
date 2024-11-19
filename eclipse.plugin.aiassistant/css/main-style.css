@@ -13,6 +13,8 @@
   --notification-bubble-bg-color: #225;
   --error-bubble-bg-color: #522;
   --selected-shadow-color: #00f;
+  --thinking-color: #3f8;
+  --reflection-color: #f83;
   --selected-shadow-blur-radius: 15px;
   --default-margin: 0.5rem;
   --top-margin: 1rem;
@@ -113,19 +115,19 @@ summary {
 }
 
 .thinking summary {
-    color: #3f8;
+    color: var(--thinking-color);
 }
 
 .reflection summary {
-    color: #f83;
+    color: var(--reflection-color);
 }
 
 .reflection .thinking summary {
-    color: #3f8;
+    color: var(--thinking-color);
 }
 
 .thinking .reflection summary {
-    color: #f83;
+    color: var(--reflection-color);
 }
 
 /* The default margins are too large */

@@ -51,11 +51,9 @@ public class MarkdownParser {
         );
         final Pattern latexBlockClosePattern = Pattern.compile("^.*?(\\$\\$|\\\\\\])[ \\t]*$");
         
-        final Pattern thinkingBlockOpenPattern = Pattern.compile("<thinking>");
-        final Pattern thinkingBlockClosePattern = Pattern.compile("</thinking>");
-        
-        final Pattern reflectionBlockOpenPattern = Pattern.compile("<reflection>");
-        final Pattern reflectionBlockClosePattern = Pattern.compile("</reflection>");
+        final Pattern thinkingBlockOpenPattern = Pattern.compile("<thinking>");        
+        final Pattern checkingBlockOpenPattern = Pattern.compile("<reflection>");
+        final Pattern summaryClosePattern = Pattern.compile("</thinking>|</reflection>");
 
         StringBuilder latexBlockBuffer = new StringBuilder();
         
@@ -68,9 +66,8 @@ public class MarkdownParser {
                 String line = scanner.next();
                 
             	Matcher thinkingOpenMatcher = thinkingBlockOpenPattern.matcher(line);
-            	Matcher thinkingCloseMatcher = thinkingBlockClosePattern.matcher(line);
-            	Matcher reflectionOpenMatcher = reflectionBlockOpenPattern.matcher(line);
-            	Matcher reflectionCloseMatcher = reflectionBlockClosePattern.matcher(line);
+            	Matcher checkingOpenMatcher = checkingBlockOpenPattern.matcher(line);
+            	Matcher summaryCloseMatcher = summaryClosePattern.matcher(line);
             	
 				Matcher codeBlockMatcher = codeBlockPattern.matcher(line);
 				Matcher latexMultilineBlockOpenMatcher = latexMultilineBlockOpenPattern.matcher(line);            
@@ -85,22 +82,16 @@ public class MarkdownParser {
                     	    thinkingOpenMatcher = thinkingBlockOpenPattern.matcher(line);
                     		summaryBlockCount++;
                     	}
-                    	while (thinkingCloseMatcher.find()) {
-                    	    htmlOutput.append(getSummaryClosingHtml());
-                    	    line = thinkingCloseMatcher.replaceFirst("");
-                    	    thinkingCloseMatcher = thinkingBlockClosePattern.matcher(line);
-                    		summaryBlockCount++;
-                    	}
-                    	while (reflectionOpenMatcher.find()) {
+                    	while (checkingOpenMatcher.find()) {
                     	    htmlOutput.append(getSummaryOpeningHtml("Reflection")); 
-                    	    line = reflectionOpenMatcher.replaceFirst("");
-                    	    reflectionOpenMatcher = reflectionBlockOpenPattern.matcher(line);
+                    	    line = checkingOpenMatcher.replaceFirst("");
+                    	    checkingOpenMatcher = checkingBlockOpenPattern.matcher(line);
                     		summaryBlockCount++;
                     	}
-                    	while (reflectionCloseMatcher.find()) {
+                    	while (summaryCloseMatcher.find()) {
                     	    htmlOutput.append(getSummaryClosingHtml());
-                    	    line = reflectionCloseMatcher.replaceFirst("");
-                    	    reflectionCloseMatcher = reflectionBlockClosePattern.matcher(line);
+                    	    line = summaryCloseMatcher.replaceFirst("");
+                    	    summaryCloseMatcher = summaryClosePattern.matcher(line);
                     		summaryBlockCount++;
                     	}
                         if (codeBlockMatcher.find()) {
