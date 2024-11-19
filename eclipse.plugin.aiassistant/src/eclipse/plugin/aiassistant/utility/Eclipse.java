@@ -1,10 +1,12 @@
 package eclipse.plugin.aiassistant.utility;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.util.Base64;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Supplier;
 
@@ -15,6 +17,9 @@ import org.eclipse.core.resources.IResource;
 import org.eclipse.core.resources.IWorkspaceRoot;
 import org.eclipse.core.resources.ResourcesPlugin;
 import org.eclipse.core.runtime.CoreException;
+import org.eclipse.core.runtime.FileLocator;
+import org.eclipse.core.runtime.Path;
+import org.eclipse.core.runtime.Platform;
 import org.eclipse.jface.resource.ImageDescriptor;
 import org.eclipse.jface.text.BadLocationException;
 import org.eclipse.jface.text.IDocument;
@@ -42,6 +47,7 @@ import org.eclipse.ui.IWorkbenchWindow;
 import org.eclipse.ui.PlatformUI;
 import org.eclipse.ui.texteditor.IDocumentProvider;
 import org.eclipse.ui.texteditor.ITextEditor;
+import org.osgi.framework.Bundle;
 
 import eclipse.plugin.aiassistant.Constants;
 import eclipse.plugin.aiassistant.Logger;
@@ -412,6 +418,26 @@ public class Eclipse {
 			throw new RuntimeException(e);
 		}
 		return ImageDescriptor.createFromURL(imageUrl).createImage();
+	}
+	
+	/**
+	 * Converts an image from the specified file path to a base64 string.
+	 *
+	 * @param filename The name of the image file, including the extension (e.g., "icon.png").
+	 * @return The image as a base64 encoded string.
+	 * @throws RuntimeException If there is an error loading or encoding the image.
+	 */
+	public static String loadIconAsBase64(String filename) {
+		URL imageUrl;
+	    try {
+	    	imageUrl = new URL(Constants.ICONS_PATH + filename);
+            try (InputStream stream = imageUrl.openStream()) {
+                byte[] imageBytes = stream.readAllBytes();
+                return Base64.getEncoder().encodeToString(imageBytes);
+            }
+	    } catch (IOException e) {
+	        throw new RuntimeException(e);
+	    }
 	}
 
 	/**

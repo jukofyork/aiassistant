@@ -300,21 +300,31 @@ public class MarkdownParser {
      * @param language Programming language identifier for syntax highlighting
      * @param includeCodeBlockButtons Whether to include interaction buttons
      */
-    private static void appendOpenCodeBlock(StringBuilder htmlOutput, String language, boolean includeCodeBlockButtons) {
-        String codeBlockId = UUID.randomUUID().toString();
-        htmlOutput.append("""
-                          <input type="${showCopy}" onClick="eclipseCopyCode(getSelectedTextFromElement('${codeBlockId}'))" value="Copy Code" />
-                          <input type="${showCopy}" onClick="eclipseReplaceSelection(getSelectedTextFromElement('${codeBlockId}'))" value="Replace Selection" />
-                          <input type="${showReviewChanges}" onClick="eclipseReviewChanges(getSelectedTextFromElement('${codeBlockId}'))" value="Review Changes"/>
-                          <input type="${showApplyPatch}" onClick="eclipseApplyPatch(document.getElementById('${codeBlockId}').innerText)" value="Apply Patch"/>
-                          <pre><code lang="${lang}" id="${codeBlockId}">"""
-                .replace( "${lang}", language )
-                .replace( "${codeBlockId}", codeBlockId )
-                .replace( "${showCopy}", includeCodeBlockButtons ? "button" : "hidden" )
-                .replace( "${showReviewChanges}", includeCodeBlockButtons && !"diff".equals(language) ? "button" : "hidden" )
-                .replace( "${showApplyPatch}", includeCodeBlockButtons && "diff".equals(language) ? "button" : "hidden" )                    
-                );
-    }
+	private static void appendOpenCodeBlock(StringBuilder htmlOutput, String language, boolean includeCodeBlockButtons) {
+	    String codeBlockId = UUID.randomUUID().toString();
+	    String copyIcon = Eclipse.loadIconAsBase64("CopyToClipboard.png");
+	    String replaceIcon = Eclipse.loadIconAsBase64("ReplaceSelection.png");
+	    String reviewIcon = Eclipse.loadIconAsBase64("ReviewChanges.png");
+	    htmlOutput.append("""
+	                      <style>
+	                      .copy-btn { background-image: url(data:image/png;base64,%s); }
+	                      .replace-btn { background-image: url(data:image/png;base64,%s); }
+	                      .review-btn { background-image: url(data:image/png;base64,%s); }
+	                      .patch-btn { background-image: url(data:image/png;base64,%s); }
+	                      </style>
+	                      <input type="${showCopy}" class="code-button copy-btn" onClick="eclipseCopyCode(getSelectedTextFromElement('${codeBlockId}'))" value="Copy Code" />
+	                      <input type="${showCopy}" class="code-button replace-btn" onClick="eclipseReplaceSelection(getSelectedTextFromElement('${codeBlockId}'))" value="Replace Selection" />
+	                      <input type="${showReviewChanges}" class="code-button review-btn" onClick="eclipseReviewChanges(getSelectedTextFromElement('${codeBlockId}'))" value="Review Changes"/>
+	                      <input type="${showApplyPatch}" class="code-button patch-btn" onClick="eclipseApplyPatch(document.getElementById('${codeBlockId}').innerText)" value="Apply Patch"/>
+	                      <pre><code lang="${lang}" id="${codeBlockId}">"""
+	            .formatted(copyIcon, replaceIcon, reviewIcon, reviewIcon)
+	            .replace( "${lang}", language )
+	            .replace( "${codeBlockId}", codeBlockId )
+	            .replace( "${showCopy}", includeCodeBlockButtons ? "button" : "hidden" )
+	            .replace( "${showReviewChanges}", includeCodeBlockButtons && !"diff".equals(language) ? "button" : "hidden" )
+	            .replace( "${showApplyPatch}", includeCodeBlockButtons && "diff".equals(language) ? "button" : "hidden" )                    
+	            );
+	}
 
     /**
      * Appends the closing tags for a code block to the output.

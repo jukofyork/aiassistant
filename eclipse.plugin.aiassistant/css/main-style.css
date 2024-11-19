@@ -12,6 +12,15 @@
   --assistant-bubble-bg-color: #444;
   --notification-bubble-bg-color: #225;
   --error-bubble-bg-color: #522;
+  --button-bg-color: #222;
+  --button-hover-bg-color: #333;
+  --button-border-color: #666;
+  --button-shadow: 2px 2px 2px rgba(0,0,0,0.2),
+                   inset 1px 1px 1px rgba(255,255,255,0.2),
+                   inset -1px -1px 1px rgba(0,0,0,0.2);
+  --button-active-shadow: 1px 1px 1px rgba(0,0,0,0.2),
+                          inset -1px -1px 1px rgba(255,255,255,0.2),
+                          inset 1px 1px 1px rgba(0,0,0,0.2);
   --broswer-selection-bg-color: rgba(96, 96, 96, 0.8);  /* Gray with 80% opacity */
   --selected-shadow-color: #00f;
   --thinking-color: #0c4;
@@ -99,6 +108,30 @@
 /* Hide scrollbar for code blocks */
 .chat-bubble pre::-webkit-scrollbar {
   display: none;
+}
+
+.code-button {
+    background-position: 4px center;
+    background-repeat: no-repeat;
+    background-size: 16px 16px;
+    padding: 4px 12px 4px 24px;
+    background-color: var(--button-bg-color);
+    color: var(--text-color);
+    border: 1px solid var(--button-border-color);
+    cursor: pointer;
+    box-shadow: var(--button-shadow);
+    border-radius: 3px;
+    margin-right: 4px;
+    margin-top: 0.5rem;
+}
+
+.code-button:hover {
+    background-color: var(--button-hover-bg-color);
+}
+
+.code-button:active {
+    box-shadow: var(--button-active-shadow);
+    transform: translateY(1px);
 }
 
 body {
