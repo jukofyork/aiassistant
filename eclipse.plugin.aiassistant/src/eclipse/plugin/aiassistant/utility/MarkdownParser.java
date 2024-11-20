@@ -186,7 +186,7 @@ public class MarkdownParser {
      * @return HTML string containing the opening structure for a thinking block
      */
     private static String getThinkingBlockOpeningHtml() {
-        return "<div class=\"thinking\"><details><summary>Thinking...</summary><blockquote>";
+        return "<div class=\"thinking\"><details><summary>Thinking...</summary>";
     }
     
     /**
@@ -197,7 +197,7 @@ public class MarkdownParser {
      * @return HTML string containing closing tags for blockquote, details, and div elements
      */
     private static String getThinkingBlockClosingHtml() {
-        return "</blockquote></details></div>";
+        return "</details></div>";
     }
     
     /**
@@ -211,7 +211,7 @@ public class MarkdownParser {
      */
     private static String trimThinkingyBlock(String html) {
         return html
-                .replaceAll("</summary>\\s*<blockquote>(?:\\s|<br/>)+", "</summary><blockquote>")
+                .replaceAll("</summary>(?:\\s|<br/>)+", "</summary><br/>")
                 .replaceAll("</details>\\s*</div>(?:\\s|<br/>)+", "</details></div><br/>");
     }
     

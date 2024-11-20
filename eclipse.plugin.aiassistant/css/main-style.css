@@ -31,7 +31,6 @@
   --blockquote-text-color: #bbb;
   --blockquote-nested-text-color: #999;
   --blockquote-line-color: #333;
-  --thinking-header-color: #ddd;
   --selected-shadow-blur-radius: 15px;
   --default-margin: 0.5rem;
   --top-margin: 1rem;
@@ -178,14 +177,26 @@ blockquote blockquote {
   margin-left: 0em;
 }
 
-.thinking summary {
-  color: var(--thinking-header-color);
+.thinking {
+  background-color: var(--user-bubble-bg-color);
+  border-radius: var(--bubble-radius);
+  padding: var(--small-padding);
 }
 
-/* Adjust spacing inside thinking blocks */
-.thinking blockquote {
-  margin-top: 0.5em;
-  margin-bottom: 0;
+.thinking summary {
+  color: var(--text-color);
+  opacity: 0.8;
+  cursor: pointer;
+  padding: 0 var(--small-padding);
+  margin-left: calc(-1 * var(--default-margin));
+}
+
+.thinking details {
+  margin-left: var(--default-margin);
+}
+
+.thinking summary:hover {
+  opacity: 1;
 }
 
 /* The default margins are too large */
