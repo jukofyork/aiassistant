@@ -52,12 +52,13 @@ public class MarkdownParser {
         final Pattern latexBlockClosePattern = Pattern.compile("^.*?(\\$\\$|\\\\\\])[ \\t]*$");
         
         final Pattern thinkingBlockOpenPattern = Pattern.compile("<thinking>");        
-        final Pattern checkingBlockOpenPattern = Pattern.compile("<reflection>");
-        final Pattern summaryClosePattern = Pattern.compile("</thinking>|</reflection>");
+        final Pattern thinkingBlockClosePattern = Pattern.compile("</thinking>");
 
         StringBuilder latexBlockBuffer = new StringBuilder();
         
-        int summaryBlockCount = 0;
+        int thinkingBlockCount = 0;
+        
+        int currentQuoteLevel = 0;
 
         try (Scanner scanner = new Scanner(markdownText)) {
             scanner.useDelimiter("\n");
@@ -65,9 +66,8 @@ public class MarkdownParser {
             while (scanner.hasNext()) {
                 String line = scanner.next();
                 
-            	Matcher thinkingOpenMatcher = thinkingBlockOpenPattern.matcher(line);
-            	Matcher checkingOpenMatcher = checkingBlockOpenPattern.matcher(line);
-            	Matcher summaryCloseMatcher = summaryClosePattern.matcher(line);
+            	Matcher thinkingBlockOpenMatcher = thinkingBlockOpenPattern.matcher(line);
+            	Matcher thinkingBlockCloseMatcher = thinkingBlockClosePattern.matcher(line);
             	
 				Matcher codeBlockMatcher = codeBlockPattern.matcher(line);
 				Matcher latexMultilineBlockOpenMatcher = latexMultilineBlockOpenPattern.matcher(line);            
@@ -76,24 +76,43 @@ public class MarkdownParser {
                 
                 switch (currentBlock) {
                     case NONE:
-                    	while (thinkingOpenMatcher.find()) {
-                    	    htmlOutput.append(getSummaryOpeningHtml("Thinking"));
-                    	    line = thinkingOpenMatcher.replaceFirst("");
-                    	    thinkingOpenMatcher = thinkingBlockOpenPattern.matcher(line);
-                    		summaryBlockCount++;
+                    	while (thinkingBlockOpenMatcher.find()) {
+                    	    htmlOutput.append(getThinkingBlockOpeningHtml());
+                    	    line = thinkingBlockOpenMatcher.replaceFirst("");
+                    	    thinkingBlockOpenMatcher = thinkingBlockOpenPattern.matcher(line);
+                    	    thinkingBlockCount++;
                     	}
-                    	while (checkingOpenMatcher.find()) {
-                    	    htmlOutput.append(getSummaryOpeningHtml("Reflection")); 
-                    	    line = checkingOpenMatcher.replaceFirst("");
-                    	    checkingOpenMatcher = checkingBlockOpenPattern.matcher(line);
-                    		summaryBlockCount++;
+                    	while (thinkingBlockCloseMatcher.find()) {
+                    	    htmlOutput.append(getThinkingBlockClosingHtml());
+                    	    line = thinkingBlockCloseMatcher.replaceFirst("");
+                    	    thinkingBlockCloseMatcher = thinkingBlockClosePattern.matcher(line);
+                    	    thinkingBlockCount++;
                     	}
-                    	while (summaryCloseMatcher.find()) {
-                    	    htmlOutput.append(getSummaryClosingHtml());
-                    	    line = summaryCloseMatcher.replaceFirst("");
-                    	    summaryCloseMatcher = summaryClosePattern.matcher(line);
-                    		summaryBlockCount++;
-                    	}
+                    	
+                        // Get quote level for current line
+                        int lineQuoteLevel = 0;
+                        if (line.trim().startsWith(">")) {
+                            lineQuoteLevel = countQuoteMarkers(line);
+                            // Remove quote markers if present and trim
+                            line = line.replaceFirst("^[ \\t]*>+[ \\t]*", "");
+                        } else {
+                            // Not a quote line - close all quote blocks
+                            while (currentQuoteLevel > 0) {
+                                htmlOutput.append("</blockquote>");
+                                currentQuoteLevel--;
+                            }
+                        }
+                        
+                        // Handle quote level transitions
+                        while (currentQuoteLevel > lineQuoteLevel) {
+                            htmlOutput.append("</blockquote>");
+                            currentQuoteLevel--;
+                        }
+                        while (currentQuoteLevel < lineQuoteLevel) {
+                            htmlOutput.append("<blockquote>");
+                            currentQuoteLevel++;
+                        }
+                    	
                         if (codeBlockMatcher.find()) {
                             String language = codeBlockMatcher.group(1);
                             appendOpenCodeBlock(htmlOutput, language, includeCodeBlockButtons);
@@ -140,51 +159,70 @@ public class MarkdownParser {
         if (currentBlock == BlockType.CODE) {
         	appendCloseCodeBlock(htmlOutput);
         }
+
+        // Close any remaining quote levels
+        while (currentQuoteLevel > 0) {
+            htmlOutput.append("</blockquote>");
+            currentQuoteLevel--;
+        }
         
         // Close any unclosed thinking blocks
-        while (summaryBlockCount > 0) {
-        	htmlOutput.append(getSummaryClosingHtml());
-        	summaryBlockCount--;
+        while (thinkingBlockCount > 0) {
+        	htmlOutput.append(getThinkingBlockClosingHtml());
+        	thinkingBlockCount--;
         }
 
-        return replaceEscapeCodes(removeWhitespaceAfterSummary(replaceLineBreaks(htmlOutput.toString())));
+        return replaceEscapeCodes(trimThinkingyBlock(replaceLineBreaks(htmlOutput.toString())));
     }
     
     /**
-     * Generates the opening HTML markup for a collapsible summary section.
-     * Creates a div with the specified tag name as its class (lowercase) and
-     * a nested details/summary structure for collapsible content.
-     * 
-     * @param tagName The name of the tag (e.g., "Thinking" or "Reflection") used for
-     *               both the CSS class name (lowercase) and display text
-     * @return HTML string containing opening div, details, and summary elements
+     * Generates the opening HTML markup for a collapsible thinking block.
+     * Creates a nested structure with:
+     * - An outer div with class "thinking"
+     * - A details element for collapsible functionality
+     * - A summary element with "Thinking" text
+     * - A blockquote element for the content
+     *
+     * @return HTML string containing the opening structure for a thinking block
      */
-    private static String getSummaryOpeningHtml(String tagName) {
-        return "<div class=\"" + tagName.toLowerCase() + "\"><details>\n<summary>" + tagName + "</summary>\n";
+    private static String getThinkingBlockOpeningHtml() {
+        return "<div class=\"thinking\"><details><summary>Thinking...</summary><blockquote>";
     }
     
     /**
-     * Generates the closing HTML markup for a collapsible summary section.
-     * Provides the matching closing tags for the structure created by getSummaryOpeningHtml.
-     * 
-     * @return HTML string containing closing details and div tags
+     * Generates the closing HTML markup for a collapsible thinking block.
+     * Provides the matching closing tags for the structure created by 
+     * {@link #getThinkingBlockOpeningHtml()}.
+     *
+     * @return HTML string containing closing tags for blockquote, details, and div elements
      */
-    private static String getSummaryClosingHtml() {
-        return "</details></div>";
+    private static String getThinkingBlockClosingHtml() {
+        return "</blockquote></details></div>";
     }
     
     /**
-     * Removes excessive whitespace and line breaks between collapsible summary blocks
-     * (thinking/reflection sections) and subsequent content. This ensures consistent
-     * spacing in the rendered HTML output by replacing any combination of whitespace
-     * and break tags with a single break tag.
-     * 
-     * @param html The HTML string containing potentially multiple summary blocks
-     * @return The HTML string with normalized spacing after summary blocks, preserving
-     *         a single <br/> tag for visual separation
+     * Normalises whitespace and line breaks around thinking block elements.
+     * Performs two specific cleanups:
+     * 1. Removes extra whitespace/breaks between thinking block elements
+     * 2. Standardises spacing after thinking blocks to a single break tag
+     *
+     * @param html The HTML string containing thinking block markup
+     * @return The HTML string with normalized spacing around thinking blocks
      */
-    private static String removeWhitespaceAfterSummary(String html) {
-        return html.replaceAll("</details>\\s*</div>(?:\\s|<br/>)+", "</details></div><br/>");
+    private static String trimThinkingyBlock(String html) {
+        return html
+                .replaceAll("</summary>\\s*<blockquote>(?:\\s|<br/>)+", "</summary><blockquote>")
+                .replaceAll("</details>\\s*</div>(?:\\s|<br/>)+", "</details></div><br/>");
+    }
+    
+    private static int countQuoteMarkers(String line) {
+        int count = 0;
+        String trimmed = line.trim();
+        while (trimmed.startsWith(">")) {
+            count++;
+            trimmed = trimmed.substring(1).trim();
+        }
+        return count;
     }
 
     /**

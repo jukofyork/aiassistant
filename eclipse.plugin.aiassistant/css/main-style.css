@@ -28,8 +28,10 @@
   --button-active-shadow: 0 1px 1px rgba(0,0,0,0.1), inset 0 1px 1px rgba(0,0,0,0.2);
   --broswer-selection-bg-color: rgba(96, 96, 96, 0.8);  /* Gray with 80% opacity */
   --selected-shadow-color: #00f;
-  --thinking-color: #2b8;
-  --reflection-color: #c44;
+  --blockquote-text-color: #bbb;
+  --blockquote-nested-text-color: #999;
+  --blockquote-line-color: #333;
+  --thinking-header-color: #ddd;
   --selected-shadow-blur-radius: 15px;
   --default-margin: 0.5rem;
   --top-margin: 1rem;
@@ -160,24 +162,30 @@ pre code {
 }
 
 summary {
-    font-weight: bold;
-    font-size: calc(var(--default-font-size) + 2px);
+  font-weight: bold;
+  font-size: calc(var(--default-font-size) + 2px);
+}
+
+blockquote {
+  color: var(--blockquote-text-color);
+  margin: 0.5em 0;
+  padding: 0 1em;
+  border-left: 0.25em solid var(--blockquote-line-color);
+}
+
+blockquote blockquote {
+  color: var(--blockquote-nested-text-color);
+  margin-left: 0em;
 }
 
 .thinking summary {
-    color: var(--thinking-color);
+  color: var(--thinking-header-color);
 }
 
-.reflection summary {
-    color: var(--reflection-color);
-}
-
-.reflection .thinking summary {
-    color: var(--thinking-color);
-}
-
-.thinking .reflection summary {
-    color: var(--reflection-color);
+/* Adjust spacing inside thinking blocks */
+.thinking blockquote {
+  margin-top: 0.5em;
+  margin-bottom: 0;
 }
 
 /* The default margins are too large */
