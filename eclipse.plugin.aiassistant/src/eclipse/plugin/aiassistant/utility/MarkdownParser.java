@@ -176,38 +176,31 @@ public class MarkdownParser {
     }
     
     /**
-     * Generates the opening HTML markup for a collapsible thinking block.
-     * Creates a nested structure with:
-     * - An outer div with class "thinking"
-     * - A details element for collapsible functionality
-     * - A summary element with "Thinking" text
-     * - A blockquote element for the content
+     * Generates HTML markup for opening a collapsible UI section used to show AI thinking process.
+     * Creates a nested structure of div, details, and summary elements for interactive display.
      *
-     * @return HTML string containing the opening structure for a thinking block
+     * @return HTML markup string for opening a collapsible thinking block
      */
     private static String getThinkingBlockOpeningHtml() {
         return "<div class=\"thinking\"><details><summary>Thinking...</summary>";
     }
     
     /**
-     * Generates the closing HTML markup for a collapsible thinking block.
-     * Provides the matching closing tags for the structure created by 
-     * {@link #getThinkingBlockOpeningHtml()}.
+     * Generates HTML markup for closing a collapsible thinking block section.
+     * Must be paired with a corresponding opening markup to maintain proper HTML structure.
      *
-     * @return HTML string containing closing tags for blockquote, details, and div elements
+     * @return HTML markup string for closing a collapsible thinking block
      */
     private static String getThinkingBlockClosingHtml() {
         return "</details></div>";
     }
     
     /**
-     * Normalises whitespace and line breaks around thinking block elements.
-     * Performs two specific cleanups:
-     * 1. Removes extra whitespace/breaks between thinking block elements
-     * 2. Standardises spacing after thinking blocks to a single break tag
+     * Normalizes whitespace and line breaks around thinking block elements for consistent display.
+     * Ensures clean formatting by removing excess whitespace and standardizing break tags.
      *
-     * @param html The HTML string containing thinking block markup
-     * @return The HTML string with normalized spacing around thinking blocks
+     * @param html The HTML string containing thinking block markup to normalize
+     * @return The HTML string with standardized spacing around thinking blocks
      */
     private static String trimThinkingyBlock(String html) {
         return html
@@ -215,6 +208,13 @@ public class MarkdownParser {
                 .replaceAll("</details>\\s*</div>(?:\\s|<br/>)+", "</details></div><br/>");
     }
     
+    /**
+     * Counts the number of nested quote levels (>) at the start of a Markdown line.
+     * Used for parsing nested blockquotes in Markdown text.
+     *
+     * @param line The text line to analyze for quote markers
+     * @return The number of nested quote levels found
+     */
     private static int countQuoteMarkers(String line) {
         int count = 0;
         String trimmed = line.trim();
