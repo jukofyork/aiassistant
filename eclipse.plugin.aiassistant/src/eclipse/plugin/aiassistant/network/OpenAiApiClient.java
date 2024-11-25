@@ -169,8 +169,7 @@ public class OpenAiApiClient {
 						Duration.ofSeconds(Preferences.getRequestTimeout()));
 				HttpResponse<InputStream> streamingResponse = httpClientWrapper.sendRequest(
 						buildChatCompletionRequestBody(modelName, chatConversation));
-				// NOTE: We can't use streaming for 'o1-mini' or 'o1-preview' models.
-				if (!Preferences.useStreaming() || isO1Model(modelName)) {
+				if (!Preferences.useStreaming()) {
 					processResponse(streamingResponse);
 				}
 				else {
@@ -250,8 +249,7 @@ public class OpenAiApiClient {
 			}
 
 			// Set the streaming flag.
-			// NOTE: We can't use streaming for 'o1-mini' or 'o1-preview' models.
-			if (!Preferences.useStreaming() || isO1Model(modelName)) {
+			if (!Preferences.useStreaming()) {
 				requestBody.put("stream", false);
 			} else {
 				requestBody.put("stream", true);
@@ -521,8 +519,8 @@ public class OpenAiApiClient {
 	
 	/**
 	 * Determines if the given model is an O1-series model with limited capabilities.
-	 * O1 models have specific restrictions: they cannot use streaming responses,
-	 * do not support system messages, and cannot have their temperature parameter modified.
+	 * O1 models have specific restrictions: they do not support system messages,
+	 * and cannot have their temperature parameter modified.
 	 *
 	 * @param modelName the name of the OpenAI model to check
 	 * @return true if the model is an O1-series model (o1-mini or o1-preview),
