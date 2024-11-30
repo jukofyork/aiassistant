@@ -10,7 +10,6 @@ import org.eclipse.jface.preference.BooleanFieldEditor;
 import org.eclipse.jface.preference.FieldEditorPreferencePage;
 import org.eclipse.jface.preference.IntegerFieldEditor;
 import org.eclipse.jface.preference.StringFieldEditor;
-import org.eclipse.jface.util.PropertyChangeEvent;
 import org.eclipse.jface.viewers.ArrayContentProvider;
 import org.eclipse.jface.viewers.ColumnLabelProvider;
 import org.eclipse.jface.viewers.ColumnWeightData;
@@ -45,15 +44,16 @@ import eclipse.plugin.aiassistant.utility.URLFieldEditor;
  *   <li>Set up current API connection parameters</li>
  *   <li>Manage bookmarked API configurations</li>
  * </ul>
- * 
+ *
  * @see IWorkbenchPreferencePage
  * @see FieldEditorPreferencePage
  */
 public class PreferencePage extends FieldEditorPreferencePage implements IWorkbenchPreferencePage {
 
-	 /** Field editors for general plugin settings */
+	/** Field editors for general plugin settings */
 	private IntegerFieldEditor connectionTimeoutEditor;
 	private IntegerFieldEditor requestTimeoutEditor;
+	private IntegerFieldEditor streamingUpdateIntervalEditor;
 	private IntegerFieldEditor chatFontSizeEditor;
 	private IntegerFieldEditor notificationFontSizeEditor;
 	private BooleanFieldEditor streamingEditor;
@@ -64,24 +64,24 @@ public class PreferencePage extends FieldEditorPreferencePage implements IWorkbe
 	private URLFieldEditor apiUrlEditor;
 	private StringFieldEditor apiKeyEditor;
 	private DoubleFieldEditor temperatureEditor;
-	
+
 	private Button bookmarkButton;
 	private Button unbookmarkButton;
 	private Button validateButton;
-	
+
 	private Button clearButton;
 	private Button sortButton;
 
-	 /** Table viewer for managing bookmarked API configurations */
+	/** Table viewer for managing bookmarked API configurations */
 	private TableViewer tableViewer;
 
-	 /** List of saved API configurations */
+	/** List of saved API configurations */
 	private List<BookmarkedApiSettings> bookmarkedApiSettings;
 
-    /**
-     * Creates a new preference page instance and initializes the preference store
-     * and bookmarked API settings.
-     */
+	/**
+	 * Creates a new preference page instance and initializes the preference store
+	 * and bookmarked API settings.
+	 */
 	public PreferencePage() {
 		super(GRID);
 		setPreferenceStore(Preferences.getDefault());
@@ -96,13 +96,13 @@ public class PreferencePage extends FieldEditorPreferencePage implements IWorkbe
 	public void init(IWorkbench workbench) {
 	}
 
-    /**
-     * Creates and initializes all field editors for this preference page.
-     * Organizes the fields into three main sections:
-     * - General Settings
-     * - Current API Settings
-     * - Bookmarked API Settings
-     */
+	/**
+	 * Creates and initializes all field editors for this preference page.
+	 * Organizes the fields into three main sections:
+	 * - General Settings
+	 * - Current API Settings
+	 * - Bookmarked API Settings
+	 */
 	@Override
 	protected void createFieldEditors() {
 		Composite parent = getFieldEditorParent();
@@ -121,12 +121,12 @@ public class PreferencePage extends FieldEditorPreferencePage implements IWorkbe
 		createSectionHeader(parent, "\nBOOKMARKED API SETTINGS:");
 		createTable(parent);
 		createTableActionButtons(parent);
-		
-	    // Add listeners to all fields that affect bookmark status
-	    addSettingsChangeListener(modelNameEditor.getTextControl(parent));
-	    addSettingsChangeListener(apiUrlEditor.getTextControl(parent));
-	    addSettingsChangeListener(apiKeyEditor.getTextControl(parent));
-	    addSettingsChangeListener(temperatureEditor.getTextControl(parent));
+
+		// Add listeners to all fields that affect bookmark status
+		addSettingsChangeListener(modelNameEditor.getTextControl(parent));
+		addSettingsChangeListener(apiUrlEditor.getTextControl(parent));
+		addSettingsChangeListener(apiKeyEditor.getTextControl(parent));
+		addSettingsChangeListener(temperatureEditor.getTextControl(parent));
 	}
 
 	@Override
@@ -134,17 +134,17 @@ public class PreferencePage extends FieldEditorPreferencePage implements IWorkbe
 		super.setVisible(visible);
 		updateBookmarkButtonsVisibility();
 	}
-		
-    /**
-     * Creates the general settings section with timeout and display preferences.
-     * 
-     * @param parent The parent composite where the fields will be created
-     */
+
+	/**
+	 * Creates the general settings section with timeout and display preferences.
+	 *
+	 * @param parent The parent composite where the fields will be created
+	 */
 	private void createGlobalSettingsGroup(Composite parent) {
 		connectionTimeoutEditor = new IntegerFieldEditor(PreferenceConstants.CONNECTION_TIMEOUT,
 				"Connection Timeout (s):", parent);
 		connectionTimeoutEditor.setValidRange(Constants.MIN_CONNECTION_TIMEOUT, Constants.MAX_CONNECTION_TIMEOUT);
-		
+
 		requestTimeoutEditor = new IntegerFieldEditor(PreferenceConstants.REQUEST_TIMEOUT,
 				"Request Timeout (s):", parent);
 		requestTimeoutEditor.setValidRange(Constants.MIN_REQUEST_TIMEOUT, Constants.MAX_REQUEST_TIMEOUT);
@@ -157,6 +157,10 @@ public class PreferencePage extends FieldEditorPreferencePage implements IWorkbe
 		notificationFontSizeEditor.setValidRange(Constants.MIN_NOTIFICATION_FONT_SIZE,
 				Constants.MAX_NOTIFICATION_FONT_SIZE);
 
+		streamingUpdateIntervalEditor = new IntegerFieldEditor(PreferenceConstants.STREAMING_UPDATE_INTERVAL,
+				"Streaming Interval (ms):", parent);
+		streamingUpdateIntervalEditor.setValidRange(Constants.MIN_STREAMING_UPDATE_INTERVAL, Constants.MAX_STREAMING_UPDATE_INTERVAL);
+
 		streamingEditor = new BooleanFieldEditor(PreferenceConstants.USE_STREAMING, "Use Streaming",
 				BooleanFieldEditor.SEPARATE_LABEL, parent);
 
@@ -167,15 +171,16 @@ public class PreferencePage extends FieldEditorPreferencePage implements IWorkbe
 		addField(requestTimeoutEditor);
 		addField(chatFontSizeEditor);
 		addField(notificationFontSizeEditor);
+		addField(streamingUpdateIntervalEditor);
 		addField(streamingEditor);
 		addField(disableTooltipsEditor);
 	}
 
-    /**
-     * Creates the current API settings section for configuring the active API connection.
-     * 
-     * @param parent The parent composite where the fields will be created
-     */
+	/**
+	 * Creates the current API settings section for configuring the active API connection.
+	 *
+	 * @param parent The parent composite where the fields will be created
+	 */
 	private void createCurrentApiSettingsGroup(Composite parent) {
 		modelNameEditor = new StringFieldEditor(PreferenceConstants.CURRENT_MODEL_NAME, "Model Name:", parent);
 		modelNameEditor.setEmptyStringAllowed(false);
@@ -194,17 +199,17 @@ public class PreferencePage extends FieldEditorPreferencePage implements IWorkbe
 		addField(temperatureEditor);
 	}
 
-    /**
-     * Creates a scrollable table for displaying and managing bookmarked API configurations.
-     * 
-     * @param parent The parent composite where the table will be created
-     */
+	/**
+	 * Creates a scrollable table for displaying and managing bookmarked API configurations.
+	 *
+	 * @param parent The parent composite where the table will be created
+	 */
 	private void createTable(Composite parent) {
 		// Create a scrolled composite
 		org.eclipse.swt.custom.ScrolledComposite scrolledComposite = new org.eclipse.swt.custom.ScrolledComposite(
 				parent, SWT.V_SCROLL | SWT.H_SCROLL | SWT.BORDER);
 		GridData scrolledData = new GridData(SWT.FILL, SWT.FILL, true, false);
-		scrolledData.heightHint = 300;
+		scrolledData.heightHint = 400;
 		scrolledData.horizontalSpan = 2;
 		scrolledComposite.setLayoutData(scrolledData);
 
@@ -249,45 +254,45 @@ public class PreferencePage extends FieldEditorPreferencePage implements IWorkbe
 		scrolledComposite.setExpandVertical(true);
 		scrolledComposite.setMinSize(tableComposite.computeSize(SWT.DEFAULT, SWT.DEFAULT));
 	}
-	
-    /**
-     * Creates and configures the action buttons for managing the current API settings.
-     * Sets up a button composite with three main actions:
-     * - Bookmark: Saves current API configuration if valid and unique
-     * - Unbookmark: Removes matching API configuration from bookmarks
-     * - Validate: Tests API connection and verifies model availability
-     * 
-     * @param parent The parent composite where the buttons will be created
-     * @see BookmarkedApiSettings
-     * @see OpenAiApiClient#getApiStatus(String, String)
-     */
+
+	/**
+	 * Creates and configures the action buttons for managing the current API settings.
+	 * Sets up a button composite with three main actions:
+	 * - Bookmark: Saves current API configuration if valid and unique
+	 * - Unbookmark: Removes matching API configuration from bookmarks
+	 * - Validate: Tests API connection and verifies model availability
+	 *
+	 * @param parent The parent composite where the buttons will be created
+	 * @see BookmarkedApiSettings
+	 * @see OpenAiApiClient#getApiStatus(String, String)
+	 */
 	private void createCurrentApiSettingsButtons(Composite parent) {
-	    Composite buttonComposite = new Composite(parent, SWT.NONE);
-	    GridLayout layout = new GridLayout(10, true);
-	    buttonComposite.setLayout(layout);
-	    GridData gridData = new GridData(SWT.FILL, SWT.CENTER, true, false);
-	    gridData.horizontalSpan = 2;
-	    buttonComposite.setLayoutData(gridData);
-		    	    
-	    bookmarkButton = createActionButton(buttonComposite, "Bookmark", "Bookmark current API settings", "Bookmark.png", () -> {
-	        BookmarkedApiSettings currentSettings = getCurrentSettings();
-	        if (currentSettings != null && !bookmarkedApiSettings.contains(currentSettings)) {
-	            bookmarkedApiSettings.add(currentSettings);
-	            tableViewer.refresh();
-	            updateBookmarkButtonsVisibility();
-	        }
-	    });
-	
-	    unbookmarkButton = createActionButton(buttonComposite, "Unbookmark", "Unbookmark matching API settings", "Unbookmark.png", () -> {
-	        BookmarkedApiSettings currentSettings = getCurrentSettings();
-	        if (currentSettings != null) {
-		        bookmarkedApiSettings.remove(currentSettings);
-		        tableViewer.refresh();
-		        updateBookmarkButtonsVisibility();
-	        }
-	    });
-	    
-	    validateButton = createActionButton(buttonComposite, "Validate", "Validate current API settings", "Refresh.png", () -> {
+		Composite buttonComposite = new Composite(parent, SWT.NONE);
+		GridLayout layout = new GridLayout(10, true);
+		buttonComposite.setLayout(layout);
+		GridData gridData = new GridData(SWT.FILL, SWT.CENTER, true, false);
+		gridData.horizontalSpan = 2;
+		buttonComposite.setLayoutData(gridData);
+
+		bookmarkButton = createActionButton(buttonComposite, "Bookmark", "Bookmark current API settings", "Bookmark.png", () -> {
+			BookmarkedApiSettings currentSettings = getCurrentSettings();
+			if (currentSettings != null && !bookmarkedApiSettings.contains(currentSettings)) {
+				bookmarkedApiSettings.add(currentSettings);
+				tableViewer.refresh();
+				updateBookmarkButtonsVisibility();
+			}
+		});
+
+		unbookmarkButton = createActionButton(buttonComposite, "Unbookmark", "Unbookmark matching API settings", "Unbookmark.png", () -> {
+			BookmarkedApiSettings currentSettings = getCurrentSettings();
+			if (currentSettings != null) {
+				bookmarkedApiSettings.remove(currentSettings);
+				tableViewer.refresh();
+				updateBookmarkButtonsVisibility();
+			}
+		});
+
+		validateButton = createActionButton(buttonComposite, "Validate", "Validate current API settings", "Refresh.png", () -> {
 			String currentModelName = modelNameEditor.getStringValue().trim();
 			String currentApiUrl = apiUrlEditor.getStringValue().trim();
 			String currentApiKey = apiKeyEditor.getStringValue().trim();
@@ -295,9 +300,9 @@ public class PreferencePage extends FieldEditorPreferencePage implements IWorkbe
 				java.util.List<String> modelNames = OpenAiApiClient.fetchAvailableModelNames(currentApiUrl,
 						currentApiKey);
 				if (modelNames.contains(currentModelName)) {
-					 Eclipse.runOnUIThreadAsync(() -> {
-						 Eclipse.setButtonIcon(validateButton, "Pass.png");
-					 });
+					Eclipse.runOnUIThreadAsync(() -> {
+						Eclipse.setButtonIcon(validateButton, "Pass.png");
+					});
 				}
 				else {
 					Eclipse.runOnUIThreadAsync(() -> {
@@ -305,48 +310,48 @@ public class PreferencePage extends FieldEditorPreferencePage implements IWorkbe
 					});
 				}
 			}
-	    });
+		});
 
 	}
 
-    /**
-     * Creates and configures the action buttons for managing the bookmarked API settings table.
-     * Implements three main operations:
-     * - Clear: Removes all bookmarked settings
-     * - Sort: Alphabetically sorts bookmarks by model name
-     * - Populate: Automatically discovers and bookmarks compatible API models
-     * 
-     * The populate operation filters available models based on the current model name
-     * as a substring match, allowing for partial name searches.
-     * 
-     * @param parent The parent composite where the buttons will be created
-     * @see BookmarkedApiSettings#compareTo(BookmarkedApiSettings)
-     * @see OpenAiApiClient#fetchAvailableModelNames(String, String)
-     */
+	/**
+	 * Creates and configures the action buttons for managing the bookmarked API settings table.
+	 * Implements three main operations:
+	 * - Clear: Removes all bookmarked settings
+	 * - Sort: Alphabetically sorts bookmarks by model name
+	 * - Populate: Automatically discovers and bookmarks compatible API models
+	 *
+	 * The populate operation filters available models based on the current model name
+	 * as a substring match, allowing for partial name searches.
+	 *
+	 * @param parent The parent composite where the buttons will be created
+	 * @see BookmarkedApiSettings#compareTo(BookmarkedApiSettings)
+	 * @see OpenAiApiClient#fetchAvailableModelNames(String, String)
+	 */
 	private void createTableActionButtons(Composite parent) {
-	    Composite buttonComposite = new Composite(parent, SWT.NONE);
-	    GridLayout layout = new GridLayout(10, true);
-	    buttonComposite.setLayout(layout);
-	    GridData gridData = new GridData(SWT.FILL, SWT.CENTER, true, false);
-	    gridData.horizontalSpan = 2;
-	    buttonComposite.setLayoutData(gridData);
-	    	
-	    // Clear button
-	    clearButton = createActionButton(buttonComposite, "Clear", "Clear all bookmarked API settings", "Clear.png", () -> {
-	        bookmarkedApiSettings.clear();
-	        tableViewer.refresh();
-	        updateBookmarkButtonsVisibility();
-	    });
-	
-	    // Sort button
-	    sortButton = createActionButton(buttonComposite, "Sort", "Sort bookmarked API settings", "Sort.png", () -> {
-	        bookmarkedApiSettings.sort(null);
-	        tableViewer.refresh();
-	        updateBookmarkButtonsVisibility();
-	    });
-	
+		Composite buttonComposite = new Composite(parent, SWT.NONE);
+		GridLayout layout = new GridLayout(10, true);
+		buttonComposite.setLayout(layout);
+		GridData gridData = new GridData(SWT.FILL, SWT.CENTER, true, false);
+		gridData.horizontalSpan = 2;
+		buttonComposite.setLayoutData(gridData);
+
+		// Clear button
+		clearButton = createActionButton(buttonComposite, "Clear", "Clear all bookmarked API settings", "Clear.png", () -> {
+			bookmarkedApiSettings.clear();
+			tableViewer.refresh();
+			updateBookmarkButtonsVisibility();
+		});
+
+		// Sort button
+		sortButton = createActionButton(buttonComposite, "Sort", "Sort bookmarked API settings", "Sort.png", () -> {
+			bookmarkedApiSettings.sort(null);
+			tableViewer.refresh();
+			updateBookmarkButtonsVisibility();
+		});
+
 		// Populate button
-	    createActionButton(buttonComposite, "Populate", "Populate API settings", "Populate.png", () -> {
+		createActionButton(buttonComposite, "Populate", "Populate API settings", "Populate.png", () -> {
 			String currentModelName = modelNameEditor.getStringValue().trim();
 			String currentApiUrl = apiUrlEditor.getStringValue().trim();
 			String currentApiKey = apiKeyEditor.getStringValue().trim();
@@ -369,96 +374,96 @@ public class PreferencePage extends FieldEditorPreferencePage implements IWorkbe
 			}
 		});
 	}
-	
+
 	/**
-     * Creates a single action button with specified parameters.
-     * 
-     * @param parent The parent composite
-     * @param text Button label text
-     * @param tooltip Button tooltip text
-     * @param imageName Name of the button image resource
-     * @param action Runnable to execute when button is clicked
-     */
+	 * Creates a single action button with specified parameters.
+	 *
+	 * @param parent The parent composite
+	 * @param text Button label text
+	 * @param tooltip Button tooltip text
+	 * @param imageName Name of the button image resource
+	 * @param action Runnable to execute when button is clicked
+	 */
 	private Button createActionButton(Composite parent, String text, String tooltip, String imageName, Runnable action) {
-	    return Eclipse.createButton(parent, text, tooltip, imageName,
-	        new SelectionAdapter() {
-	            @Override
-	            public void widgetSelected(SelectionEvent e) {
-	                action.run();
-	                updateBookmarkButtonsVisibility();
-	            }
-	        });
+		return Eclipse.createButton(parent, text, tooltip, imageName,
+				new SelectionAdapter() {
+			@Override
+			public void widgetSelected(SelectionEvent e) {
+				action.run();
+				updateBookmarkButtonsVisibility();
+			}
+		});
 	}
-	
+
 	/**
 	 * Attaches a listener to a text control that triggers button state updates
 	 * whenever the text content changes. This ensures bookmark-related buttons
 	 * stay in sync with the current input state.
-	 * 
+	 *
 	 * @param textControl The SWT Text widget to monitor for changes
 	 * @see org.eclipse.swt.widgets.Text
 	 * @see #updateBookmarkButtonsVisibility()
 	 */
 	private void addSettingsChangeListener(Text textControl) {
-	    textControl.addModifyListener(e -> updateBookmarkButtonsVisibility());
+		textControl.addModifyListener(e -> updateBookmarkButtonsVisibility());
 	}
-	
+
 	/**
 	 * Updates the enabled state and icons of all bookmark-related buttons based on
 	 * the current API settings and bookmark state. The update happens in two phases:
-	 * 
+	 *
 	 * 1. Synchronously resets the validate button icon to prevent stale states
 	 * 2. Asynchronously updates all button states to prevent UI freezing
-	 * 
+	 *
 	 * Button states are determined by:
 	 * - Validate: Enabled if current settings are valid
 	 * - Bookmark: Enabled if settings are valid and not already bookmarked
 	 * - Unbookmark: Enabled if settings are valid and currently bookmarked
 	 * - Clear/Sort: Enabled if any bookmarks exist
-	 * 
+	 *
 	 * @see Eclipse#runOnUIThreadSync(Runnable)
 	 * @see Eclipse#runOnUIThreadAsync(Runnable)
 	 * @see #getCurrentSettings()
 	 */
 	private void updateBookmarkButtonsVisibility() {
-	    boolean isValidatable;
-	    boolean isBookmarkable;
-	    boolean isUnbookmarkable;
-	    BookmarkedApiSettings currentSettings = getCurrentSettings();
-	    if (currentSettings == null) {
-	        isValidatable = false;
-	        isBookmarkable = false;
-	        isUnbookmarkable = false;
-	    }
-	    else {
-	        isValidatable = true;
-	        isBookmarkable = !bookmarkedApiSettings.contains(getCurrentSettings());
-	        isUnbookmarkable = bookmarkedApiSettings.contains(getCurrentSettings());
-	    }
-	    
-	    // Reset validate button icon synchronously to ensure immediate feedback
-	    Eclipse.runOnUIThreadSync(() -> {
-	        Eclipse.setButtonIcon(validateButton, "Refresh.png");
-	    });
-	    
-	    // Update button states asynchronously to maintain UI responsiveness
-	    Eclipse.runOnUIThreadAsync(() -> {
-	        bookmarkButton.setEnabled(isBookmarkable);
-	        unbookmarkButton.setEnabled(isUnbookmarkable);
-	        validateButton.setEnabled(isValidatable);
-	        clearButton.setEnabled(!bookmarkedApiSettings.isEmpty());
-	        sortButton.setEnabled(!bookmarkedApiSettings.isEmpty());
-	    });
+		boolean isValidatable;
+		boolean isBookmarkable;
+		boolean isUnbookmarkable;
+		BookmarkedApiSettings currentSettings = getCurrentSettings();
+		if (currentSettings == null) {
+			isValidatable = false;
+			isBookmarkable = false;
+			isUnbookmarkable = false;
+		}
+		else {
+			isValidatable = true;
+			isBookmarkable = !bookmarkedApiSettings.contains(getCurrentSettings());
+			isUnbookmarkable = bookmarkedApiSettings.contains(getCurrentSettings());
+		}
+
+		// Reset validate button icon synchronously to ensure immediate feedback
+		Eclipse.runOnUIThreadSync(() -> {
+			Eclipse.setButtonIcon(validateButton, "Refresh.png");
+		});
+
+		// Update button states asynchronously to maintain UI responsiveness
+		Eclipse.runOnUIThreadAsync(() -> {
+			bookmarkButton.setEnabled(isBookmarkable);
+			unbookmarkButton.setEnabled(isUnbookmarkable);
+			validateButton.setEnabled(isValidatable);
+			clearButton.setEnabled(!bookmarkedApiSettings.isEmpty());
+			sortButton.setEnabled(!bookmarkedApiSettings.isEmpty());
+		});
 	}
-	
+
 	/**
-     * Creates a table column with specified configuration.
-     * 
-     * @param title Column header text
-     * @param weight Column width weight
-     * @param tableLayout Layout manager for the table
-     * @param labelProvider Function to extract display text from table elements
-     */
+	 * Creates a table column with specified configuration.
+	 *
+	 * @param title Column header text
+	 * @param weight Column width weight
+	 * @param tableLayout Layout manager for the table
+	 * @param labelProvider Function to extract display text from table elements
+	 */
 	private void createTableColumn(String title, int weight, TableColumnLayout tableLayout,
 			Function<Object, String> labelProvider) {
 		TableViewerColumn column = new TableViewerColumn(tableViewer, SWT.NONE);
@@ -473,33 +478,33 @@ public class PreferencePage extends FieldEditorPreferencePage implements IWorkbe
 
 		tableLayout.setColumnData(column.getColumn(), new ColumnWeightData(weight, true));
 	}
-	
-    /**
-     * Creates a section header label with specified text.
-     * 
-     * @param parent The parent composite
-     * @param text Header text
-     * @return Created Label widget
-     */
+
+	/**
+	 * Creates a section header label with specified text.
+	 *
+	 * @param parent The parent composite
+	 * @param text Header text
+	 * @return Created Label widget
+	 */
 	private Label createSectionHeader(Composite parent, String text) {
-	    Label sectionLabel = new Label(parent, SWT.NONE);
-	    sectionLabel.setText(text);
-	    GridData gridData = new GridData(SWT.FILL, SWT.CENTER, true, false);
-	    gridData.horizontalSpan = 2;
-	    sectionLabel.setLayoutData(gridData);
-	    return sectionLabel;
+		Label sectionLabel = new Label(parent, SWT.NONE);
+		sectionLabel.setText(text);
+		GridData gridData = new GridData(SWT.FILL, SWT.CENTER, true, false);
+		gridData.horizontalSpan = 2;
+		sectionLabel.setLayoutData(gridData);
+		return sectionLabel;
 	}
-	
+
 	/**
 	 * Creates a BookmarkedApiSettings object from the current field values using
 	 * a two-phase validation process:
-	 * 
+	 *
 	 * 1. Validates field editor states (format validation)
 	 * 2. Verifies non-blank content for all required fields
-	 * 
+	 *
 	 * All validations must be performed on the UI thread since they access SWT widgets.
 	 * An AtomicBoolean is used to safely return values from UI thread operations.
-	 * 
+	 *
 	 * @return A new BookmarkedApiSettings instance if all validations pass,
 	 *         or null if any validation fails or fields are blank
 	 * @see BookmarkedApiSettings
@@ -507,41 +512,41 @@ public class PreferencePage extends FieldEditorPreferencePage implements IWorkbe
 	 * @see org.eclipse.jface.preference.FieldEditor#isValid()
 	 */
 	private BookmarkedApiSettings getCurrentSettings() {
-	    AtomicBoolean allValid = new AtomicBoolean();
-	    
-	    // Phase 1: Validate field editor states
-	    Eclipse.runOnUIThreadSync(() -> {
-	        allValid.set(modelNameEditor.isValid()
-	                && apiUrlEditor.isValid()
-	                && apiKeyEditor.isValid()
-	                && temperatureEditor.isValid());
-	    });
-	    
-	    if (allValid.get()) {
-	        // Phase 2: Verify non-blank content
-	        Eclipse.runOnUIThreadSync(() -> {
-	            allValid.set(!modelNameEditor.getStringValue().isBlank()
-	                    && !apiUrlEditor.getStringValue().isBlank()
-	                    && !apiKeyEditor.getStringValue().isBlank()
-	                    && !temperatureEditor.getStringValue().isBlank());
-	        });
-	        
-	        if (allValid.get()) {
-	            return new BookmarkedApiSettings(
-	                    modelNameEditor.getStringValue(),
-	                    apiUrlEditor.getStringValue(),
-	                    apiKeyEditor.getStringValue(),
-	                    temperatureEditor.getDoubleValue());
-	        }
-	    }
-	    return null;
+		AtomicBoolean allValid = new AtomicBoolean();
+
+		// Phase 1: Validate field editor states
+		Eclipse.runOnUIThreadSync(() -> {
+			allValid.set(modelNameEditor.isValid()
+					&& apiUrlEditor.isValid()
+					&& apiKeyEditor.isValid()
+					&& temperatureEditor.isValid());
+		});
+
+		if (allValid.get()) {
+			// Phase 2: Verify non-blank content
+			Eclipse.runOnUIThreadSync(() -> {
+				allValid.set(!modelNameEditor.getStringValue().isBlank()
+						&& !apiUrlEditor.getStringValue().isBlank()
+						&& !apiKeyEditor.getStringValue().isBlank()
+						&& !temperatureEditor.getStringValue().isBlank());
+			});
+
+			if (allValid.get()) {
+				return new BookmarkedApiSettings(
+						modelNameEditor.getStringValue(),
+						apiUrlEditor.getStringValue(),
+						apiKeyEditor.getStringValue(),
+						temperatureEditor.getDoubleValue());
+			}
+		}
+		return null;
 	}
-	
-    /**
-     * Saves the current preference page state.
-     * 
-     * @return true if save successful, false otherwise
-     */
+
+	/**
+	 * Saves the current preference page state.
+	 *
+	 * @return true if save successful, false otherwise
+	 */
 	@Override
 	public boolean performOk() {
 		boolean result = super.performOk();
@@ -562,16 +567,16 @@ public class PreferencePage extends FieldEditorPreferencePage implements IWorkbe
 		performOk(); // Save the preferences immediately on apply.
 	}
 
-    /**
-     * Restores all preferences to their default values.
-     */
+	/**
+	 * Restores all preferences to their default values.
+	 */
 	@Override
 	protected void performDefaults() {
-	    super.performDefaults();
-	    bookmarkedApiSettings = Constants.DEFAULT_BOOKMARKED_API_SETTINGS;
-	    tableViewer.setInput(bookmarkedApiSettings);
-	    tableViewer.refresh();
-	    updateBookmarkButtonsVisibility();
+		super.performDefaults();
+		bookmarkedApiSettings = Constants.DEFAULT_BOOKMARKED_API_SETTINGS;
+		tableViewer.setInput(bookmarkedApiSettings);
+		tableViewer.refresh();
+		updateBookmarkButtonsVisibility();
 	}
 
 }
