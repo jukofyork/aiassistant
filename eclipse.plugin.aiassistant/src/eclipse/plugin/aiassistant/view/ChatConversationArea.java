@@ -31,16 +31,16 @@ import eclipse.plugin.aiassistant.utility.MarkdownParser;
  * interacting with browser functions.
  */
 public class ChatConversationArea {
-	
+
 	public static final String BROWSER_TOOLTIP = """
-			 									 Right Click: Show Context Menu			
-			 									 Ctrl+Scrollwheel: Navigate Top/Bottom
-			 									 Shift+Scrollwheel: Navigate Messages""";
-	
-    public static final String COPY_CODE_FUNCTION_NAME = "eclipseCopyCode";
-    public static final String REPLACE_SELECTION_FUNCTION_NAME = "eclipseReplaceSelection";
-    public static final String REVIEW_CHANGES_FUNCTION_NAME = "eclipseReviewChanges";
-    public static final String APPLY_PATCH_FUNCTION_NAME = "eclipseApplyPatch";
+			Right Click: Show Context Menu
+			Ctrl+Scrollwheel: Navigate Top/Bottom
+			Shift+Scrollwheel: Navigate Messages""";
+
+	public static final String COPY_CODE_FUNCTION_NAME = "eclipseCopyCode";
+	public static final String REPLACE_SELECTION_FUNCTION_NAME = "eclipseReplaceSelection";
+	public static final String REVIEW_CHANGES_FUNCTION_NAME = "eclipseReviewChanges";
+	public static final String APPLY_PATCH_FUNCTION_NAME = "eclipseApplyPatch";
 
 	private final MainPresenter mainPresenter;
 
@@ -51,6 +51,8 @@ public class ChatConversationArea {
 
 	// Smooth scrolling is too janky whilst streaming output getting written.
 	private boolean useSmoothScroll = true;
+
+	private boolean useAsyncExecution = true;
 
 	/**
 	 * Constructs a new ChatConversationArea instance.
@@ -76,7 +78,7 @@ public class ChatConversationArea {
 	 */
 	public void initialize() {
 		setText(browserScriptGenerator.generateInitialHtml());
-		Eclipse.executeScript(browser, "");
+		executeScript("");
 	}
 
 	/**
@@ -98,7 +100,7 @@ public class ChatConversationArea {
 		browserMenu.setEnabled(enabled);
 		useSmoothScroll = enabled;
 	}
-	
+
 	/**
 	 * Sets the visible state of the chat conversation area.
 	 *
@@ -106,6 +108,7 @@ public class ChatConversationArea {
 	 */
 	public void setVisible(boolean enabled) {
 		browser.setVisible(enabled);
+		useAsyncExecution = enabled;
 	}
 
 	/**
@@ -115,7 +118,7 @@ public class ChatConversationArea {
 	 */
 	public void newMessage(ChatMessage message) {
 		String script = browserScriptGenerator.generateNewMessageElementScript(message);
-		Eclipse.executeScript(browser, script);
+		executeScript(script);
 		updateMessage(message);
 	}
 
@@ -127,7 +130,7 @@ public class ChatConversationArea {
 	public void updateMessage(ChatMessage message) {
 		String html = MarkdownParser.convertMarkdownToHtml(message.getMessage(), message.getRole() == ChatRole.ASSISTANT);
 		String script = browserScriptGenerator.generateUpdateMessageScript(html, message.getId());
-		Eclipse.executeScript(browser, script);
+		executeScript(script);
 	}
 
 	/**
@@ -136,7 +139,7 @@ public class ChatConversationArea {
 	 * @param messageId The UUID of the message to remove.
 	 */
 	public void removeMessage(UUID messageId) {
-		Eclipse.executeScript(browser, browserScriptGenerator.generateRemoveMessageScript(messageId));
+		executeScript(browserScriptGenerator.generateRemoveMessageScript(messageId));
 	}
 
 	/**
@@ -144,7 +147,7 @@ public class ChatConversationArea {
 	 */
 	public void scrollToTop() {
 		removeAllSelectionBorders();
-		Eclipse.executeScript(browser, browserScriptGenerator.generateScrollToTopScript(useSmoothScroll));
+		executeScript(browserScriptGenerator.generateScrollToTopScript(useSmoothScroll));
 	}
 
 	/**
@@ -152,7 +155,7 @@ public class ChatConversationArea {
 	 */
 	public void scrollToBottom() {
 		removeAllSelectionBorders();
-		Eclipse.executeScript(browser, browserScriptGenerator.generateScrollToBottomScript(useSmoothScroll));
+		executeScript(browserScriptGenerator.generateScrollToBottomScript(useSmoothScroll));
 	}
 
 	/**
@@ -163,7 +166,7 @@ public class ChatConversationArea {
 	public void scrollToMessage(UUID messageId) {
 		removeAllSelectionBorders();
 		setSelectionBorder(messageId);
-		Eclipse.executeScript(browser, browserScriptGenerator.generateScrollToMessageScript(messageId, useSmoothScroll));
+		executeScript(browserScriptGenerator.generateScrollToMessageScript(messageId, useSmoothScroll));
 	}
 
 	/**
@@ -175,43 +178,43 @@ public class ChatConversationArea {
 	public boolean isScrollbarAtBottom() {
 		return (boolean) Eclipse.evaluateScript(browser, browserScriptGenerator.generateIsScrollbarAtBottomScript());
 	}
-	
+
 	/**
 	 * Sets a border around a specific message in the chat conversation area to indicate selection.
-	 * 
+	 *
 	 * @param messageId The UUID of the message to set the border for.
 	 */
 	public void setSelectionBorder(UUID messageId) {
-		Eclipse.executeScript(browser, browserScriptGenerator.generateSetBorderScript(messageId));
+		executeScript(browserScriptGenerator.generateSetBorderScript(messageId));
 	}
-	
+
 	/**
 	 * Removes all borders around messages in the chat conversation area.
 	 */
 	public void removeAllSelectionBorders() {
-		Eclipse.executeScript(browser, browserScriptGenerator.generateRemoveAllBordersScript());
+		executeScript(browserScriptGenerator.generateRemoveAllBordersScript());
 	}
-	
+
 	public Browser getBrowser() {
 		return browser;
 	}
-	
+
 	public void handleCopySelection(String selectedText) {
-	    if (!selectedText.isEmpty()) {
-	        browserFunctions.get(0).function(new Object[]{selectedText});
-	    }
+		if (!selectedText.isEmpty()) {
+			browserFunctions.get(0).function(new Object[]{selectedText});
+		}
 	}
-	
+
 	public void handleReplaceSelection(String selectedText) {
-	    if (!selectedText.isEmpty()) {
-	        browserFunctions.get(1).function(new Object[]{selectedText});
-	    }
+		if (!selectedText.isEmpty()) {
+			browserFunctions.get(1).function(new Object[]{selectedText});
+		}
 	}
-	
+
 	public void handleReviewChanges(String selectedText) {
-	    if (!selectedText.isEmpty()) {
-	        browserFunctions.get(2).function(new Object[]{selectedText});
-	    }
+		if (!selectedText.isEmpty()) {
+			browserFunctions.get(2).function(new Object[]{selectedText});
+		}
 	}
 
 	/**
@@ -225,7 +228,7 @@ public class ChatConversationArea {
 
 	/**
 	 * Configures the tooltip text for the browser widget.
-	 * 
+	 *
 	 * @param tooltipText The tooltip text to set.
 	 */
 	private void configureTextToolTip(String tooltipText) {
@@ -251,30 +254,30 @@ public class ChatConversationArea {
 			}
 		});
 	}
-	
+
 	/**
 	 * Adds a key listener to the display for handling Shift key events.
 	 */
 	private void addShiftKeyListener() {
-	    Display display = browser.getDisplay();
-	    display.addFilter(SWT.KeyDown, new Listener() {
-	         @Override
-	        public void handleEvent(Event event) {
-	            if (event.keyCode == SWT.SHIFT) {
-	            	handleShiftKeyPressed();
-	             }
-	         }
-	     });
-	    display.addFilter(SWT.KeyUp, new Listener() {
-	         @Override
-	        public void handleEvent(Event event) {
-	            if (event.keyCode == SWT.SHIFT) {
-	            	handleShiftKeyReleased();
-	             }
-	         }
-	     });
+		Display display = browser.getDisplay();
+		display.addFilter(SWT.KeyDown, new Listener() {
+			@Override
+			public void handleEvent(Event event) {
+				if (event.keyCode == SWT.SHIFT) {
+					handleShiftKeyPressed();
+				}
+			}
+		});
+		display.addFilter(SWT.KeyUp, new Listener() {
+			@Override
+			public void handleEvent(Event event) {
+				if (event.keyCode == SWT.SHIFT) {
+					handleShiftKeyReleased();
+				}
+			}
+		});
 	}
-	
+
 	/**
 	 * Handles Control + Scrollwheel events by scrolling to the top or bottom of the
 	 * chat conversation area.
@@ -302,7 +305,7 @@ public class ChatConversationArea {
 			mainPresenter.onScrollDown();
 		}
 	}
-	
+
 	/**
 	 * Handles the Shift key pressed event by calling the corresponding method in the main presenter.
 	 */
@@ -337,6 +340,14 @@ public class ChatConversationArea {
 	private void setAllBrowserFunctionsEnabled(boolean enabled) {
 		for (DisableableBrowserFunction function : browserFunctions) {
 			function.setEnabled(enabled);
+		}
+	}
+
+	private void executeScript(String script) {
+		if (useAsyncExecution) {
+			Eclipse.executeScript(browser,script);
+		} else {
+			Eclipse.evaluateScript(browser, script);
 		}
 	}
 

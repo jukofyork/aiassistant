@@ -36,7 +36,7 @@ public class MainPresenter {
 
 	private final static UUID SCROLLED_TO_TOP = new UUID(0, 0); // At top, before the first message.
 	private final static UUID SCROLLED_TO_BOTTOM = new UUID(-1, -1); // at bottom, beyond the last message.
-	
+
 	private final ChatConversation chatConversation;
 	private final OpenAiApiClient openAiApiClient;
 	private final StreamingChatProcessorJob sendConversationJob;
@@ -53,13 +53,13 @@ public class MainPresenter {
 	 * changes and model selection.
 	 */
 	public MainPresenter() {
-	    chatConversation = new ChatConversation();
-	    openAiApiClient = new OpenAiApiClient();
-	    sendConversationJob = new StreamingChatProcessorJob(this, openAiApiClient, chatConversation);
-	    userMessageHistory = new UserMessageHistory();
-	    setupLogListener();
-	    setupPropertyChangeListener();
-	    setupShutdownListener();
+		chatConversation = new ChatConversation();
+		openAiApiClient = new OpenAiApiClient();
+		sendConversationJob = new StreamingChatProcessorJob(this, openAiApiClient, chatConversation);
+		userMessageHistory = new UserMessageHistory();
+		setupLogListener();
+		setupPropertyChangeListener();
+		setupShutdownListener();
 	}
 
 	/**
@@ -236,23 +236,23 @@ public class MainPresenter {
 	 * If saving fails due to an IOException, it logs a warning but does not throw an exception.
 	 */
 	public void saveStateToPreferenceStore() {
-	    Eclipse.runOnUIThreadSync(new Runnable() {
-	        @Override
-	        public void run() {
-	            try {
-	                Preferences.saveChatConversation(chatConversation);
-	            } catch (IOException e) {
-	                Logger.warning("Failed to save chat conversation: " + e.getMessage());
-	            }
-	            try {
-	                Preferences.saveUserMessageHistory(userMessageHistory);
-	            } catch (IOException e) {
-	                Logger.warning("Failed to save user message history: " + e.getMessage());
-	            }
-	        }
-	    });
+		Eclipse.runOnUIThreadSync(new Runnable() {
+			@Override
+			public void run() {
+				try {
+					Preferences.saveChatConversation(chatConversation);
+				} catch (IOException e) {
+					Logger.warning("Failed to save chat conversation: " + e.getMessage());
+				}
+				try {
+					Preferences.saveUserMessageHistory(userMessageHistory);
+				} catch (IOException e) {
+					Logger.warning("Failed to save user message history: " + e.getMessage());
+				}
+			}
+		});
 	}
-	
+
 	/**
 	 * Loads the chat conversation and user message history from the preference store asynchronously.
 	 * Messages are processed based on their designated roles and displayed accordingly.
@@ -260,48 +260,50 @@ public class MainPresenter {
 	 * This method also ensures that the view is scrolled to the bottom after processing.
 	 */
 	public void loadStateFromPreferenceStore() {
-	    Eclipse.runOnUIThreadAsync(new Runnable() {
-	        @Override
-	        public void run() {
-	            ChatConversation tempConversation;
-	            try {
-	                tempConversation = Preferences.loadChatConversation();
-	            } catch (IOException e) {
-	                Logger.warning("Failed to load chat conversation: " + e.getMessage());
-	                tempConversation = new ChatConversation(); // Fallback to an empty conversation
-	            }
-	            if (!tempConversation.isEmpty()) {
-		    		performOnMainView(mainView -> {
-		    			mainView.getChatMessageArea().setEnabled(false);
-		    		});
-		            for (ChatMessage message : tempConversation.messages()) {
-		                switch (message.getRole()) {
-		                    case USER:
-		                        sendUserMessage(message.getMessage(), false);
-		                        break;
-		                    case ASSISTANT:
-		                        sendAutoReplyAssistantMessage(message.getMessage());
-		                        break;
-		                    case NOTIFICATION:
-		                        displayNotificationMessage(message.getMessage());
-		                        break;
-		                }
-		            }
-		    		performOnMainView(mainView -> {
-		    			mainView.getChatMessageArea().scrollToBottom();
-		    			mainView.getChatMessageArea().setEnabled(true);
-		    		});
-	            }
-	    		try {
-	                userMessageHistory = Preferences.loadUserMessageHistory();
-	            } catch (IOException e) {
-	                Logger.warning("Failed to load user message history: " + e.getMessage());
-	                userMessageHistory = new UserMessageHistory(); // Fallback to an empty message history
-	            }
-	        }
-	    });
+		Eclipse.runOnUIThreadAsync(new Runnable() {
+			@Override
+			public void run() {
+				ChatConversation tempConversation;
+				try {
+					tempConversation = Preferences.loadChatConversation();
+				} catch (IOException e) {
+					Logger.warning("Failed to load chat conversation: " + e.getMessage());
+					tempConversation = new ChatConversation(); // Fallback to an empty conversation
+				}
+				if (!tempConversation.isEmpty()) {
+					performOnMainView(mainView -> {
+						mainView.getChatMessageArea().setEnabled(false);
+						mainView.getChatMessageArea().setVisible(false);
+					});
+					for (ChatMessage message : tempConversation.messages()) {
+						switch (message.getRole()) {
+						case USER:
+							sendUserMessage(message.getMessage(), false);
+							break;
+						case ASSISTANT:
+							sendAutoReplyAssistantMessage(message.getMessage());
+							break;
+						case NOTIFICATION:
+							displayNotificationMessage(message.getMessage());
+							break;
+						}
+					}
+					performOnMainView(mainView -> {
+						mainView.getChatMessageArea().setVisible(true);
+						mainView.getChatMessageArea().scrollToBottom();
+						mainView.getChatMessageArea().setEnabled(true);
+					});
+				}
+				try {
+					userMessageHistory = Preferences.loadUserMessageHistory();
+				} catch (IOException e) {
+					Logger.warning("Failed to load user message history: " + e.getMessage());
+					userMessageHistory = new UserMessageHistory(); // Fallback to an empty message history
+				}
+			}
+		});
 	}
-	
+
 	/**
 	 * Begins a new message from the assistant. It also updates the view to reflect
 	 * the changes.
@@ -380,7 +382,7 @@ public class MainPresenter {
 		}
 
 	}
-			
+
 	/**
 	 * Sends a user message to the chat conversation and schedules a reply if
 	 * requested.
@@ -398,7 +400,7 @@ public class MainPresenter {
 				return;
 			}
 		}
-			
+
 		// Don't add blank messages to the chat conversation.
 		if (!messageString.trim().isEmpty()) {
 			ChatMessage message = new ChatMessage(ChatRole.USER, messageString);
@@ -461,65 +463,65 @@ public class MainPresenter {
 		});
 		return returnText.get();
 	}
-	
+
 	/**
 	 * Initializes a log listener that filters and displays notification messages unless they are cancellation exceptions.
 	 * This method is crucial for providing real-time feedback to the user through the UI.
 	 */
 	private void setupLogListener() {
-	    Logger.getDefault().addLogListener(new ILogListener() {
-	        @Override
-	        public void logging(IStatus status, String plugin) {
-	            // Ignore cancellation exceptions to avoid unnecessary user notifications
-	            if (!status.getMessage().equals("CancellationException")) {
-	                displayNotificationMessage(status.getMessage());
-	            }
-	        }
-	    });
+		Logger.getDefault().addLogListener(new ILogListener() {
+			@Override
+			public void logging(IStatus status, String plugin) {
+				// Ignore cancellation exceptions to avoid unnecessary user notifications
+				if (!status.getMessage().equals("CancellationException")) {
+					displayNotificationMessage(status.getMessage());
+				}
+			}
+		});
 	}
-	
+
 	/**
 	 * Registers a property change listener to handle changes in font size preferences.
 	 * This listener reacts to changes in chat and notification font sizes by clearing the display to apply the new settings immediately.
 	 */
 	private void setupPropertyChangeListener() {
-	    Preferences.getDefault().addPropertyChangeListener(new IPropertyChangeListener() {
-	        @Override
-	        public void propertyChange(PropertyChangeEvent event) {
-	            // React to changes in font size settings
-	            if (event.getProperty().equals(PreferenceConstants.CHAT_FONT_SIZE)
-	                || event.getProperty().equals(PreferenceConstants.NOTIFICATION_FONT_SIZE)) {
-	                onClear(); // Clear the display to apply font size changes instantly
-	            }
-	        }
-	    });
+		Preferences.getDefault().addPropertyChangeListener(new IPropertyChangeListener() {
+			@Override
+			public void propertyChange(PropertyChangeEvent event) {
+				// React to changes in font size settings
+				if (event.getProperty().equals(PreferenceConstants.CHAT_FONT_SIZE)
+						|| event.getProperty().equals(PreferenceConstants.NOTIFICATION_FONT_SIZE)) {
+					onClear(); // Clear the display to apply font size changes instantly
+				}
+			}
+		});
 	}
-	
+
 	/**
 	 * Sets up a listener to ensure the chat conversation is saved when the workbench is about to shut down.
 	 * This method guarantees that the current state is preserved across sessions by saving before the application closes.
 	 */
 	private void setupShutdownListener() {
-	    Eclipse.getWorkbench().addWorkbenchListener(new IWorkbenchListener() {
-	        @Override
-	        public boolean preShutdown(IWorkbench workbench, boolean forced) {
-	            saveStateToPreferenceStore(); // Ensure state is saved before shutdown
-	            return true;  // Allow the shutdown process to continue
-	        }
-	
-	        @Override
-	        public void postShutdown(IWorkbench workbench) {
-	            // Perform any necessary cleanup after shutdown
-	        }
-	    });
+		Eclipse.getWorkbench().addWorkbenchListener(new IWorkbenchListener() {
+			@Override
+			public boolean preShutdown(IWorkbench workbench, boolean forced) {
+				saveStateToPreferenceStore(); // Ensure state is saved before shutdown
+				return true;  // Allow the shutdown process to continue
+			}
+
+			@Override
+			public void postShutdown(IWorkbench workbench) {
+				// Perform any necessary cleanup after shutdown
+			}
+		});
 	}
 
 	/**
 	 * Performs an action on the MainView if it exists.
-	 * 
+	 *
 	 * This method retrieves the MainView from the application model and performs a
 	 * given action on it. If the MainView does not exist, this method does nothing.
-	 * 
+	 *
 	 * @param action The action to be performed on the MainView. It is a Consumer
 	 *               that accepts a MainView as its parameter.
 	 */
