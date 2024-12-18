@@ -534,7 +534,7 @@ public class OpenAiApiClient {
 	 * @since 1.0
 	 */
 	private static boolean isO1Model(String modelName) {
-		return modelName.contains("o1-mini") || modelName.contains("o1-preview");
+		return modelName.contains("o1-mini") || modelName.contains("o1-preview") || modelName.contains("openai/o1");
 	}
 
 }

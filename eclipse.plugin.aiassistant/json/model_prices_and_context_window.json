@@ -4013,6 +4013,18 @@
         "supports_parallel_function_calling": true,
         "supports_vision": false
     },
+    "openrouter/openai/o1": {
+        "max_tokens": 102400,
+        "max_input_tokens": 204800,
+        "max_output_tokens": 102400,
+        "input_cost_per_token": 0.000015,
+        "output_cost_per_token": 0.000060,
+        "litellm_provider": "openrouter",
+        "mode": "chat",
+        "supports_function_calling": true,
+        "supports_parallel_function_calling": true,
+        "supports_vision": false
+    },
     "openrouter/openai/gpt-4o": {
         "max_tokens": 4096,
         "max_input_tokens": 128000,
