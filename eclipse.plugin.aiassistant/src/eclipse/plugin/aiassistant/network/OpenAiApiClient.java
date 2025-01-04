@@ -46,7 +46,8 @@ public class OpenAiApiClient {
 	/** Callback to check if the current operation should be cancelled */
 	private Supplier<Boolean> isCancelled = () -> false;
 
-	private long lastUpdateTime = 0;
+	/** Used to avoid stalling the GUI by having a minimum time between updates */
+	private long nextScheduledUpdateTime = 0;
 
 	public OpenAiApiClient() {
 	}
@@ -392,12 +393,16 @@ public class OpenAiApiClient {
 
 					// If the queue is empty then deal with the buffered string.
 					// NOTE: Now also avoids stalling the GUI by having a minimum time between updates.
-					long currentTime = System.currentTimeMillis();
-					if (streamingResponsePublisher.estimateMaximumLag() == 0 &&
-							(currentTime - lastUpdateTime >= Preferences.getStreamingUpdateInterval())) {
-						streamingResponsePublisher.submit(responseContentBuffer.toString());
-						responseContentBuffer.setLength(0);
-						lastUpdateTime = currentTime;
+					if (streamingResponsePublisher.estimateMaximumLag() == 0) {
+						long currentTime = System.currentTimeMillis();
+						if (nextScheduledUpdateTime == 0) {
+							nextScheduledUpdateTime = currentTime + Preferences.getStreamingUpdateInterval();
+						}
+						else if (currentTime >= nextScheduledUpdateTime) {
+							streamingResponsePublisher.submit(responseContentBuffer.toString());
+							responseContentBuffer.setLength(0);
+							nextScheduledUpdateTime = 0;
+						}
 					}
 
 				}

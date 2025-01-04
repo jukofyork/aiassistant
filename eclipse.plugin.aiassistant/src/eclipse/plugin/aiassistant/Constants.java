@@ -81,7 +81,7 @@ public final class Constants {
 	// The (minimum) update interval for use in processStreamingResponse() to avoid GUI stalling.
 	public static final int MIN_STREAMING_UPDATE_INTERVAL = 1;
 	public static final int MAX_STREAMING_UPDATE_INTERVAL = 1000;
-	public static final int DEFAULT_STREAMING_UPDATE_INTERVAL = 100;
+	public static final int DEFAULT_STREAMING_UPDATE_INTERVAL = 50;
 
 	// Temperature value.
 	// NOTE: Coding LLMs need a much lower (preferably zero) temperature vs chat LLMs.
