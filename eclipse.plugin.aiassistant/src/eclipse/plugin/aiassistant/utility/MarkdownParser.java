@@ -143,7 +143,7 @@ public class MarkdownParser {
 						appendCloseCodeBlock(htmlOutput);
 						currentBlock = BlockType.NONE;
 					} else {
-						htmlOutput.append(convertToEscapedHtmlLine(line));
+						htmlOutput.append(convertToEscapedHtmlLine(line)).append("\n");
 					}
 					break;
 
@@ -154,7 +154,7 @@ public class MarkdownParser {
 						flushLatexBlockBuffer(latexBlockBuffer, htmlOutput);
 						currentBlock = BlockType.NONE;
 					} else {
-						latexBlockBuffer.append(line + "\n");
+						latexBlockBuffer.append(line).append("\n");
 					}
 					break;
 				}
@@ -321,13 +321,12 @@ public class MarkdownParser {
 
 	/**
 	 * Converts a single line of text to an HTML-escaped line with escaped backslashes.
-	 * Adds a newline character at the end of the processed line.
 	 *
 	 * @param line The line of text to be processed
-	 * @return The HTML-escaped line with backslashes escaped and a newline character appended
+	 * @return The HTML-escaped line with backslashes escaped
 	 */
 	private static String convertToEscapedHtmlLine(String line) {
-		return StringEscapeUtils.escapeHtml4(escapeBackslashes(line)) + "\n";
+		return StringEscapeUtils.escapeHtml4(escapeBackslashes(line));
 	}
 
 	/**
