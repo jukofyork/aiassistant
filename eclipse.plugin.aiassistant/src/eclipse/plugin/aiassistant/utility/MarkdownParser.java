@@ -20,35 +20,17 @@ public class MarkdownParser {
 
 	private static final Pattern CODE_BLOCK_PATTERN = Pattern.compile("^[ \\t]*```([a-zA-Z]*)[ \\t]*$");
 	private static final Pattern CODE_INLINE_PATTERN = Pattern.compile("`(.*?)`");
-
-	private static final Pattern LATEX_INLINE_PATTERN = Pattern.compile(
-			"\\$(.*?)\\$|" +										// Single $ pairs
-					"\\\\\\((.*?)\\\\\\)"							// \( \) pairs
-			);
-
-	private static final Pattern LATEX_MULTILINE_BLOCK_OPEN_PATTERN = Pattern.compile(
-			"^[ \\t]*(?:" +
-					"\\$\\$(?!.*\\$\\$)|" +							// $$ syntax without closing on same line
-					"\\\\\\[(?!.*\\\\\\])" +						// \[ syntax without closing on same line
-					").*$"
-			);
-	private static final Pattern LATEX_SINGLELINE_BLOCK_OPEN_PATTERN = Pattern.compile(
-			"^[ \\t]*(?:" +
-					"\\$\\$(?:.*\\$\\$)|" +							// $$ syntax with closing on same line
-					"\\\\\\[(?:.*\\\\\\])" +						// \[ syntax with closing on same line
-					").*$"
-			);
+	private static final Pattern LATEX_INLINE_PATTERN = Pattern.compile("\\$(.*?)\\$|\\\\\\((.*?)\\\\\\)");
+	private static final Pattern LATEX_MULTILINE_BLOCK_OPEN_PATTERN = Pattern.compile("^[ \\t]*(?:\\$\\$(?!.*\\$\\$)|\\\\\\[(?!.*\\\\\\])).*$");
+	private static final Pattern LATEX_SINGLELINE_BLOCK_OPEN_PATTERN = Pattern.compile("^[ \\t]*(?:\\$\\$(?:.*\\$\\$)|\\\\\\[(?:.*\\\\\\])).*$");
 	private static final Pattern LATEX_BLOCK_CLOSE_PATTERN = Pattern.compile("^.*?(\\$\\$|\\\\\\])[ \\t]*$");
 	private static final Pattern LATEX_LINE_START_PATTERN = Pattern.compile("^\\s*(\\$\\$|\\\\\\[)\\s*");
 	private static final Pattern LATEX_LINE_END_PATTERN = Pattern.compile("\\s*(\\$\\$|\\\\\\])$");
-
 	private static final Pattern THINKING_BLOCK_OPEN_PATTERN = Pattern.compile("<thinking>");
 	private static final Pattern THINKING_BLOCK_CLOSE_PATTERN = Pattern.compile("</thinking>");
 	private static final Pattern THINKING_BLOCK_SUMMARY_CLEANUP_PATTERN = Pattern.compile("</summary>(?:\\s|<br/>)+");
 	private static final Pattern THINKING_BLOCK_DETAILS_CLEANUP_PATTERN = Pattern.compile("</details>\\s*</div>(?:\\s|<br/>)+");
-
 	private static final Pattern QUOTE_MARKER_PATTERN = Pattern.compile("^[ \\t]*>+[ \\t]*");
-
 	private static final Pattern HEADER_H1_PATTERN = Pattern.compile("^[ \\t]*# (.*?)$");
 	private static final Pattern HEADER_H2_PATTERN = Pattern.compile("^[ \\t]*## (.*?)$");
 	private static final Pattern HEADER_H3_PATTERN = Pattern.compile("^[ \\t]*### (.*?)$");
@@ -419,11 +401,27 @@ public class MarkdownParser {
 		return input.replace("\\", "\\\\");
 	}
 
+	/**
+	 * Replaces all occurrences of a specified pattern in the input string with the given replacement.
+	 *
+	 * @param input The original string where replacements are to be made.
+	 * @param pattern The regular expression pattern to search for in the input string.
+	 * @param replacement The string to replace each match of the pattern.
+	 * @return A new string with all occurrences of the pattern replaced by the replacement string.
+	 */
 	private static String replacePattern(String input, Pattern pattern, String replacement) {
 		Matcher matcher = pattern.matcher(input);
 		return matcher.replaceAll(replacement);
 	}
 
+	/**
+	 * Replaces the first occurrence of a specified pattern in the input string with the given replacement.
+	 *
+	 * @param input The original string where the replacement is to be made.
+	 * @param pattern The regular expression pattern to search for in the input string.
+	 * @param replacement The string to replace the first match of the pattern.
+	 * @return A new string with the first occurrence of the pattern replaced by the replacement string.
+	 */
 	private static String replaceFirstPattern(String input, Pattern pattern, String replacement) {
 		Matcher matcher = pattern.matcher(input);
 		return matcher.replaceFirst(replacement);
