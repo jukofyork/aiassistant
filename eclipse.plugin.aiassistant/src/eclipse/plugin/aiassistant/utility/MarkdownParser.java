@@ -189,7 +189,7 @@ public class MarkdownParser {
 	 * @return HTML markup string for opening a collapsible thinking block
 	 */
 	private static String getThinkingBlockOpeningHtml() {
-		return "<div class=\"thinking\"><details><summary>Thinking...</summary>";
+		return "<div class=\"thinking\"><details open><summary>Thinking...</summary>";
 	}
 
 	/**
