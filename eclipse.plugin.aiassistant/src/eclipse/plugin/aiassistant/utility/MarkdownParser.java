@@ -26,8 +26,8 @@ public class MarkdownParser {
 	private static final Pattern LATEX_BLOCK_CLOSE_PATTERN = Pattern.compile("^.*?(\\$\\$|\\\\\\])[ \\t]*$");
 	private static final Pattern LATEX_LINE_START_PATTERN = Pattern.compile("^\\s*(\\$\\$|\\\\\\[)\\s*");
 	private static final Pattern LATEX_LINE_END_PATTERN = Pattern.compile("\\s*(\\$\\$|\\\\\\])$");
-	private static final Pattern THINKING_BLOCK_OPEN_PATTERN = Pattern.compile("<thinking>");
-	private static final Pattern THINKING_BLOCK_CLOSE_PATTERN = Pattern.compile("</thinking>");
+	private static final Pattern THINKING_BLOCK_OPEN_PATTERN = Pattern.compile("<think>");
+	private static final Pattern THINKING_BLOCK_CLOSE_PATTERN = Pattern.compile("</think>");
 	private static final Pattern THINKING_BLOCK_SUMMARY_CLEANUP_PATTERN = Pattern.compile("</summary>(?:\\s|<br/>)+");
 	private static final Pattern THINKING_BLOCK_DETAILS_CLEANUP_PATTERN = Pattern.compile("</details>\\s*</div>(?:\\s|<br/>)+");
 	private static final Pattern QUOTE_MARKER_PATTERN = Pattern.compile("^[ \\t]*>+[ \\t]*");

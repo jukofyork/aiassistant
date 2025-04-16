@@ -220,6 +220,12 @@ public class OpenAiApiClient {
 			for (ChatMessage message : chatConversation.messages()) {
 				if (Objects.nonNull(message.getMessage())) {
 					var jsonMessage = objectMapper.createObjectNode();
+					String messageContent = message.getMessage();
+
+					// Process assistant messages to remove <think> tags and any surrounding whitespace that remains
+					if (message.getRole() == ChatRole.ASSISTANT) {
+						messageContent = messageContent.replaceAll("(?s)<think>.*?</think>\\s*", "");
+					}
 
 					// If the last role was the same, concatenate this message's text.
 					if (jsonMessages.size() > 0) {
@@ -227,7 +233,7 @@ public class OpenAiApiClient {
 						if (lastMessage.get("role").asText().equals(message.getRole().getRoleName())) {
 							jsonMessage.put("role", message.getRole().getRoleName());
 							jsonMessage.put("content",
-									lastMessage.get("content").asText() + "\n" + message.getMessage());
+									lastMessage.get("content").asText() + "\n" + messageContent);
 							jsonMessages.remove(jsonMessages.size() - 1);
 							jsonMessages.add(jsonMessage);
 						}
@@ -237,10 +243,9 @@ public class OpenAiApiClient {
 					if (jsonMessage.isEmpty()
 							&& (message.getRole() == ChatRole.USER || message.getRole() == ChatRole.ASSISTANT)) {
 						jsonMessage.put("role", message.getRole().getRoleName());
-						jsonMessage.put("content", message.getMessage());
+						jsonMessage.put("content", messageContent);
 						jsonMessages.add(jsonMessage);
 					}
-
 				}
 			}
 			requestBody.set("messages", jsonMessages);
