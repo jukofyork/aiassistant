@@ -221,10 +221,13 @@ public class BrowserScriptGenerator {
 	 * @return A modified CSS string with updated font size values.
 	 */
 	private String substituteFontSizes(String css) {
-		// TODO: Find a better way to substitute font sizes dynamically.
-		return css.replace("--default-font-size: 14px", "--default-font-size: " + Preferences.getChatFontSize() + "px")
-				.replace("--small-font-size: 10px",
-						"--small-font-size: " + Preferences.getNotificationFontSize() + "px");
+		String defaultFontPattern = "(--default-font-size:\\s*)\\d+(px.*)";
+		String smallFontPattern = "(--small-font-size:\\s*)\\d+(px.*)";
+		String updatedCss = css.replaceAll(defaultFontPattern,
+				"$1" + Preferences.getChatFontSize() + "$2");
+		updatedCss = updatedCss.replaceAll(smallFontPattern,
+				"$1" + Preferences.getNotificationFontSize() + "$2");
+		return updatedCss;
 	}
 
 	/**

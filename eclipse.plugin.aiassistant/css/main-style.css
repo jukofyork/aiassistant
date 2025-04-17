@@ -4,8 +4,8 @@
   --assistant-bubble-alignment: flex-start;
   --main-font: 'Sans', sans-serif;
   --mono-font: 'Monospace', monospace;
-  --default-font-size: 14px;	/* Leave at 14px for BrowserScriptGenerator.substituteFontSizes() to set */
-  --small-font-size: 10px;		/* Leave at 10px for BrowserScriptGenerator.substituteFontSizes() to set */
+  --default-font-size: 0px;  /* NOTE: BrowserScriptGenerator.substituteFontSizes() will override this setting */
+  --small-font-size: 0px;    /* NOTE: BrowserScriptGenerator.substituteFontSizes() will override this setting */
   --text-color: #fff;  
   --body-bg-color: #000;
   --user-bubble-bg-color: #222;
