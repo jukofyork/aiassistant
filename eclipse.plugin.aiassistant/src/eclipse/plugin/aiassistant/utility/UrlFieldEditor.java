@@ -10,7 +10,7 @@ import org.eclipse.swt.widgets.Composite;
  * plugins. It extends the `StringFieldEditor` class and provides additional
  * functionality to validate if the input is a valid OpenAI compatible API endpoint.
  */
-public class URLFieldEditor extends StringFieldEditor {
+public class UrlFieldEditor extends StringFieldEditor {
 
 	/**
 	 * Constructs a new URLFieldEditor with the specified name, label text, and
@@ -20,7 +20,7 @@ public class URLFieldEditor extends StringFieldEditor {
 	 * @param labelText the label text for the field editor
 	 * @param parent    the parent composite for the field editor
 	 */
-	public URLFieldEditor(String name, String labelText, Composite parent) {
+	public UrlFieldEditor(String name, String labelText, Composite parent) {
 		super(name, labelText, parent);
 		setEmptyStringAllowed(false);
 		setErrorMessage("URL must be a valid OpenAI compatible API endpoint, ending with \"/v1\".");

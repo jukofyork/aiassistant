@@ -34,7 +34,7 @@ import eclipse.plugin.aiassistant.Logger;
 import eclipse.plugin.aiassistant.network.OpenAiApiClient;
 import eclipse.plugin.aiassistant.utility.DoubleFieldEditor;
 import eclipse.plugin.aiassistant.utility.Eclipse;
-import eclipse.plugin.aiassistant.utility.URLFieldEditor;
+import eclipse.plugin.aiassistant.utility.UrlFieldEditor;
 
 /**
  * Preference page for the AI Assistant plugin that manages both general settings
@@ -61,7 +61,7 @@ public class PreferencePage extends FieldEditorPreferencePage implements IWorkbe
 
 	/** Field editors for current API configuration */
 	private StringFieldEditor modelNameEditor;
-	private URLFieldEditor apiUrlEditor;
+	private UrlFieldEditor apiUrlEditor;
 	private StringFieldEditor apiKeyEditor;
 	private DoubleFieldEditor temperatureEditor;
 
@@ -185,7 +185,7 @@ public class PreferencePage extends FieldEditorPreferencePage implements IWorkbe
 		modelNameEditor = new StringFieldEditor(PreferenceConstants.CURRENT_MODEL_NAME, "Model Name:", parent);
 		modelNameEditor.setEmptyStringAllowed(false);
 
-		apiUrlEditor = new URLFieldEditor(PreferenceConstants.CURRENT_API_URL, "API URL:", parent);
+		apiUrlEditor = new UrlFieldEditor(PreferenceConstants.CURRENT_API_URL, "API URL:", parent);
 
 		apiKeyEditor = new StringFieldEditor(PreferenceConstants.CURRENT_API_KEY, "API Key:", parent);
 		apiKeyEditor.setEmptyStringAllowed(false);
