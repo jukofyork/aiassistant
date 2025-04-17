@@ -30,7 +30,7 @@ import eclipse.plugin.aiassistant.chat.ChatMessage;
 import eclipse.plugin.aiassistant.chat.ChatRole;
 import eclipse.plugin.aiassistant.preferences.Preferences;
 import eclipse.plugin.aiassistant.prompt.PromptLoader;
-import eclipse.plugin.aiassistant.utility.ApiModelData;
+import eclipse.plugin.aiassistant.utility.ApiMetadata;
 
 /**
  * Client for interacting with OpenAI-compatible APIs to handle chat completions.
@@ -464,10 +464,10 @@ public class OpenAiApiClient {
 
 		// Retrieve model-specific data from ApiModelData
 		String provider = ""; // Empty provider will match any provider in ApiModelData
-		int maxInputTokens = ApiModelData.getMaxInputTokens(actualModelName, provider);
-		int maxOutputTokens = ApiModelData.getMaxOutputTokens(actualModelName, provider);
-		double inputCost = ApiModelData.getInputCostPerToken(actualModelName, provider);
-		double outputCost = ApiModelData.getOutputCostPerToken(actualModelName, provider);
+		int maxInputTokens = ApiMetadata.getMaxInputTokens(actualModelName, provider);
+		int maxOutputTokens = ApiMetadata.getMaxOutputTokens(actualModelName, provider);
+		double inputCost = ApiMetadata.getInputCostPerToken(actualModelName, provider);
+		double outputCost = ApiMetadata.getOutputCostPerToken(actualModelName, provider);
 
 		responseStatistics.append(modelName).append("\n")
 		.append(finishReason).append("\n");

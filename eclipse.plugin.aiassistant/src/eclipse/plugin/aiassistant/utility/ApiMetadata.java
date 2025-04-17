@@ -20,7 +20,7 @@ import eclipse.plugin.aiassistant.Constants;
  * This class provides access to API model data stored in a JSON file.
  * It offers methods to retrieve various properties of AI models based on their name and provider.
  */
-public class ApiModelData {
+public class ApiMetadata {
     private static Map<String, JsonNode> modelData;
     
     static {
