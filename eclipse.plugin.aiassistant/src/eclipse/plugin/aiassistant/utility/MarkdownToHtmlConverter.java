@@ -16,7 +16,7 @@ import org.apache.commons.text.StringEscapeUtils;
  * like headers, lists, bold, and italic text. It handles nested blocks and ensures proper
  * HTML escaping to prevent XSS vulnerabilities.
  */
-public class MarkdownParser {
+public class MarkdownToHtmlConverter {
 
 	private static final Pattern CODE_BLOCK_PATTERN = Pattern.compile("^[ \\t]*```([a-zA-Z]*)[ \\t]*$");
 	private static final Pattern CODE_INLINE_PATTERN = Pattern.compile("`(.*?)`");

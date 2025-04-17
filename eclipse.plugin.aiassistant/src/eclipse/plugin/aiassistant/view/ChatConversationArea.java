@@ -23,7 +23,7 @@ import eclipse.plugin.aiassistant.chat.ChatMessage;
 import eclipse.plugin.aiassistant.chat.ChatRole;
 import eclipse.plugin.aiassistant.preferences.Preferences;
 import eclipse.plugin.aiassistant.utility.Eclipse;
-import eclipse.plugin.aiassistant.utility.MarkdownParser;
+import eclipse.plugin.aiassistant.utility.MarkdownToHtmlConverter;
 
 /**
  * The ChatConversationArea class represents the chat area in the AssistAI
@@ -128,7 +128,7 @@ public class ChatConversationArea {
 	 * @param message The ChatMessage instance to update.
 	 */
 	public void updateMessage(ChatMessage message) {
-		String html = MarkdownParser.convertMarkdownToHtml(message.getMessage(), message.getRole() == ChatRole.ASSISTANT);
+		String html = MarkdownToHtmlConverter.convertMarkdownToHtml(message.getMessage(), message.getRole() == ChatRole.ASSISTANT);
 		String script = browserScriptGenerator.generateUpdateMessageScript(html, message.getId());
 		executeScript(script);
 	}
