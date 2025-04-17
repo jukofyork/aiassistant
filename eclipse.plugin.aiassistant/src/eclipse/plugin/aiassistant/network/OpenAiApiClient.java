@@ -172,11 +172,11 @@ public class OpenAiApiClient {
 						Duration.ofSeconds(Preferences.getRequestTimeout()));
 				HttpResponse<InputStream> streamingResponse = httpClientWrapper.sendRequest(
 						buildChatCompletionRequestBody(modelName, chatConversation));
-				if (!Preferences.useStreaming()) {
-					processResponse(streamingResponse);
+				if (Preferences.useStreaming() && !isOpenAiReasoningModel(modelName)) {
+					processStreamingResponse(streamingResponse);
 				}
 				else {
-					processStreamingResponse(streamingResponse);
+					processResponse(streamingResponse);
 				}
 			} catch (Exception e) {
 				if (streamingResponsePublisher != null)
@@ -209,14 +209,23 @@ public class OpenAiApiClient {
 			// Add the model ID first.
 			requestBody.put("model", modelName);
 
-			// Add the message history so far.
-			// NOTE: We can't use a system message for 'o1-mini' or 'o1-preview' models.
-			if (!isO1Model(modelName)) {
+			// Add the system (or developer message for OpenAI reasoning models).
+			// NOTE: The "o1-preview" and "o1-mini-2024-09-12" models use no system message at all
+			if (!isLegacyOpenAiReasoningModel(modelName)) {
 				var systemMessage = objectMapper.createObjectNode();
-				systemMessage.put("role", "system");
-				systemMessage.put("content", PromptLoader.getSystemPromptText());
+
+				// "Starting with o1-2024-12-17, o1 models support developer messages rather than system messages"
+				if (!isOpenAiReasoningModel(modelName)) {
+					systemMessage.put("role", "system");
+					systemMessage.put("content", PromptLoader.getSystemPromptText());
+				} else {
+					systemMessage.put("role", "developer");
+					systemMessage.put("content", PromptLoader.getDeveloperPromptText());
+				}
 				jsonMessages.add(systemMessage);
 			}
+
+			// Add the message history so far.
 			for (ChatMessage message : chatConversation.messages()) {
 				if (Objects.nonNull(message.getMessage())) {
 					var jsonMessage = objectMapper.createObjectNode();
@@ -251,21 +260,26 @@ public class OpenAiApiClient {
 			requestBody.set("messages", jsonMessages);
 
 			// Add the temperature to the request.
-			// NOTE: We can't set temperature for 'o1-mini' or 'o1-preview' models.
-			if (!isO1Model(modelName)) {
+			// NOTE: We can't set a temperature for OpenAI's reasoning models.
+			if (!isOpenAiReasoningModel(modelName)) {
 				requestBody.put("temperature", Preferences.getCurrentTemperature());
 			}
 
+			// Always use "high" reasoning effort for OpenAI's non-legacy reasoning models.
+			if (isOpenAiReasoningModel(modelName) && !isLegacyOpenAiReasoningModel(modelName)) {
+				requestBody.put("reasoning_effort", "high");
+			}
+
 			// Set the streaming flag.
-			if (!Preferences.useStreaming()) {
-				requestBody.put("stream", false);
-			} else {
+			// NOTE: We can't use streaming for OpenAI's reasoning models.
+			if (Preferences.useStreaming() && !isOpenAiReasoningModel(modelName)) {
 				requestBody.put("stream", true);
 				var node = objectMapper.createObjectNode();
 				node.put("include_usage", true);
 				requestBody.putPOJO("stream_options", node);
 			}
 
+			//Logger.info(objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(requestBody));
 			return objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(requestBody);
 
 		} catch (JsonProcessingException e) {
@@ -534,17 +548,13 @@ public class OpenAiApiClient {
 	}
 
 	/**
-	 * Determines if the given model is an O1-series model with limited capabilities.
-	 * O1 models have specific restrictions: they do not support system messages,
-	 * and cannot have their temperature parameter modified.
-	 *
-	 * @param modelName the name of the OpenAI model to check
-	 * @return true if the model is an O1-series model (o1-mini or o1-preview),
-	 *         false otherwise
-	 * @since 1.0
+	 * These are used to determine if the given model is an OpenAI "o" model with limited capabilities.
 	 */
-	private static boolean isO1Model(String modelName) {
-		return modelName.contains("o1-mini") || modelName.contains("o1-preview") || modelName.contains("openai/o1");
+	private static boolean isOpenAiReasoningModel(String modelName) {
+		return modelName.matches("^(openai/)?o\\d(-.*)?");
+	}
+	private static boolean isLegacyOpenAiReasoningModel(String modelName) {
+		return modelName.matches("^(openai/)?o1-preview.*") || modelName.matches("^(openai/)?o1-mini-2024-09-12");
 	}
 
 }

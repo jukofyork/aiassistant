@@ -75,12 +75,21 @@ public class PromptLoader {
 	}
 
 	/**
-	 * Retrieves the system prompt text from the preference store.
+	 * Retrieves the system message prompt text from the preference store.
 	 *
 	 * @return The system prompt text as a string.
 	 */
 	public static String getSystemPromptText() {
 		return Preferences.getDefault().getString(Prompts.SYSTEM.preferenceName());
+	}
+
+	/**
+	 * Retrieves the developer message prompt text from the preference store.
+	 *
+	 * @return The developer prompt text as a string.
+	 */
+	public static String getDeveloperPromptText() {
+		return Preferences.getDefault().getString(Prompts.DEVELOPER.preferenceName());
 	}
 
 	/**
