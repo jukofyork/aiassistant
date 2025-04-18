@@ -1,18 +1,19 @@
 package eclipse.plugin.aiassistant.chat;
 
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Stack;
 import java.util.UUID;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
 /**
  * This class represents a chat conversation.
  */
 public class ChatConversation {
-	
+
 	private static final ObjectMapper objectMapper = new ObjectMapper();
 
 	private final Stack<ChatMessage> messages = new Stack<>();
@@ -28,7 +29,7 @@ public class ChatConversation {
 
 	/**
 	 * Checks if the conversation has no messages.
-	 * 
+	 *
 	 * @return true if the conversation is empty, false otherwise
 	 */
 	public boolean isEmpty() {
@@ -37,31 +38,31 @@ public class ChatConversation {
 
 	/**
 	 * Returns the number of messages in the conversation.
-	 * 
+	 *
 	 * @return the number of messages in the conversation
 	 */
 	public int size() {
 		return messages.size();
 	}
-	
+
 	/**
 	 * Checks if a message with the given UUID exists in the conversation.
-	 * 
+	 *
 	 * @param id the UUID of the message to check
 	 * @return true if the message exists, false otherwise
 	 */
 	public boolean contains(UUID id) {
-	    for (ChatMessage message : messages) {
-	        if (message.getId().equals(id)) {
-	            return true;
-	        }
-	    }
-	    return false;
+		for (ChatMessage message : messages) {
+			if (message.getId().equals(id)) {
+				return true;
+			}
+		}
+		return false;
 	}
-	
+
 	/**
 	 * Returns the first message in the conversation that is not a notification.
-	 * 
+	 *
 	 *  @return the first message in the conversation, or null if there are no
 	 *         messages
 	 */
@@ -76,7 +77,7 @@ public class ChatConversation {
 
 	/**
 	 * Returns the last message in the conversation that is not a notification.
-	 * 
+	 *
 	 *  @return the last message in the conversation, or null if there are no
 	 *         messages
 	 */
@@ -91,7 +92,7 @@ public class ChatConversation {
 
 	/**
 	 * Returns the message with the next lowest index in the conversation that is not a notification.
-	 * 
+	 *
 	 *  @param id the UUID of the message to find
 	 *  @return the next lowest message in the conversation, or null if there is no
 	 *         such message or no previous message
@@ -114,7 +115,7 @@ public class ChatConversation {
 
 	/**
 	 * Returns the message with the next highest index in the conversation that is not a notification.
-	 * 
+	 *
 	 *  @param id the UUID of the message to find
 	 *  @return the next highest message in the conversation, or null if there is no
 	 *         such message or no next message
@@ -134,13 +135,18 @@ public class ChatConversation {
 		}
 		return null;
 	}
-	
+
 	/**
-	 * Returns an iterable of the messages in the conversation.
+	 * Returns an iterable of the messages in the conversation,
+	 * skipping the last message if it has no content.
 	 *
 	 * @return an iterable of the messages in the conversation
 	 */
 	public Iterable<ChatMessage> messages() {
+		if (!messages.isEmpty() &&
+				(messages.peek().getMessage() == null || messages.peek().getMessage().isEmpty())) {
+			return messages.subList(0, messages.size() - 1);
+		}
 		return messages;
 	}
 
@@ -168,7 +174,7 @@ public class ChatConversation {
 	public void clear() {
 		messages.clear();
 	}
-	
+
 	/**
 	 * This method scans backwards through the stack and returns true if it finds an
 	 * USER message, but returns false as soon as it finds an ASSISTANT message or
@@ -188,29 +194,29 @@ public class ChatConversation {
 		}
 		return false;
 	}
-	
-    /**
-     * Serializes this ChatConversation to a JSON string.
-     *
-     * @return a JSON string representing this conversation
-     * @throws IOException if an input/output exception occurs
-     */
-    public synchronized String serialize() throws IOException {
-        return objectMapper.writeValueAsString(messages);
-    }
 
-    /**
-     * Deserializes a JSON string to a ChatConversation.
-     *
-     * @param json the JSON string representing a conversation
-     * @return a ChatConversation object
-     * @throws IOException if an input/output exception occurs
-     */
-    public static ChatConversation deserialize(String json) throws IOException {
-        Stack<ChatMessage> messageStack = objectMapper.readValue(json, new TypeReference<Stack<ChatMessage>>() {});
-        ChatConversation conversation = new ChatConversation();
-        conversation.messages.addAll(messageStack);
-        return conversation;
-    }
+	/**
+	 * Serializes this ChatConversation to a JSON string.
+	 *
+	 * @return a JSON string representing this conversation
+	 * @throws IOException if an input/output exception occurs
+	 */
+	public synchronized String serialize() throws IOException {
+		return objectMapper.writeValueAsString(messages);
+	}
+
+	/**
+	 * Deserializes a JSON string to a ChatConversation.
+	 *
+	 * @param json the JSON string representing a conversation
+	 * @return a ChatConversation object
+	 * @throws IOException if an input/output exception occurs
+	 */
+	public static ChatConversation deserialize(String json) throws IOException {
+		Stack<ChatMessage> messageStack = objectMapper.readValue(json, new TypeReference<Stack<ChatMessage>>() {});
+		ChatConversation conversation = new ChatConversation();
+		conversation.messages.addAll(messageStack);
+		return conversation;
+	}
 
 }
