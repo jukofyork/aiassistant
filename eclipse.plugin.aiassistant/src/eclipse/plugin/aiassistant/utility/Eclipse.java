@@ -17,9 +17,6 @@ import org.eclipse.core.resources.IResource;
 import org.eclipse.core.resources.IWorkspaceRoot;
 import org.eclipse.core.resources.ResourcesPlugin;
 import org.eclipse.core.runtime.CoreException;
-import org.eclipse.core.runtime.FileLocator;
-import org.eclipse.core.runtime.Path;
-import org.eclipse.core.runtime.Platform;
 import org.eclipse.jface.resource.ImageDescriptor;
 import org.eclipse.jface.text.BadLocationException;
 import org.eclipse.jface.text.IDocument;
@@ -47,7 +44,6 @@ import org.eclipse.ui.IWorkbenchWindow;
 import org.eclipse.ui.PlatformUI;
 import org.eclipse.ui.texteditor.IDocumentProvider;
 import org.eclipse.ui.texteditor.ITextEditor;
-import org.osgi.framework.Bundle;
 
 import eclipse.plugin.aiassistant.Constants;
 import eclipse.plugin.aiassistant.Logger;
@@ -148,7 +144,7 @@ public class Eclipse {
 		}
 		return null;
 	}
-    
+
 	/**
 	 * Returns the active file in the active text editor.
 	 *
@@ -168,7 +164,7 @@ public class Eclipse {
 	public static IProject getActiveProject(ITextEditor textEditor) {
 		return getActiveFile(textEditor).getProject();
 	}
-	
+
 	/**
 	 * Returns the selected text in the active text editor.
 	 *
@@ -215,7 +211,7 @@ public class Eclipse {
 			throw new RuntimeException(e);
 		}
 	}
-	
+
 	/**
 	 * Returns the text of the active file (used as a fallback for reading non-workspace files).
 	 *
@@ -223,14 +219,14 @@ public class Eclipse {
 	 * @return the text of the active file
 	 */
 	public static String getEditorText(ITextEditor textEditor) {
-	    IDocument document = textEditor.getDocumentProvider().getDocument(textEditor.getEditorInput());
-	    if (document != null) {
-	        return document.get();
-	    } else {
-	        throw new IllegalStateException("Cannot retrieve document from the editor.");
-	    }
+		IDocument document = textEditor.getDocumentProvider().getDocument(textEditor.getEditorInput());
+		if (document != null) {
+			return document.get();
+		} else {
+			throw new IllegalStateException("Cannot retrieve document from the editor.");
+		}
 	}
-	
+
 	/**
 	 * Returns the title of the active editor.
 	 *
@@ -351,7 +347,7 @@ public class Eclipse {
 			}
 		}
 	}
-	
+
 	/**
 	 * Saves all open editors in the current workbench.
 	 *
@@ -378,7 +374,19 @@ public class Eclipse {
 		Button button = new Button(parent, SWT.PUSH);
 		button.setText(buttonName);
 		button.setToolTipText(tooltipText);
-		setButtonIcon(button, filename);
+
+		// Set the button's image and ensure it's properly managed
+		Image image = loadIcon(filename);
+		button.setImage(image);
+
+		// Add a dispose listener to ensure the image is disposed when the button is disposed
+		button.addDisposeListener(e -> {
+			Image buttonImage = button.getImage();
+			if (buttonImage != null && !buttonImage.isDisposed()) {
+				buttonImage.dispose();
+			}
+		});
+
 		button.addSelectionListener(listener);
 		button.setLayoutData(new GridData(SWT.FILL, SWT.FILL, true, true));
 		return button;
@@ -391,13 +399,17 @@ public class Eclipse {
 	 * @param filename The name of the image file, including the extension (e.g.,
 	 *                 "icon.png").
 	 */
+	// In Eclipse.java
 	public static void setButtonIcon(Button button, String filename) {
-		Image oldIcon = button.getImage();
-		if (oldIcon != null && !oldIcon.isDisposed()) {
-			oldIcon.dispose();
-		}
-		Image newIcon = loadIcon(filename);
-		runOnUIThreadAsync(() -> {
+		runOnUIThreadSync(() -> {
+			// Dispose old image first
+			Image oldIcon = button.getImage();
+			if (oldIcon != null && !oldIcon.isDisposed()) {
+				oldIcon.dispose();
+			}
+
+			// Create and set new image
+			Image newIcon = loadIcon(filename);
 			button.setImage(newIcon);
 		});
 	}
@@ -405,8 +417,7 @@ public class Eclipse {
 	/**
 	 * Loads an image from the specified file path.
 	 *
-	 * @param filename The name of the image file, including the extension (e.g.,
-	 *                 "icon.png").
+	 * @param filename The name of the image file, including the extension (e.g., "icon.png").
 	 * @return The loaded image.
 	 * @throws RuntimeException If there is an error loading the image.
 	 */
@@ -414,12 +425,14 @@ public class Eclipse {
 		URL imageUrl;
 		try {
 			imageUrl = new URL(Constants.ICONS_PATH + filename);
+			// Use ImageDescriptor.createFromURL(imageUrl).createImage(true) to track the image
+			// The 'true' parameter enables device tracking which helps with disposal
+			return ImageDescriptor.createFromURL(imageUrl).createImage(true);
 		} catch (MalformedURLException e) {
 			throw new RuntimeException(e);
 		}
-		return ImageDescriptor.createFromURL(imageUrl).createImage();
 	}
-	
+
 	/**
 	 * Converts an image from the specified file path to a base64 string.
 	 *
@@ -429,15 +442,15 @@ public class Eclipse {
 	 */
 	public static String loadIconAsBase64(String filename) {
 		URL imageUrl;
-	    try {
-	    	imageUrl = new URL(Constants.ICONS_PATH + filename);
-            try (InputStream stream = imageUrl.openStream()) {
-                byte[] imageBytes = stream.readAllBytes();
-                return Base64.getEncoder().encodeToString(imageBytes);
-            }
-	    } catch (IOException e) {
-	        throw new RuntimeException(e);
-	    }
+		try {
+			imageUrl = new URL(Constants.ICONS_PATH + filename);
+			try (InputStream stream = imageUrl.openStream()) {
+				byte[] imageBytes = stream.readAllBytes();
+				return Base64.getEncoder().encodeToString(imageBytes);
+			}
+		} catch (IOException e) {
+			throw new RuntimeException(e);
+		}
 	}
 
 	/**
@@ -496,7 +509,7 @@ public class Eclipse {
 	public static void runOnUIThreadAsync(Runnable runnable) {
 		Display.getDefault().asyncExec(runnable);
 	}
-	
+
 	/**
 	 * Executes the given runnable on the UI thread synchronously.
 	 *
@@ -540,7 +553,7 @@ public class Eclipse {
 	public static Object evaluateScript(Browser browser, String script) {
 		return runOnUIThreadSync(() -> browser.evaluate(script));
 	}
-	
+
 	/**
 	 * Returns the compiler messages for the active file with the given severity.
 	 *
@@ -564,7 +577,7 @@ public class Eclipse {
 								String message = marker.getAttribute(IMarker.MESSAGE, "");
 								int lineNumber = marker.getAttribute(IMarker.LINE_NUMBER, -1);
 								compilerMessages.append("* \"").append(message).append("\" at line ").append(lineNumber)
-										.append(" in file `").append(activeFile.getName()).append("`\n");
+								.append(" in file `").append(activeFile.getName()).append("`\n");
 							}
 						}
 					}
