@@ -26,12 +26,13 @@ public class PreferenceInitializer extends AbstractPreferenceInitializer {
 		setDefaultStreamingUpdateInterval();
 		setDefaultChatFontSize();
 		setDefaultNotificationFontSize();
-		setDefaultUseStreaming();
 		setDefaultDisableTooltips();
 		setDefaultCurrentModelName();
 		setDefaultCurrentApiUrl();
 		setDefaultCurrentApiKey();
 		setDefaultCurrentTemperature();
+		setDefaultCurrentUseSystemMessage();
+		setDefaultCurrentUseStreaming();
 		setDefaultBookmarkedApiSettings();
 		setDefaultChatConversation();
 		setDefaultUserMessageHistory();
@@ -71,13 +72,6 @@ public class PreferenceInitializer extends AbstractPreferenceInitializer {
 	}
 
 	/**
-	 * Sets the default value for using streaming.
-	 */
-	private void setDefaultUseStreaming() {
-		Preferences.getDefault().setDefault(PreferenceConstants.USE_STREAMING, Constants.DEFAULT_USE_STREAMING);
-	}
-
-	/**
 	 * Sets whether tooltips should be disabled across the application.
 	 */
 	private void setDefaultDisableTooltips() {
@@ -110,6 +104,21 @@ public class PreferenceInitializer extends AbstractPreferenceInitializer {
 	 */
 	private void setDefaultCurrentTemperature() {
 		Preferences.getDefault().setDefault(PreferenceConstants.CURRENT_TEMPERATURE, Constants.DEFAULT_TEMPERATURE);
+	}
+
+	/**
+	 * Sets the default currently selected system message flag setting in the preference store.
+	 */
+	private void setDefaultCurrentUseSystemMessage() {
+		Preferences.getDefault().setDefault(PreferenceConstants.CURRENT_USE_SYSTEM_MESSAGE,
+				Constants.DEFAULT_USE_SYSTEM_MESSAGE);
+	}
+
+	/**
+	 * Sets the default currently selected streaming flag setting in the preference store.
+	 */
+	private void setDefaultCurrentUseStreaming() {
+		Preferences.getDefault().setDefault(PreferenceConstants.CURRENT_USE_STREAMING, Constants.DEFAULT_USE_STREAMING);
 	}
 
 	/**

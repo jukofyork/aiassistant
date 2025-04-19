@@ -96,16 +96,6 @@ public final class Preferences {
 
 	/**
 	 * This method retrieves a boolean value from the preference store indicating
-	 * whether to use streaming.
-	 *
-	 * @return A boolean value indicating whether to use streaming.
-	 */
-	public static boolean useStreaming() {
-		return preferenceStore.getBoolean(PreferenceConstants.USE_STREAMING);
-	}
-
-	/**
-	 * This method retrieves a boolean value from the preference store indicating
 	 * whether to disable tooltips.
 	 *
 	 * @return A boolean value indicating whether to disable tooltips.
@@ -148,6 +138,24 @@ public final class Preferences {
 	 */
 	public static Double getCurrentTemperature() {
 		return preferenceStore.getDouble(PreferenceConstants.CURRENT_TEMPERATURE);
+	}
+
+	/**
+	 * Returns the currently selected system message flag from the preference store.
+	 *
+	 * @return The message flag value.
+	 */
+	public static Boolean getCurrentUseSystemMessage() {
+		return preferenceStore.getBoolean(PreferenceConstants.CURRENT_USE_SYSTEM_MESSAGE);
+	}
+
+	/**
+	 * Returns the currently selected streaming flag from the preference store.
+	 *
+	 * @return The streaming flag value.
+	 */
+	public static Boolean getCurrentUseStreaming() {
+		return preferenceStore.getBoolean(PreferenceConstants.CURRENT_USE_STREAMING);
 	}
 
 	/**

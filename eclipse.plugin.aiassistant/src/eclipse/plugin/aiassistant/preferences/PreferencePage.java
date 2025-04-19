@@ -51,13 +51,47 @@ import eclipse.plugin.aiassistant.utility.UrlFieldEditor;
  */
 public class PreferencePage extends FieldEditorPreferencePage implements IWorkbenchPreferencePage {
 
+	/**
+	 * Extension of BooleanFieldEditor that provides access to the underlying checkbox control.
+	 * This allows attaching listeners to detect user interactions with the checkbox.
+	 */
+	public class AccessibleBooleanFieldEditor extends BooleanFieldEditor {
+
+		private Composite parent = null;
+
+		public AccessibleBooleanFieldEditor(String name, String label, int style, Composite parent) {
+			super(name, label, style, parent);
+			this.parent = parent;
+		}
+
+		public AccessibleBooleanFieldEditor(String name, String labelText, Composite parent) {
+			super(name, labelText, parent);
+			this.parent = parent;
+		}
+
+		/**
+		 * Returns the checkbox control by exposing the protected getChangeControl method.
+		 */
+		public Button getCheckboxControl(Composite parent) {
+			return super.getChangeControl(parent);
+		}
+
+		public void setBooleanValue(boolean value) {
+			boolean oldValue = getBooleanValue();
+			if (oldValue != value) {
+				getCheckboxControl(this.parent).setSelection(value);
+				valueChanged(oldValue, value);
+			}
+		}
+
+	}
+
 	/** Field editors for general plugin settings */
 	private IntegerFieldEditor connectionTimeoutEditor;
 	private IntegerFieldEditor requestTimeoutEditor;
 	private IntegerFieldEditor streamingUpdateIntervalEditor;
 	private IntegerFieldEditor chatFontSizeEditor;
 	private IntegerFieldEditor notificationFontSizeEditor;
-	private BooleanFieldEditor streamingEditor;
 	private BooleanFieldEditor disableTooltipsEditor;
 
 	/** Field editors for current API configuration */
@@ -65,6 +99,8 @@ public class PreferencePage extends FieldEditorPreferencePage implements IWorkbe
 	private UrlFieldEditor apiUrlEditor;
 	private PasswordFieldEditor apiKeyEditor;
 	private DoubleFieldEditor temperatureEditor;
+	private AccessibleBooleanFieldEditor useSystemMessageEditor;
+	private AccessibleBooleanFieldEditor useStreamingEditor;
 
 	private Button bookmarkButton;
 	private Button unbookmarkButton;
@@ -128,6 +164,20 @@ public class PreferencePage extends FieldEditorPreferencePage implements IWorkbe
 		addSettingsChangeListener(apiUrlEditor.getTextControl(parent));
 		addSettingsChangeListener(apiKeyEditor.getTextControl(parent));
 		addSettingsChangeListener(temperatureEditor.getTextControl(parent));
+		addSettingsChangeListener(useSystemMessageEditor.getCheckboxControl(parent));
+		addSettingsChangeListener(useStreamingEditor.getCheckboxControl(parent));
+	}
+
+	/**
+	 * Initializes the preference page and sets the initial visibility
+	 * of the password field after its value has been loaded.
+	 */
+	@Override
+	protected void initialize() {
+		super.initialize();
+		if (apiKeyEditor != null) {
+			apiKeyEditor.setPasswordVisible(apiKeyEditor.getStringValue().isBlank());
+		}
 	}
 
 	@Override
@@ -162,9 +212,6 @@ public class PreferencePage extends FieldEditorPreferencePage implements IWorkbe
 				"Streaming Interval (ms):", parent);
 		streamingUpdateIntervalEditor.setValidRange(Constants.MIN_STREAMING_UPDATE_INTERVAL, Constants.MAX_STREAMING_UPDATE_INTERVAL);
 
-		streamingEditor = new BooleanFieldEditor(PreferenceConstants.USE_STREAMING, "Use Streaming",
-				BooleanFieldEditor.SEPARATE_LABEL, parent);
-
 		disableTooltipsEditor = new BooleanFieldEditor(PreferenceConstants.DISABLE_TOOLTIPS, "Disable Tooltips",
 				BooleanFieldEditor.SEPARATE_LABEL, parent);
 
@@ -173,7 +220,6 @@ public class PreferencePage extends FieldEditorPreferencePage implements IWorkbe
 		addField(chatFontSizeEditor);
 		addField(notificationFontSizeEditor);
 		addField(streamingUpdateIntervalEditor);
-		addField(streamingEditor);
 		addField(disableTooltipsEditor);
 	}
 
@@ -187,17 +233,27 @@ public class PreferencePage extends FieldEditorPreferencePage implements IWorkbe
 		modelNameEditor.setEmptyStringAllowed(false);
 
 		apiUrlEditor = new UrlFieldEditor(PreferenceConstants.CURRENT_API_URL, "API URL:", parent);
+		apiUrlEditor.setEmptyStringAllowed(false);
 
+		// NOTE: The API-key is allowed to be blank or empty for use with llama.cpp or other local back-ends
 		apiKeyEditor = new PasswordFieldEditor(PreferenceConstants.CURRENT_API_KEY, "API Key:", parent);
-		apiKeyEditor.setEmptyStringAllowed(false);
+		apiKeyEditor.setEmptyStringAllowed(true);
 
 		temperatureEditor = new DoubleFieldEditor(PreferenceConstants.CURRENT_TEMPERATURE, "Temperature:", parent);
 		temperatureEditor.setValidRange(Constants.MIN_TEMPERATURE, Constants.MAX_TEMPERATURE);
+
+		useSystemMessageEditor = new AccessibleBooleanFieldEditor(PreferenceConstants.CURRENT_USE_SYSTEM_MESSAGE,
+				"System Message", BooleanFieldEditor.SEPARATE_LABEL, parent);
+
+		useStreamingEditor = new AccessibleBooleanFieldEditor(PreferenceConstants.CURRENT_USE_STREAMING,
+				"Streaming", BooleanFieldEditor.SEPARATE_LABEL, parent);
 
 		addField(modelNameEditor);
 		addField(apiUrlEditor);
 		addField(apiKeyEditor);
 		addField(temperatureEditor);
+		addField(useSystemMessageEditor);
+		addField(useStreamingEditor);
 	}
 
 	/**
@@ -226,11 +282,14 @@ public class PreferencePage extends FieldEditorPreferencePage implements IWorkbe
 		table.setLinesVisible(true);
 
 		// Create all columns with weight-based widths
-		createTableColumn("Model Name", 40, tableLayout, e -> ((BookmarkedApiSettings) e).getModelName());
-		createTableColumn("API URL", 40, tableLayout, e -> ((BookmarkedApiSettings) e).getApiUrl());
-		createTableColumn("API Key", 10, tableLayout, e -> "•".repeat(8)); // same character as PasswordFieldEditor
-		createTableColumn("Temperature", 10, tableLayout,
+		createTableColumn("Model Name", 32, SWT.LEFT, tableLayout, e -> ((BookmarkedApiSettings) e).getModelName());
+		createTableColumn("API URL", 32, SWT.LEFT, tableLayout, e -> ((BookmarkedApiSettings) e).getApiUrl());
+		createTableColumn("Temperature", 12, SWT.CENTER, tableLayout,
 				e -> String.valueOf(((BookmarkedApiSettings) e).getTemperature()));
+		createTableColumn("System Message", 12, SWT.CENTER, tableLayout,
+				e -> ((BookmarkedApiSettings) e).getUseSystemMessage() ? "🗹" : "☐");
+		createTableColumn("Streaming", 12, SWT.CENTER, tableLayout,
+				e -> ((BookmarkedApiSettings) e).getUseStreaming() ? "🗹" : "☐");
 
 		table.addSelectionListener(new SelectionAdapter() {
 			@Override
@@ -241,7 +300,11 @@ public class PreferencePage extends FieldEditorPreferencePage implements IWorkbe
 					modelNameEditor.setStringValue(selectedSettings.getModelName());
 					apiUrlEditor.setStringValue(selectedSettings.getApiUrl());
 					apiKeyEditor.setStringValue(selectedSettings.getApiKey());
+					apiKeyEditor.setPasswordVisible(apiKeyEditor.getStringValue().isBlank()); // Hide if not blank for safety
 					temperatureEditor.setStringValue(Double.toString(selectedSettings.getTemperature()));
+					useSystemMessageEditor.setBooleanValue(selectedSettings.getUseSystemMessage());
+					useStreamingEditor.setBooleanValue(selectedSettings.getUseStreaming());
+					updateBookmarkButtonsVisibility();
 				}
 			}
 		});
@@ -356,7 +419,9 @@ public class PreferencePage extends FieldEditorPreferencePage implements IWorkbe
 			String currentModelName = modelNameEditor.getStringValue().trim();
 			String currentApiUrl = apiUrlEditor.getStringValue().trim();
 			String currentApiKey = apiKeyEditor.getStringValue().trim();
-			double currentTemp = temperatureEditor.getDoubleValue();
+			double currentTemperature = temperatureEditor.getDoubleValue();
+			boolean currentUseSystemMessage = useSystemMessageEditor.getBooleanValue();
+			boolean currentUseStreaming = useStreamingEditor.getBooleanValue();
 			if (OpenAiApiClient.getApiStatus(currentApiUrl, currentApiKey).equals("OK")) {
 				java.util.List<String> modelNames = OpenAiApiClient.fetchAvailableModelNames(currentApiUrl,
 						currentApiKey);
@@ -364,7 +429,7 @@ public class PreferencePage extends FieldEditorPreferencePage implements IWorkbe
 					// If current model name is a substring of model name (or empty)
 					if (modelName.toLowerCase().contains(currentModelName.toLowerCase())) {
 						BookmarkedApiSettings newSetting = new BookmarkedApiSettings(modelName, currentApiUrl,
-								currentApiKey, currentTemp);
+								currentApiKey, currentTemperature, currentUseSystemMessage, currentUseStreaming);
 						if (!bookmarkedApiSettings.contains(newSetting)) {
 							bookmarkedApiSettings.add(newSetting);
 						}
@@ -407,6 +472,24 @@ public class PreferencePage extends FieldEditorPreferencePage implements IWorkbe
 	 */
 	private void addSettingsChangeListener(Text textControl) {
 		textControl.addModifyListener(e -> updateBookmarkButtonsVisibility());
+	}
+
+	/**
+	 * Attaches a listener to a button control that triggers button state updates
+	 * whenever its selection state changes. This ensures bookmark-related buttons
+	 * stay in sync with the current input state.
+	 *
+	 * @param buttonControl The SWT Button widget to monitor for changes
+	 * @see org.eclipse.swt.widgets.Button
+	 * @see #updateBookmarkButtonsVisibility()
+	 */
+	private void addSettingsChangeListener(Button buttonControl) {
+		buttonControl.addSelectionListener(new SelectionAdapter() {
+			@Override
+			public void widgetSelected(SelectionEvent e) {
+				updateBookmarkButtonsVisibility();
+			}
+		});
 	}
 
 	/**
@@ -462,14 +545,16 @@ public class PreferencePage extends FieldEditorPreferencePage implements IWorkbe
 	 *
 	 * @param title Column header text
 	 * @param weight Column width weight
+	 * @param alignment Column alignment (e.g., SWT.LEFT, SWT.CENTER, SWT.RIGHT)
 	 * @param tableLayout Layout manager for the table
 	 * @param labelProvider Function to extract display text from table elements
 	 */
-	private void createTableColumn(String title, int weight, TableColumnLayout tableLayout,
+	private void createTableColumn(String title, int weight, int alignment, TableColumnLayout tableLayout,
 			Function<Object, String> labelProvider) {
 		TableViewerColumn column = new TableViewerColumn(tableViewer, SWT.NONE);
 		column.getColumn().setText(title);
 		column.getColumn().setResizable(true);
+		column.getColumn().setAlignment(alignment);
 		column.setLabelProvider(new ColumnLabelProvider() {
 			@Override
 			public String getText(Object element) {
@@ -500,8 +585,8 @@ public class PreferencePage extends FieldEditorPreferencePage implements IWorkbe
 	 * Creates a BookmarkedApiSettings object from the current field values using
 	 * a two-phase validation process:
 	 *
-	 * 1. Validates field editor states (format validation)
-	 * 2. Verifies non-blank content for all required fields
+	 * 1. Validates all string field editor states
+	 * 2. Verifies non-blank content for all string fields
 	 *
 	 * All validations must be performed on the UI thread since they access SWT widgets.
 	 * An AtomicBoolean is used to safely return values from UI thread operations.
@@ -515,7 +600,7 @@ public class PreferencePage extends FieldEditorPreferencePage implements IWorkbe
 	private BookmarkedApiSettings getCurrentSettings() {
 		AtomicBoolean allValid = new AtomicBoolean();
 
-		// Phase 1: Validate field editor states
+		// Validate string field editor states
 		Eclipse.runOnUIThreadSync(() -> {
 			allValid.set(modelNameEditor.isValid()
 					&& apiUrlEditor.isValid()
@@ -524,11 +609,11 @@ public class PreferencePage extends FieldEditorPreferencePage implements IWorkbe
 		});
 
 		if (allValid.get()) {
-			// Phase 2: Verify non-blank content
+			// Verify non-blank content for all string fields
+			// NOTE: The API-key is allowed to be blank or empty for use with llama.cpp or other local back-ends
 			Eclipse.runOnUIThreadSync(() -> {
 				allValid.set(!modelNameEditor.getStringValue().isBlank()
 						&& !apiUrlEditor.getStringValue().isBlank()
-						&& !apiKeyEditor.getStringValue().isBlank()
 						&& !temperatureEditor.getStringValue().isBlank());
 			});
 
@@ -537,7 +622,9 @@ public class PreferencePage extends FieldEditorPreferencePage implements IWorkbe
 						modelNameEditor.getStringValue(),
 						apiUrlEditor.getStringValue(),
 						apiKeyEditor.getStringValue(),
-						temperatureEditor.getDoubleValue());
+						temperatureEditor.getDoubleValue(),
+						useSystemMessageEditor.getBooleanValue(),
+						useStreamingEditor.getBooleanValue());
 			}
 		}
 		return null;

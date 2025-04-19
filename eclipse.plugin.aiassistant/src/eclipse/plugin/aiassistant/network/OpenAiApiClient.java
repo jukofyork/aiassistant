@@ -172,7 +172,7 @@ public class OpenAiApiClient {
 						Duration.ofSeconds(Preferences.getRequestTimeout()));
 				HttpResponse<InputStream> streamingResponse = httpClientWrapper.sendRequest(
 						buildChatCompletionRequestBody(modelName, chatConversation));
-				if (Preferences.useStreaming() && !isOpenAiReasoningModel(modelName)) {
+				if (Preferences.getCurrentUseStreaming()) {
 					processStreamingResponse(streamingResponse);
 				}
 				else {
@@ -210,8 +210,7 @@ public class OpenAiApiClient {
 			requestBody.put("model", modelName);
 
 			// Add the system (or developer message for OpenAI reasoning models).
-			// NOTE: The "o1-preview" and "o1-mini-2024-09-12" models use no system message at all
-			if (!isLegacyOpenAiReasoningModel(modelName)) {
+			if (Preferences.getCurrentUseSystemMessage()) {
 				var systemMessage = objectMapper.createObjectNode();
 
 				// "Starting with o1-2024-12-17, o1 models support developer messages rather than system messages"
@@ -271,8 +270,7 @@ public class OpenAiApiClient {
 			}
 
 			// Set the streaming flag.
-			// NOTE: We can't use streaming for OpenAI's reasoning models.
-			if (Preferences.useStreaming() && !isOpenAiReasoningModel(modelName)) {
+			if (Preferences.getCurrentUseStreaming()) {
 				requestBody.put("stream", true);
 				var node = objectMapper.createObjectNode();
 				node.put("include_usage", true);
