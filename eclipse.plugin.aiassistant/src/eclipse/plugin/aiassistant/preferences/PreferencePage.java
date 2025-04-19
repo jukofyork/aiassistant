@@ -34,6 +34,7 @@ import eclipse.plugin.aiassistant.Logger;
 import eclipse.plugin.aiassistant.network.OpenAiApiClient;
 import eclipse.plugin.aiassistant.utility.DoubleFieldEditor;
 import eclipse.plugin.aiassistant.utility.Eclipse;
+import eclipse.plugin.aiassistant.utility.PasswordFieldEditor;
 import eclipse.plugin.aiassistant.utility.UrlFieldEditor;
 
 /**
@@ -62,7 +63,7 @@ public class PreferencePage extends FieldEditorPreferencePage implements IWorkbe
 	/** Field editors for current API configuration */
 	private StringFieldEditor modelNameEditor;
 	private UrlFieldEditor apiUrlEditor;
-	private StringFieldEditor apiKeyEditor;
+	private PasswordFieldEditor apiKeyEditor;
 	private DoubleFieldEditor temperatureEditor;
 
 	private Button bookmarkButton;
@@ -187,7 +188,7 @@ public class PreferencePage extends FieldEditorPreferencePage implements IWorkbe
 
 		apiUrlEditor = new UrlFieldEditor(PreferenceConstants.CURRENT_API_URL, "API URL:", parent);
 
-		apiKeyEditor = new StringFieldEditor(PreferenceConstants.CURRENT_API_KEY, "API Key:", parent);
+		apiKeyEditor = new PasswordFieldEditor(PreferenceConstants.CURRENT_API_KEY, "API Key:", parent);
 		apiKeyEditor.setEmptyStringAllowed(false);
 
 		temperatureEditor = new DoubleFieldEditor(PreferenceConstants.CURRENT_TEMPERATURE, "Temperature:", parent);
@@ -225,9 +226,9 @@ public class PreferencePage extends FieldEditorPreferencePage implements IWorkbe
 		table.setLinesVisible(true);
 
 		// Create all columns with weight-based widths
-		createTableColumn("Model Name", 25, tableLayout, e -> ((BookmarkedApiSettings) e).getModelName());
-		createTableColumn("API URL", 25, tableLayout, e -> ((BookmarkedApiSettings) e).getApiUrl());
-		createTableColumn("API Key", 40, tableLayout, e -> ((BookmarkedApiSettings) e).getApiKey());
+		createTableColumn("Model Name", 40, tableLayout, e -> ((BookmarkedApiSettings) e).getModelName());
+		createTableColumn("API URL", 40, tableLayout, e -> ((BookmarkedApiSettings) e).getApiUrl());
+		createTableColumn("API Key", 10, tableLayout, e -> "•".repeat(8)); // same character as PasswordFieldEditor
 		createTableColumn("Temperature", 10, tableLayout,
 				e -> String.valueOf(((BookmarkedApiSettings) e).getTemperature()));
 
