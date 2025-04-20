@@ -1,5 +1,6 @@
 package eclipse.plugin.aiassistant.utility;
 
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.MalformedURLException;
@@ -17,6 +18,8 @@ import org.eclipse.core.resources.IResource;
 import org.eclipse.core.resources.IWorkspaceRoot;
 import org.eclipse.core.resources.ResourcesPlugin;
 import org.eclipse.core.runtime.CoreException;
+import org.eclipse.core.runtime.IPath;
+import org.eclipse.core.runtime.Platform;
 import org.eclipse.jface.resource.ImageDescriptor;
 import org.eclipse.jface.text.BadLocationException;
 import org.eclipse.jface.text.IDocument;
@@ -552,6 +555,17 @@ public class Eclipse {
 	 */
 	public static Object evaluateScript(Browser browser, String script) {
 		return runOnUIThreadSync(() -> browser.evaluate(script));
+	}
+
+	/**
+	 * Returns the state location for the plugin.
+	 *
+	 * @param pluginId The ID of the plugin
+	 * @return The state location as a File object
+	 */
+	public static File getPluginStateLocation(String pluginId) {
+		IPath statePath = Platform.getStateLocation(Platform.getBundle(pluginId));
+		return statePath.toFile();
 	}
 
 	/**

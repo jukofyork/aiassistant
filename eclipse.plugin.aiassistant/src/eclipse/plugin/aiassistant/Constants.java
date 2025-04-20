@@ -41,8 +41,9 @@ public final class Constants {
 	public static final String HIGHLIGHT_JS_LANGUAGES_FILENAMES = "language-extensions.json";
 
 	// Contains the model prices,context_window, etc.
-	// See: https://raw.githubusercontent.com/BerriAI/litellm/main/model_prices_and_context_window.json
-	public static final String API_MODEL_DATA = "model_prices_and_context_window.json";
+	// NOTE: We start off with a copy of this in JSON_PATH - to use in case we can't update it...
+	public static final String API_MODEL_DATA_REMOTE_URL = "https://raw.githubusercontent.com/BerriAI/litellm/main/";
+	public static final String API_MODEL_DATA_FILENAME = "model_prices_and_context_window.json";
 
 	// API base URL and endpoints.
 	public static final String DEFAULT_MODEL_NAME = "gpt-4-turbo";
