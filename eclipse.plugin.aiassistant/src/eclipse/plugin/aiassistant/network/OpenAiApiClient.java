@@ -210,7 +210,8 @@ public class OpenAiApiClient {
 			requestBody.put("model", modelName);
 
 			// Add the system (or developer message for OpenAI reasoning models).
-			if (Preferences.getCurrentUseSystemMessage()) {
+			// NOTE: OpenAI's legacy reasoning models can't use a system or developer message.
+			if (Preferences.getCurrentUseSystemMessage() && !isLegacyOpenAiReasoningModel(modelName)) {
 				var systemMessage = objectMapper.createObjectNode();
 
 				// "Starting with o1-2024-12-17, o1 models support developer messages rather than system messages"
