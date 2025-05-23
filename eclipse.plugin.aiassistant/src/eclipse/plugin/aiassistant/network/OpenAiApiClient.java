@@ -354,6 +354,9 @@ public class OpenAiApiClient {
 		String finishReason = "";
 		String usageReport = "";
 
+		// Used to wrap the thinking block between `<think>` and `</think>` for DeepSeek API.
+		boolean isInThinkingBlock = false;
+
 		try (var inputStream = response.body();
 				var streamingInputStreamReader = new InputStreamReader(inputStream, StandardCharsets.UTF_8);
 				var streamingResponseReader = new BufferedReader(streamingInputStreamReader)) {
@@ -387,16 +390,27 @@ public class OpenAiApiClient {
 							if (choiceNode.has("finish_reason") && !choiceNode.get("finish_reason").asText().equals("null")) {
 								finishReason = "Finish : "+choiceNode.get("finish_reason").asText();
 							}
-							if (choiceNode.has("message") && choiceNode.get("message").has("content")) {
-								var messageContent = choiceNode.get("message").get("content").asText();
-								if (!messageContent.equals("null")) {
-									responseContentBuffer.append(messageContent);
+							if (choiceNode.has("message") || choiceNode.has("delta")) {
+								JsonNode contentNode = choiceNode.has("message") ? choiceNode.get("message") : choiceNode.get("delta");
+								if (contentNode.has("reasoning_content")) {
+									var reasoningContent = contentNode.get("reasoning_content").asText();
+									if (!reasoningContent.equals("null")) {
+										if (!isInThinkingBlock) {
+											responseContentBuffer.append("<think>\n");
+											isInThinkingBlock = true;
+										}
+										responseContentBuffer.append(reasoningContent);
+									}
 								}
-							}
-							else if (choiceNode.has("delta") && choiceNode.get("delta").has("content")) {
-								var messageContent = choiceNode.get("delta").get("content").asText();
-								if (!messageContent.equals("null")) {
-									responseContentBuffer.append(messageContent);
+								if (contentNode.has("content")) {
+									var messageContent = contentNode.get("content").asText();
+									if (!messageContent.equals("null")) {
+										if (isInThinkingBlock) {
+											responseContentBuffer.append("\n</think>\n\n");
+											isInThinkingBlock = false;
+										}
+										responseContentBuffer.append(messageContent);
+									}
 								}
 							}
 						}
