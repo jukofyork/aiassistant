@@ -393,8 +393,9 @@ public class OpenAiApiClient {
 							if (choiceNode.has("message") || choiceNode.has("delta")) {
 								JsonNode contentNode = choiceNode.has("message") ? choiceNode.get("message") : choiceNode.get("delta");
 								if (contentNode.has("reasoning_content")) {
-									var reasoningContent = contentNode.get("reasoning_content").asText();
-									if (!reasoningContent.equals("null")) {
+									JsonNode reasoningNode = contentNode.get("reasoning_content");
+									if (!reasoningNode.isNull()) {  // Check for JSON null so string "null" will be preserved!
+										String reasoningContent = reasoningNode.asText();
 										if (!isInThinkingBlock) {
 											responseContentBuffer.append("<think>\n");
 											isInThinkingBlock = true;
@@ -403,8 +404,9 @@ public class OpenAiApiClient {
 									}
 								}
 								if (contentNode.has("content")) {
-									var messageContent = contentNode.get("content").asText();
-									if (!messageContent.equals("null")) {
+									JsonNode contentNodeValue = contentNode.get("content");
+									if (!contentNodeValue.isNull()) {  // Check for JSON null so string "null" will be preserved!
+										String messageContent = contentNodeValue.asText();
 										if (isInThinkingBlock) {
 											responseContentBuffer.append("\n</think>\n\n");
 											isInThinkingBlock = false;
