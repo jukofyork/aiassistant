@@ -6,7 +6,7 @@ import java.nio.charset.StandardCharsets;
 
 import org.eclipse.compare.CompareConfiguration;
 import org.eclipse.compare.patch.ApplyPatchOperation;
-import org.eclipse.core.resources.IProject;
+import org.eclipse.core.resources.IFile;
 import org.eclipse.core.resources.IStorage;
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.IPath;
@@ -52,24 +52,21 @@ public class ApplyPatchBrowserFunction extends DisableableBrowserFunction {
 				try (var patchInputStream = new ByteArrayInputStream(patchString.getBytes(StandardCharsets.UTF_8))) {
 					var patchStorage = new PatchStorage(patchString);
 					IWorkbenchPart activeWorkbenchPart = Eclipse.getActivePart();
-					IProject activeProject = Eclipse.getActiveProject(textEditor);
+					IFile targetFile = Eclipse.getActiveFile(textEditor);
 					ApplyPatchOperation operation = new ApplyPatchOperation(activeWorkbenchPart, patchStorage,
-							activeProject, new CompareConfiguration());
+							targetFile, new CompareConfiguration());
 					operation.openWizard();
 				} catch (Exception e) {
 					Logger.error(e.getLocalizedMessage(), e);
 				}
-
 			}
-
 		}
 		return null;
 	}
 
 	/**
-	 * This method removes the prefixes from the patch string if they exist. With
-	 * these added the Eclipse patch wizard won't work...
-	 * 
+	 * This method removes the prefixes from the patch string if they exist.
+	 *
 	 * @param patchString The patch string to be processed.
 	 * @return The processed patch string.
 	 */
