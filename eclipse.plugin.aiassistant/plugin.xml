@@ -102,6 +102,21 @@
            id="eclipse.plugin.aiassistant.FixErrors"
            name="FixErrors">
      </command>
+     <command
+           defaultHandler="eclipse.plugin.aiassistant.handlers.AddGitDiffPromptHandler"
+           id="eclipse.plugin.aiassistant.AddGitDiff"
+           name="AddGitDiff">
+     </command>
+     <command
+           defaultHandler="eclipse.plugin.aiassistant.handlers.GitCommitCommentPromptHandler"
+           id="eclipse.plugin.aiassistant.GitCommitComment"
+           name="GitCommitComment">
+     </command>
+     <command
+           defaultHandler="eclipse.plugin.aiassistant.handlers.CopyGitDiffHandler"
+           id="eclipse.plugin.aiassistant.CopyGitDiff"
+           name="CopyGitDiff">
+     </command>
   </extension>
   <extension
         point="org.eclipse.ui.menus">
@@ -246,6 +261,34 @@
                     property="eclipse.plugin.aiassistant.MenuVisibilityHandler">
               </test>
            </visibleWhen>
+        </menu>
+     </menuContribution>
+     <menuContribution locationURI="popup:team.main?after=org.eclipse.egit.ui.team.ShowRepositoriesView">
+        <menu
+              icon="icons/Robot.png"
+              label="AI Assistant"
+              id="eclipse.plugin.aiassistant.team.menu">
+           <command
+              commandId="eclipse.plugin.aiassistant.CopyGitDiff"
+              icon="icons/CopyToClipboard.png"
+              label="Copy Git Diff"
+              style="push"
+              tooltip="Copy the Current Git Diff to the Clipboard">
+           </command>
+           <command
+              commandId="eclipse.plugin.aiassistant.AddGitDiff"
+              icon="icons/Add.png"
+              label="Add Git Diff"
+              style="push"
+              tooltip="Add the Current Git Diff as a Message">
+           </command>
+           <command
+              commandId="eclipse.plugin.aiassistant.GitCommitComment"
+              icon="icons/CodeGeneration.png"
+              label="Git Commit Comment"
+              style="push"
+              tooltip="Generate a Git Commit Comment">
+           </command>
         </menu>
      </menuContribution>
   </extension>

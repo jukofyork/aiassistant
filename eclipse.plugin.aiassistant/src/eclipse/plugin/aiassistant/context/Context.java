@@ -4,6 +4,7 @@ import org.eclipse.core.resources.IFile;
 import org.eclipse.ui.texteditor.ITextEditor;
 
 import eclipse.plugin.aiassistant.utility.Eclipse;
+import eclipse.plugin.aiassistant.utility.Git;
 import eclipse.plugin.aiassistant.utility.IndentationFormatter;
 import eclipse.plugin.aiassistant.utility.LanguageFileExtensions;
 
@@ -14,7 +15,7 @@ import eclipse.plugin.aiassistant.utility.LanguageFileExtensions;
  * line numbers.
  */
 public class Context {
-	
+
 	private String userText = "";
 	private String filename = "";
 	private String language = "";
@@ -26,6 +27,7 @@ public class Context {
 	private String selectionText = "";
 	private String lineNumberDescription = "";
 	private String documentationGenerator = "";
+	private String gitDiff = "";
 
 	/**
 	 * Constructs a new Context object with the given text editor and user input.
@@ -33,19 +35,19 @@ public class Context {
 	 * @param userText   The user input from the chat conversation view.
 	 */
 	public Context(String userText) {
-		
+
 		// Can get the user text even if not in a text editor.
 		this.userText = userText;
-		
+
 		// Try to get the active text editor (or null if not text editor)).
 		ITextEditor textEditor = Eclipse.getActiveTextEditor();
-		
+
 		// Can't get any of these unless from a text editor.
 		if (textEditor != null) {
-			
+
 			// Save all dirty editors for Eclipse.getEditorText().
 			Eclipse.saveAllEditors(false);
-			
+
 			IFile activeFile = Eclipse.getActiveFile(textEditor);
 			if (activeFile != null) {
 				this.filename = activeFile.getProjectRelativePath().toString();
@@ -59,7 +61,7 @@ public class Context {
 				this.filename = Eclipse.getEditorTitle(textEditor); // Fallback method.
 				this.documentText = Eclipse.getEditorText(textEditor); // Fallback method.
 			}
-	
+
 			// NOTE: Deliberately not trimming to not effect line numbers and indentation.
 			this.selectionText = Eclipse.getSelectedText(textEditor);
 			if (!this.selectionText.isEmpty()) {
@@ -71,7 +73,7 @@ public class Context {
 					this.lineNumberDescription = "lines " + startLine.toString() + " to " + endLine.toString();
 				}
 			}
-			
+
 			// TODO: Move out.
 			if (language.equals("Java")) {
 				documentationGenerator = "Javadoc (@see, @param, @return, @throws, etc)";
@@ -80,15 +82,22 @@ public class Context {
 				documentationGenerator = "Doxygen (@see, @param, @return, @throws, etc)";
 			}
 			else if (language.equals("Python")) {
-			    documentationGenerator = "Sphinx (:param, :type, :return:, :rtype:, etc)";
+				documentationGenerator = "Sphinx (:param, :type, :return:, :rtype:, etc)";
 			}
-			
+
 		}
-		
+
 		// Can get the clipboard contents even if not in a text editor.
 		// NOTE: Deliberately not trimming to not effect line numbers and indentation.
 		this.clipboardText = Eclipse.getClipboardContents();
-		
+
+		// Get git diff - can be retrieved even if not in a text editor
+		try {
+			this.gitDiff = Git.getStagedDiff();
+		} catch (Exception e) {
+			this.gitDiff = "Error getting git diff: " + e.getMessage();
+		}
+
 		// Remove the indentation from both.
 		// May not work well if mixed space and tab indentation.
 		this.clipboardText = IndentationFormatter.removeIndentation(this.clipboardText);
@@ -98,7 +107,7 @@ public class Context {
 
 	/**
 	 * Returns the user input text from the chat conversation view.
-	 * 
+	 *
 	 * @return The user input text from the chat conversation view.
 	 */
 	public String getUserText() {
@@ -107,7 +116,7 @@ public class Context {
 
 	/**
 	 * Returns the filename of the active file.
-	 * 
+	 *
 	 * @return The filename of the active file.
 	 */
 	public String getFilename() {
@@ -116,16 +125,16 @@ public class Context {
 
 	/**
 	 * Returns the language name associated with the active file's extension.
-	 * 
+	 *
 	 * @return The language name associated with the active file's extension.
 	 */
 	public String getLanguage() {
 		return language;
 	}
-	
+
 	/**
 	 * Returns the Markdown language tag associated with the active file's extension.
-	 * 
+	 *
 	 * @return The language tag associated with the active file's extension.
 	 */
 	public String getTag() {
@@ -136,7 +145,7 @@ public class Context {
 	 * Returns a string containing all compiler warnings for the active file. Each
 	 * warning is listed on a new line, along with the line number and filename
 	 * where it occurred.
-	 * 
+	 *
 	 * @return A string containing all compiler warnings for the active file.
 	 */
 	public String getCompilerWarnings() {
@@ -147,7 +156,7 @@ public class Context {
 	 * Returns a string containing all compiler errors for the active file. Each
 	 * error is listed on a new line, along with the line number and filename where
 	 * it occurred.
-	 * 
+	 *
 	 * @return A string containing all compiler errors for the active file.
 	 */
 	public String getCompilerErrors() {
@@ -156,7 +165,7 @@ public class Context {
 
 	/**
 	 * Returns the text content of the active file.
-	 * 
+	 *
 	 * @return The text content of the active file.
 	 */
 	public String getDocumentText() {
@@ -165,7 +174,7 @@ public class Context {
 
 	/**
 	 * Returns the text content of the clipboard.
-	 * 
+	 *
 	 * @return The text content of the clipboard.
 	 */
 	public String getClipboardText() {
@@ -174,7 +183,7 @@ public class Context {
 
 	/**
 	 * Returns the selected text from the active file in the editor.
-	 * 
+	 *
 	 * @return The selected text from the active file in the editor.
 	 */
 	public String getSelectionText() {
@@ -186,15 +195,24 @@ public class Context {
 	 * If only one line is selected, it returns "line X", where X is the line
 	 * number. If multiple lines are selected, it returns "lines X to Y", where X
 	 * and Y are the start and end line numbers.
-	 * 
+	 *
 	 * @return A description of the line numbers associated with the selected text.
 	 */
 	public String getLineNumberDescription() {
 		return lineNumberDescription;
 	}
-	
+
 	public String getDocumentationGenerator() {
 		return documentationGenerator;
+	}
+
+	/**
+	 * Returns the git diff of staged changes for the current repository.
+	 *
+	 * @return The git diff of staged changes or an error message if unable to retrieve.
+	 */
+	public String getGitDiff() {
+		return gitDiff;
 	}
 
 }

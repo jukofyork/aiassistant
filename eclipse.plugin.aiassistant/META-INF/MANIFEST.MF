@@ -20,7 +20,9 @@ Require-Bundle: org.eclipse.compare,
  org.eclipse.jface.text,
  org.eclipse.ui,
  org.eclipse.ui.editors,
- org.eclipse.ui.workbench.texteditor
+ org.eclipse.ui.workbench.texteditor,
+ org.eclipse.jgit,
+ org.eclipse.egit.core
 Bundle-RequiredExecutionEnvironment: JavaSE-17
 Automatic-Module-Name: eclipse.plugin.aiassistant
 Bundle-ActivationPolicy: lazy
