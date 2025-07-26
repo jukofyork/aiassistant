@@ -289,6 +289,12 @@
               style="push"
               tooltip="Generate a Git Commit Comment">
            </command>
+           <visibleWhen
+                 checkEnabled="false">
+              <test
+                    property="eclipse.plugin.aiassistant.TeamMenuVisibilityHandler">
+              </test>
+           </visibleWhen>
         </menu>
      </menuContribution>
   </extension>
@@ -314,26 +320,33 @@
   </extension>
   <extension
         point="org.eclipse.core.expressions.propertyTesters">
-          <propertyTester
+     <propertyTester
            class="eclipse.plugin.aiassistant.handlers.FixWarningsVisibilityHandler"
            id="eclipse.plugin.aiassistant.FixWarningsVisibilityHandler"
            namespace="eclipse.plugin.aiassistant"
            properties="FixWarningsVisibilityHandler"
            type="java.lang.Object">
      </propertyTester>
-          <propertyTester
+     <propertyTester
            class="eclipse.plugin.aiassistant.handlers.FixErrorsVisibilityHandler"
            id="eclipse.plugin.aiassistant.FixErrorsVisibilityHandler"
            namespace="eclipse.plugin.aiassistant"
            properties="FixErrorsVisibilityHandler"
            type="java.lang.Object">
      </propertyTester>
-          <propertyTester
-                class="eclipse.plugin.aiassistant.handlers.MenuVisibilityHandler"
-                id="eclipse.plugin.aiassistant.MenuVisibilityHandler"
-                namespace="eclipse.plugin.aiassistant"
-                properties="MenuVisibilityHandler"
-                type="java.lang.Object">
-          </propertyTester>
+     <propertyTester
+           class="eclipse.plugin.aiassistant.handlers.MenuVisibilityHandler"
+           id="eclipse.plugin.aiassistant.MenuVisibilityHandler"
+           namespace="eclipse.plugin.aiassistant"
+           properties="MenuVisibilityHandler"
+           type="java.lang.Object">
+     </propertyTester>
+     <propertyTester
+           class="eclipse.plugin.aiassistant.handlers.TeamMenuVisibilityHandler"
+           id="eclipse.plugin.aiassistant.TeamMenuVisibilityHandler"
+           namespace="eclipse.plugin.aiassistant"
+           properties="TeamMenuVisibilityHandler"
+           type="java.lang.Object">
+     </propertyTester>
   </extension>
 </plugin>
