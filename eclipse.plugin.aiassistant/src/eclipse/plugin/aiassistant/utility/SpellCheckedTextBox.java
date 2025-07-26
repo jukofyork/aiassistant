@@ -57,8 +57,10 @@ public class SpellCheckedTextBox {
 	 * Constructs a SpellCheckedTextBox with a specified parent and an enter key
 	 * press handler.
 	 *
-	 * @param parent  the parent composite in which this text box is placed
-	 * @param handler the handler for enter key press events
+	 * @param parent     the parent composite in which this text box is placed
+	 * @param heightHint the preferred height in pixels for the text widget
+	 * @param fontSize   the font size in points for the text display
+	 * @param handler    the handler for enter key press events
 	 */
 	public SpellCheckedTextBox(Composite parent, int heightHint, int fontSize, EnterKeyPressHandler handler) {
 		this.enterKeyPressHandler = handler;
@@ -165,7 +167,8 @@ public class SpellCheckedTextBox {
 	 * composite. Sets up the text editing environment including syntax
 	 * highlighting, decorations, and document handling.
 	 *
-	 * @param parent the parent composite in which the source viewer is placed
+	 * @param parent     the parent composite in which the source viewer is placed
+	 * @param heightHint the preferred height in pixels for the text widget layout
 	 */
 	private void initializeSourceViewer(Composite parent, int heightHint) {
 		DefaultMarkerAnnotationAccess access = new DefaultMarkerAnnotationAccess();
