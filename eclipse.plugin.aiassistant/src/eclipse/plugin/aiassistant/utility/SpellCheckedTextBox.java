@@ -1,8 +1,8 @@
 package eclipse.plugin.aiassistant.utility;
 
 import org.eclipse.jface.action.Action;
-import org.eclipse.jface.action.Separator;
 import org.eclipse.jface.action.MenuManager;
+import org.eclipse.jface.action.Separator;
 import org.eclipse.jface.preference.IPreferenceStore;
 import org.eclipse.jface.text.DefaultTextHover;
 import org.eclipse.jface.text.Document;
@@ -13,6 +13,14 @@ import org.eclipse.jface.text.ITextViewer;
 import org.eclipse.jface.text.source.AnnotationModel;
 import org.eclipse.jface.text.source.ISourceViewer;
 import org.eclipse.jface.text.source.SourceViewer;
+import org.eclipse.swt.SWT;
+import org.eclipse.swt.events.KeyAdapter;
+import org.eclipse.swt.events.KeyEvent;
+import org.eclipse.swt.events.TraverseEvent;
+import org.eclipse.swt.events.TraverseListener;
+import org.eclipse.swt.graphics.Font;
+import org.eclipse.swt.graphics.FontData;
+import org.eclipse.swt.layout.GridData;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Menu;
 import org.eclipse.ui.editors.text.EditorsUI;
@@ -23,12 +31,6 @@ import org.eclipse.ui.texteditor.MarkerAnnotationPreferences;
 import org.eclipse.ui.texteditor.SourceViewerDecorationSupport;
 
 import eclipse.plugin.aiassistant.preferences.Preferences;
-
-import org.eclipse.swt.SWT;
-import org.eclipse.swt.events.KeyAdapter;
-import org.eclipse.swt.events.KeyEvent;
-import org.eclipse.swt.events.TraverseEvent;
-import org.eclipse.swt.events.TraverseListener;
 
 /**
  * A text input component with spell checking and undo/redo/copy/paste, etc.
@@ -41,32 +43,34 @@ public class SpellCheckedTextBox {
 	public interface EnterKeyPressHandler {
 		/**
 		 * Handles the enter key press.
-		 * 
+		 *
 		 * @param stateMask the state mask of the event
 		 */
 		void handleEnterKeyPress(int stateMask);
 	}
 
 	private SourceViewer sourceViewer;
+
 	private EnterKeyPressHandler enterKeyPressHandler;
 
 	/**
 	 * Constructs a SpellCheckedTextBox with a specified parent and an enter key
 	 * press handler.
-	 * 
+	 *
 	 * @param parent  the parent composite in which this text box is placed
 	 * @param handler the handler for enter key press events
 	 */
-	public SpellCheckedTextBox(Composite parent, EnterKeyPressHandler handler) {
+	public SpellCheckedTextBox(Composite parent, int heightHint, int fontSize, EnterKeyPressHandler handler) {
 		this.enterKeyPressHandler = handler;
-		initializeSourceViewer(parent);
+		initializeSourceViewer(parent, heightHint);
+		setFontSize(fontSize);
 		addTraverseListener();
 		addKeyListener();
 	}
 
 	/**
 	 * Checks if the text widget is disposed.
-	 * 
+	 *
 	 * @return true if the text widget is disposed, false otherwise
 	 */
 	public boolean isDisposed() {
@@ -75,7 +79,7 @@ public class SpellCheckedTextBox {
 
 	/**
 	 * Retrieves the current text from the text widget.
-	 * 
+	 *
 	 * @return the current text
 	 */
 	public String getText() {
@@ -84,7 +88,7 @@ public class SpellCheckedTextBox {
 
 	/**
 	 * Checks if the text widget is enabled.
-	 * 
+	 *
 	 * @return true if enabled, false otherwise
 	 */
 	public boolean getEnabled() {
@@ -93,7 +97,7 @@ public class SpellCheckedTextBox {
 
 	/**
 	 * Sets the text of the text widget.
-	 * 
+	 *
 	 * @param text the text to set
 	 */
 	public void setText(String text) {
@@ -109,7 +113,7 @@ public class SpellCheckedTextBox {
 
 	/**
 	 * Enables or disables the text widget.
-	 * 
+	 *
 	 * @param enabled true to enable, false to disable
 	 */
 	public void setEnabled(boolean enabled) {
@@ -117,8 +121,37 @@ public class SpellCheckedTextBox {
 	}
 
 	/**
+	 * Sets the font size of the text widget.
+	 *
+	 * @param fontSize the new font size
+	 */
+	public void setFontSize(int fontSize) {
+		Eclipse.runOnUIThreadAsync(() -> {
+			if (sourceViewer.getTextWidget() != null && !sourceViewer.getTextWidget().isDisposed()) {
+				Font oldFont = sourceViewer.getTextWidget().getFont();
+
+				// Get current font data to preserve family and style
+				FontData[] fontData = oldFont.getFontData();
+				if (fontData.length > 0) {
+					// Create new font data with the new size
+					FontData newFontData = new FontData(fontData[0].getName(), fontSize, fontData[0].getStyle());
+					Font newFont = new Font(sourceViewer.getTextWidget().getDisplay(), newFontData);
+
+					// Set the new font
+					sourceViewer.getTextWidget().setFont(newFont);
+
+					// Dispose of the old font if we created it (don't dispose system fonts)
+					if (oldFont != sourceViewer.getTextWidget().getDisplay().getSystemFont()) {
+						oldFont.dispose();
+					}
+				}
+			}
+		});
+	}
+
+	/**
 	 * Configures the tooltip for the text widget.
-	 * 
+	 *
 	 * @param tooltipText the text to display as a tooltip
 	 */
 	public void configureTextToolTip(String tooltipText) {
@@ -131,14 +164,18 @@ public class SpellCheckedTextBox {
 	 * Initializes the source viewer component within the specified parent
 	 * composite. Sets up the text editing environment including syntax
 	 * highlighting, decorations, and document handling.
-	 * 
+	 *
 	 * @param parent the parent composite in which the source viewer is placed
 	 */
-	private void initializeSourceViewer(Composite parent) {
+	private void initializeSourceViewer(Composite parent, int heightHint) {
 		DefaultMarkerAnnotationAccess access = new DefaultMarkerAnnotationAccess();
 		sourceViewer = new SourceViewer(parent, null, null, true, SWT.BORDER | SWT.MULTI | SWT.WRAP | SWT.V_SCROLL);
 		sourceViewer.configure(new CustomSourceViewerConfiguration(EditorsUI.getPreferenceStore()));
-		sourceViewer.getTextWidget().setLayoutData(Eclipse.createGridData(true, true));
+
+		// Set the height hint
+		GridData gridData = Eclipse.createGridData(true, true);
+		gridData.heightHint = heightHint;
+		sourceViewer.getTextWidget().setLayoutData(gridData);
 
 		Document document = new Document();
 		sourceViewer.setDocument(document, new AnnotationModel());
@@ -146,7 +183,7 @@ public class SpellCheckedTextBox {
 		SourceViewerDecorationSupport decorationSupport = new SourceViewerDecorationSupport(sourceViewer, null, access,
 				EditorsUI.getSharedTextColors());
 		new MarkerAnnotationPreferences().getAnnotationPreferences()
-				.forEach(pref -> decorationSupport.setAnnotationPreference((AnnotationPreference) pref));
+		.forEach(pref -> decorationSupport.setAnnotationPreference((AnnotationPreference) pref));
 		decorationSupport.install(EditorsUI.getPreferenceStore());
 
 		initializeContextMenu();
@@ -193,7 +230,7 @@ public class SpellCheckedTextBox {
 
 	/**
 	 * Executes a specified text operation on the source viewer.
-	 * 
+	 *
 	 * @param operationCode the code of the operation to execute
 	 */
 	private void executeEditorOperation(int operationCode) {
@@ -206,37 +243,37 @@ public class SpellCheckedTextBox {
 	 * when the text widget is enabled.
 	 */
 	private void addTraverseListener() {
-	    sourceViewer.getTextWidget().addTraverseListener(new TraverseListener() {
-	        public void keyTraversed(TraverseEvent e) {
-	            if (getEnabled()) {
-	                if (e.detail == SWT.TRAVERSE_RETURN) {
-	                    enterKeyPressHandler.handleEnterKeyPress(e.stateMask);
-	                }
-	            }
-	        }
-	    });
+		sourceViewer.getTextWidget().addTraverseListener(new TraverseListener() {
+			public void keyTraversed(TraverseEvent e) {
+				if (getEnabled()) {
+					if (e.detail == SWT.TRAVERSE_RETURN) {
+						enterKeyPressHandler.handleEnterKeyPress(e.stateMask);
+					}
+				}
+			}
+		});
 	}
-	
-    /**
-     * Adds a key listener to the text widget to handle specific key events for undo and redo operations.
-     * This method listens for 'z' key presses combined with modifier keys to execute undo and redo.
-     */
-    private void addKeyListener() {
-        sourceViewer.getTextWidget().addKeyListener(new KeyAdapter() {
-            @Override
-            public void keyPressed(KeyEvent e) {
-                if (getEnabled()) {
-                    if (e.keyCode == 'z') {
-                        if ((e.stateMask & SWT.MODIFIER_MASK) == SWT.MOD1) {
-                            executeEditorOperation(ITextOperationTarget.UNDO);
-                        } else if ((e.stateMask & SWT.MODIFIER_MASK) == (SWT.MOD1 | SWT.MOD2)) {
-                            executeEditorOperation(ITextOperationTarget.REDO);
-                        }
-                    }
-                }
-            }
-        });
-    }
+
+	/**
+	 * Adds a key listener to the text widget to handle specific key events for undo and redo operations.
+	 * This method listens for 'z' key presses combined with modifier keys to execute undo and redo.
+	 */
+	private void addKeyListener() {
+		sourceViewer.getTextWidget().addKeyListener(new KeyAdapter() {
+			@Override
+			public void keyPressed(KeyEvent e) {
+				if (getEnabled()) {
+					if (e.keyCode == 'z') {
+						if ((e.stateMask & SWT.MODIFIER_MASK) == SWT.MOD1) {
+							executeEditorOperation(ITextOperationTarget.UNDO);
+						} else if ((e.stateMask & SWT.MODIFIER_MASK) == (SWT.MOD1 | SWT.MOD2)) {
+							executeEditorOperation(ITextOperationTarget.REDO);
+						}
+					}
+				}
+			}
+		});
+	}
 
 	/**
 	 * Custom configuration for the source viewer, handling preferences and text

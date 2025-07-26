@@ -1,17 +1,20 @@
 package eclipse.plugin.aiassistant.view;
 
+import org.eclipse.jface.util.IPropertyChangeListener;
+import org.eclipse.jface.util.PropertyChangeEvent;
+import org.eclipse.swt.SWT;
+import org.eclipse.swt.events.SelectionAdapter;
+import org.eclipse.swt.events.SelectionEvent;
 import org.eclipse.swt.widgets.Button;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Display;
 
 import eclipse.plugin.aiassistant.Constants;
+import eclipse.plugin.aiassistant.preferences.PreferenceConstants;
+import eclipse.plugin.aiassistant.preferences.Preferences;
 import eclipse.plugin.aiassistant.prompt.Prompts;
 import eclipse.plugin.aiassistant.utility.Eclipse;
 import eclipse.plugin.aiassistant.utility.SpellCheckedTextBox;
-
-import org.eclipse.swt.SWT;
-import org.eclipse.swt.events.SelectionAdapter;
-import org.eclipse.swt.events.SelectionEvent;
 
 /**
  * This class represents the user input area in the application, which consists
@@ -19,13 +22,19 @@ import org.eclipse.swt.events.SelectionEvent;
  */
 public class UserInputArea {
 
+	// The height hint we pass to the SpellCheckedTextBox widget
+	public static final int HEIGHT_HINT_PIXELS = 80;
+
+	// Adjustment factor, used to try to better match the Browser widget and Eclipse UI font sizes
+	public static final int FONT_SIZE_OFFSET = -2;
+
 	public static final String ARROW_UP_TOOLTIP = "Older User Messages";
 	public static final String ARROW_DOWN_TOOLTIP = "Newer User Messages";
 	public static final String ARROW_UP_ICON = "ArrowUp.png";
 	public static final String ARROW_DOWN_ICON = "ArrowDown.png";
 	public static final String INPUT_AREA_TOOLTIP = """
-													Ctrl+Enter: Delay the Assistant's Response
-													Shift+Enter: Insert a Newline""";
+			Ctrl+Enter: Delay the Assistant's Response
+			Shift+Enter: Insert a Newline""";
 	public static final int ARROW_BUTTONS_VERTICAL_SPACING = 0;
 
 	private final MainPresenter mainPresenter;
@@ -51,6 +60,7 @@ public class UserInputArea {
 		arrowButtonContainer = createArrowButtonContainer(mainContainer);
 		upArrowButton = createUpArrowButton(arrowButtonContainer);
 		downArrowButton = createDownArrowButton(arrowButtonContainer);
+		setupPropertyChangeListener();
 	}
 
 	/**
@@ -126,7 +136,8 @@ public class UserInputArea {
 	 *         interaction.
 	 */
 	private SpellCheckedTextBox createSpellCheckedTextBox(Composite parent) {
-		SpellCheckedTextBox spellCheckedTextBox = new SpellCheckedTextBox(parent, this::handleEnterKeyPress);
+		SpellCheckedTextBox spellCheckedTextBox = new SpellCheckedTextBox(parent, HEIGHT_HINT_PIXELS,
+				Preferences.getChatFontSize() + FONT_SIZE_OFFSET, this::handleEnterKeyPress);
 		spellCheckedTextBox.configureTextToolTip(INPUT_AREA_TOOLTIP);
 		return spellCheckedTextBox;
 	}
@@ -179,6 +190,21 @@ public class UserInputArea {
 			}
 		};
 		return Eclipse.createButton(buttonContainer, "", ARROW_DOWN_TOOLTIP, ARROW_DOWN_ICON, listener);
+	}
+
+	/**
+	 * Registers a property change listener to handle changes in font size preferences.
+	 * This listener reacts to changes in chat font size by updating the input area font immediately.
+	 */
+	private void setupPropertyChangeListener() {
+		Preferences.getDefault().addPropertyChangeListener(new IPropertyChangeListener() {
+			@Override
+			public void propertyChange(PropertyChangeEvent event) {
+				if (event.getProperty().equals(PreferenceConstants.CHAT_FONT_SIZE)) {
+					spellCheckedTextBox.setFontSize(Preferences.getChatFontSize() + FONT_SIZE_OFFSET);
+				}
+			}
+		});
 	}
 
 	/**
