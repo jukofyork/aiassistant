@@ -18,7 +18,10 @@ import org.apache.commons.text.StringEscapeUtils;
  */
 public class MarkdownToHtmlConverter {
 
-	private static final Pattern CODE_BLOCK_PATTERN = Pattern.compile("^[ \\t]*```([a-zA-Z]*)[ \\t]*$");
+	// NOTE: We do our best to handle nested code blocks, but sadly: ```language = open, ``` = open OR close!
+	private static final Pattern CODE_BLOCK_OPEN_PATTERN = Pattern.compile("^[ \\t]*```([a-zA-Z]*)[ \\t]*$");
+	private static final Pattern CODE_BLOCK_CLOSE_PATTERN = Pattern.compile("^[ \\t]*```[ \\t]*$");
+
 	private static final Pattern CODE_INLINE_PATTERN = Pattern.compile("`(.*?)`");
 	private static final Pattern LATEX_INLINE_PATTERN = Pattern.compile("\\$(.*?)\\$|\\\\\\((.*?)\\\\\\)");
 	private static final Pattern LATEX_MULTILINE_BLOCK_OPEN_PATTERN = Pattern.compile("^[ \\t]*(?:\\$\\$(?!.*\\$\\$)|\\\\\\[(?!.*\\\\\\])).*$");
@@ -67,6 +70,8 @@ public class MarkdownToHtmlConverter {
 
 		int currentQuoteLevel = 0;
 
+		int codeBlockLevel = 0;
+
 		try (Scanner scanner = new Scanner(markdownText)) {
 			scanner.useDelimiter("\n");
 
@@ -76,7 +81,8 @@ public class MarkdownToHtmlConverter {
 				Matcher thinkingBlockOpenMatcher = THINKING_BLOCK_OPEN_PATTERN.matcher(line);
 				Matcher thinkingBlockCloseMatcher = THINKING_BLOCK_CLOSE_PATTERN.matcher(line);
 
-				Matcher codeBlockMatcher = CODE_BLOCK_PATTERN.matcher(line);
+				Matcher codeBlockOpenMatcher = CODE_BLOCK_OPEN_PATTERN.matcher(line);
+				Matcher codeBlockCloseMatcher = CODE_BLOCK_CLOSE_PATTERN.matcher(line);
 				Matcher latexMultilineBlockOpenMatcher = LATEX_MULTILINE_BLOCK_OPEN_PATTERN.matcher(line);
 				Matcher latexSinglelineBlockOpenMatcher = LATEX_SINGLELINE_BLOCK_OPEN_PATTERN.matcher(line);
 				Matcher latexCloseMatcher = LATEX_BLOCK_CLOSE_PATTERN.matcher(line);
@@ -120,8 +126,8 @@ public class MarkdownToHtmlConverter {
 						currentQuoteLevel++;
 					}
 
-					if (codeBlockMatcher.find()) {
-						String language = codeBlockMatcher.group(1);
+					if (codeBlockOpenMatcher.find()) {
+						String language = codeBlockOpenMatcher.group(1);
 						appendOpenCodeBlock(htmlOutput, language, includeCodeBlockButtons);
 						currentBlock = BlockType.CODE;
 					} else if (latexMultilineBlockOpenMatcher.find()) {
@@ -139,10 +145,18 @@ public class MarkdownToHtmlConverter {
 					break;
 
 				case CODE:
-					if (codeBlockMatcher.find()) {
+					// Only close the code block when we see the outermost closing pattern without a language tag
+					if (codeBlockLevel == 0 && codeBlockCloseMatcher.find()) {
 						appendCloseCodeBlock(htmlOutput);
 						currentBlock = BlockType.NONE;
 					} else {
+						if (codeBlockCloseMatcher.find()) {
+							// Assume this as a closing pattern (even though it's ambiguous and could be a new opening pattern!)
+							codeBlockLevel--;
+						} else if (codeBlockOpenMatcher.find()) {
+							// To get here, this must be a new opening pattern with the language tag
+							codeBlockLevel++;
+						}
 						htmlOutput.append(convertToEscapedHtmlLine(line)).append("\n");
 					}
 					break;
@@ -161,7 +175,8 @@ public class MarkdownToHtmlConverter {
 			}
 		}
 
-		// Handle unclosed blocks at the end of the input
+		// Handle unclosed code blocks at the end of the input
+		// NOTE: Ignore the codeBlockLevel as only for the nesting heuristic in the loop above
 		// NOTE: Don't auto-close LaTeX here - it causes flicker/errors in output.
 		if (currentBlock == BlockType.CODE) {
 			appendCloseCodeBlock(htmlOutput);
