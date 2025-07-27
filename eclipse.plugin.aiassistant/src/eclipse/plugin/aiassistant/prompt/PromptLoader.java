@@ -38,6 +38,7 @@ public class PromptLoader {
 		promptText = applySubstitutions(promptText,
 				"taskname", type.getTaskName(),
 				"usertext", context.getUserText(),
+				"project", context.getProjectName(),
 				"filename", context.getFilename(),
 				"language", context.getLanguage(),
 				"tag", context.getTag(),
@@ -49,7 +50,7 @@ public class PromptLoader {
 				"lines", context.getLineNumberDescription(),
 				"documentation", context.getDocumentationGenerator(),
 				"file_diff", context.getFileDiff(),
-				"staged_diff", context.getStagedDiff());
+				"project_diff", context.getProjectDiff());
 
 		// Un-escape the angle brackets.
 		promptText = unescapeAngleBrackets(promptText);

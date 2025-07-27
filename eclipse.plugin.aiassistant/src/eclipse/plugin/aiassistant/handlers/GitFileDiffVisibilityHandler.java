@@ -27,7 +27,7 @@ public class GitFileDiffVisibilityHandler extends PropertyTester {
 	@Override
 	public boolean test(Object receiver, String property, Object[] args, Object expectedValue) {
 		try {
-			return GitDiff.isRepositoryAvailable() && !GitDiff.getCurrentFileWorkingDiff().isEmpty();
+			return GitDiff.isRepositoryAvailable() && !GitDiff.getCurrentFileStagedDiff().isEmpty();
 		} catch (Exception e) {
 			return false;
 		}

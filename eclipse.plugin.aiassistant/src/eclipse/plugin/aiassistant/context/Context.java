@@ -17,6 +17,7 @@ import eclipse.plugin.aiassistant.utility.LanguageFileExtensions;
 public class Context {
 
 	private String userText = "";
+	private String projectName = "";
 	private String filename = "";
 	private String language = "";
 	private String tag = "";
@@ -28,7 +29,7 @@ public class Context {
 	private String lineNumberDescription = "";
 	private String documentationGenerator = "";
 	private String fileDiff = "";
-	private String stagedDiff = "";
+	private String projectDiff = "";
 
 	/**
 	 * Constructs a new Context object with the given text editor and user input.
@@ -39,6 +40,12 @@ public class Context {
 
 		// Can get the user text even if not in a text editor.
 		this.userText = userText;
+
+		// Get the current project name (works with or without active text editor)
+		String currentProjectName = Eclipse.getCurrentProjectName();
+		if (currentProjectName != null) {
+			this.projectName = currentProjectName;
+		}
 
 		// Try to get the active text editor (or null if not text editor)).
 		ITextEditor textEditor = Eclipse.getActiveTextEditor();
@@ -94,14 +101,14 @@ public class Context {
 
 		// Get git diffs
 		try {
-			this.fileDiff = GitDiff.getCurrentFileWorkingDiff();
+			this.fileDiff = GitDiff.getCurrentFileStagedDiff();
 		} catch (Exception e) {
 			this.fileDiff = "Error getting current file diff: " + e.getMessage();
 		}
 		try {
-			this.stagedDiff = GitDiff.getStagedDiff();
+			this.projectDiff = GitDiff.getCurrentProjectStagedDiff();
 		} catch (Exception e) {
-			this.stagedDiff = "Error getting git staged diff: " + e.getMessage();
+			this.projectDiff = "Error getting current project diff: " + e.getMessage();
 		}
 
 		// Remove the indentation from both.
@@ -118,6 +125,15 @@ public class Context {
 	 */
 	public String getUserText() {
 		return userText;
+	}
+
+	/**
+	 * Returns the name of the current project.
+	 *
+	 * @return The name of the current project.
+	 */
+	public String getProjectName() {
+		return projectName;
 	}
 
 	/**
@@ -213,7 +229,7 @@ public class Context {
 	}
 
 	/**
-	 * Returns the git diff of all changes (both staged and unstaged) since HEAD for the current file.
+	 * Returns the git diff of staged changes for the current file.
 	 *
 	 * @return The git diff of all changes for the current file or an error message if unable to retrieve.
 	 */
@@ -222,12 +238,12 @@ public class Context {
 	}
 
 	/**
-	 * Returns the git diff of staged changes for the current repository.
+	 * Returns the git diff of staged changes for the current project/repository.
 	 *
 	 * @return The git diff of staged changes or an error message if unable to retrieve.
 	 */
-	public String getStagedDiff() {
-		return stagedDiff;
+	public String getProjectDiff() {
+		return projectDiff;
 	}
 
 }

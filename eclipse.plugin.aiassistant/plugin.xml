@@ -108,9 +108,9 @@
            name="FixErrors">
      </command>
      <command
-           defaultHandler="eclipse.plugin.aiassistant.handlers.AddStagedDiffPromptHandler"
-           id="eclipse.plugin.aiassistant.AddStagedDiff"
-           name="AddStagedDiff">
+           defaultHandler="eclipse.plugin.aiassistant.handlers.AddProjectDiffPromptHandler"
+           id="eclipse.plugin.aiassistant.AddProjectDiff"
+           name="AddProjectDiff">
      </command>
      <command
            defaultHandler="eclipse.plugin.aiassistant.handlers.GitCommitCommentPromptHandler"
@@ -143,9 +143,9 @@
            <command
                  commandId="eclipse.plugin.aiassistant.AddDiff"
                  icon="icons/DiffFile.png"
-                 label="Add Git Diff"
+                 label="Add Staged Diff"
                  style="push"
-                 tooltip="Add the Current File's Diff as a Message">
+                 tooltip="Add the Files's Current Staged Diff as a Message">
               <visibleWhen
                     checkEnabled="false">
                  <test
@@ -282,15 +282,15 @@
               label="AI Assistant"
               id="eclipse.plugin.aiassistant.team.menu">
            <command
-                commandId="eclipse.plugin.aiassistant.AddStagedDiff"
+                commandId="eclipse.plugin.aiassistant.AddProjectDiff"
                 icon="icons/DiffProject.png"
-                label="Add Git Staged Diff"
+                label="Add Staged Diff"
                 style="push"
-                tooltip="Add the Current Staged Diff as a Message">
+                tooltip="Add the Project's Current Staged Diff as a Message">
               <visibleWhen
                     checkEnabled="false">
                  <test
-                       property="eclipse.plugin.aiassistant.GitStagedDiffVisibilityHandler">
+                       property="eclipse.plugin.aiassistant.GitProjectDiffVisibilityHandler">
                  </test>
               </visibleWhen>
            </command>
@@ -299,11 +299,11 @@
                 icon="icons/CodeGeneration.png"
                 label="Git Commit Comment"
                 style="push"
-                tooltip="Generate a Git Commit Comment from Current Staged Diff">
+                tooltip="Generate a Git Commit Comment from the Project's Current Staged Diff">
               <visibleWhen
                     checkEnabled="false">
                  <test
-                       property="eclipse.plugin.aiassistant.GitStagedDiffVisibilityHandler">
+                       property="eclipse.plugin.aiassistant.GitProjectDiffVisibilityHandler">
                  </test>
               </visibleWhen>
            </command>
@@ -367,10 +367,10 @@
            type="java.lang.Object">
      </propertyTester>
      <propertyTester
-           class="eclipse.plugin.aiassistant.handlers.GitStagedDiffVisibilityHandler"
-           id="eclipse.plugin.aiassistant.GitStagedDiffVisibilityHandler"
+           class="eclipse.plugin.aiassistant.handlers.GitProjectDiffVisibilityHandler"
+           id="eclipse.plugin.aiassistant.GitProjectDiffVisibilityHandler"
            namespace="eclipse.plugin.aiassistant"
-           properties="GitStagedDiffVisibilityHandler"
+           properties="GitProjectDiffVisibilityHandler"
            type="java.lang.Object">
      </propertyTester>
      <propertyTester

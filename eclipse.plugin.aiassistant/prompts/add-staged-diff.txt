@@ -1,4 +1,0 @@
-```diff
-<staged_diff>
-```
-<usertext>

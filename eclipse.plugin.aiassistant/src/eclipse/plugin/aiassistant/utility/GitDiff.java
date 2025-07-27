@@ -48,41 +48,23 @@ public class GitDiff {
 	}
 
 	/**
-	 * Returns the staged changes as a formatted diff string.
+	 * Returns the staged changes for the current project as a formatted diff string.
 	 *
-	 * @return the staged changes diff
+	 * @return the staged changes diff for current project
 	 */
-	public static String getStagedDiff() {
-		return generateCurrentRepositoryDiff(HEAD_REF, INDEX_REF);
+	public static String getCurrentProjectStagedDiff() {
+		return generateDiff(HEAD_REF, INDEX_REF, false);
 	}
 
 	/**
-	 * Returns the unstaged changes as a formatted diff string.
-	 *
-	 * @return the unstaged changes diff
-	 */
-	public static String getUnstagedDiff() {
-		return generateCurrentRepositoryDiff(INDEX_REF, null);
-	}
-
-	/**
-	 * Returns a diff between two commits as a formatted diff string.
+	 * Returns a diff for the current project between two commits as a formatted diff string.
 	 *
 	 * @param oldCommit the old commit ID (e.g., "HEAD~1")
 	 * @param newCommit the new commit ID (e.g., "HEAD")
-	 * @return the diff between commits
+	 * @return the diff for current project between commits
 	 */
-	public static String getCommitDiff(String oldCommit, String newCommit) {
-		return generateCurrentRepositoryDiff(oldCommit, newCommit);
-	}
-
-	/**
-	 * Returns all changes for the current file since HEAD as a formatted diff string.
-	 *
-	 * @return the complete working directory diff for current file since last commit
-	 */
-	public static String getCurrentFileWorkingDiff() {
-		return generateCurrentFileDiff(HEAD_REF, null);
+	public static String getCurrentProjectCommitDiff(String oldCommit, String newCommit) {
+		return generateDiff(oldCommit, newCommit, false);
 	}
 
 	/**
@@ -91,16 +73,7 @@ public class GitDiff {
 	 * @return the staged changes diff for current file
 	 */
 	public static String getCurrentFileStagedDiff() {
-		return generateCurrentFileDiff(HEAD_REF, INDEX_REF);
-	}
-
-	/**
-	 * Returns the unstaged changes for the current file as a formatted diff string.
-	 *
-	 * @return the unstaged changes diff for current file
-	 */
-	public static String getCurrentFileUnstagedDiff() {
-		return generateCurrentFileDiff(INDEX_REF, null);
+		return generateDiff(HEAD_REF, INDEX_REF, true);
 	}
 
 	/**
@@ -111,53 +84,29 @@ public class GitDiff {
 	 * @return the diff for current file between commits
 	 */
 	public static String getCurrentFileCommitDiff(String oldCommit, String newCommit) {
-		return generateCurrentFileDiff(oldCommit, newCommit);
+		return generateDiff(oldCommit, newCommit, true);
 	}
 
 	/**
-	 * Generates a repository-wide diff based on the specified references.
+	 * Generates a diff based on the specified references and scope.
 	 *
 	 * @param oldRef the old reference ("HEAD", "INDEX", or commit ID)
-	 * @param newRef the new reference ("HEAD", "INDEX", commit ID, or null for working tree)
+	 * @param newRef the new reference ("HEAD", "INDEX", or commit ID)
+	 * @param currentFileOnly if true, limit diff to current file; if false, include entire repository
 	 * @return the formatted diff string
 	 */
-	private static String generateCurrentRepositoryDiff(String oldRef, String newRef) {
-		return generateDiff(oldRef, newRef, null);
-	}
-
-	/**
-	 * Generates a diff for the current file based on the specified references.
-	 *
-	 * @param oldRef the old reference ("HEAD", "INDEX", or commit ID)
-	 * @param newRef the new reference ("HEAD", "INDEX", commit ID, or null for working tree)
-	 * @return the formatted diff string
-	 */
-	private static String generateCurrentFileDiff(String oldRef, String newRef) {
-		String filePath = getCurrentFilePath(getActiveRepository());
-		return generateDiff(oldRef, newRef, PathFilter.create(filePath));
-	}
-
-	/**
-	 * Generates a diff based on the specified references and optional path filter.
-	 *
-	 * @param oldRef the old reference ("HEAD", "INDEX", or commit ID)
-	 * @param newRef the new reference ("HEAD", "INDEX", commit ID, or null for working tree)
-	 * @param pathFilter optional path filter to limit diff to specific files
-	 * @return the formatted diff string
-	 */
-	private static String generateDiff(String oldRef, String newRef, PathFilter pathFilter) {
+	private static String generateDiff(String oldRef, String newRef, boolean currentFileOnly) {
 		Repository repository = getActiveRepository();
 
 		try (Git git = new Git(repository)) {
 			AbstractTreeIterator oldTree = getTreeIterator(repository, oldRef);
-			AbstractTreeIterator newTree = newRef != null ? getTreeIterator(repository, newRef) : null;
+			AbstractTreeIterator newTree = getTreeIterator(repository, newRef);
 
-			var diffCommand = git.diff().setOldTree(oldTree);
-			if (newTree != null) {
-				diffCommand.setNewTree(newTree);
-			}
-			if (pathFilter != null) {
-				diffCommand.setPathFilter(pathFilter);
+			var diffCommand = git.diff().setOldTree(oldTree).setNewTree(newTree);
+
+			if (currentFileOnly) {
+				String filePath = getCurrentFilePath(repository);
+				diffCommand.setPathFilter(PathFilter.create(filePath));
 			}
 
 			List<DiffEntry> changes = diffCommand.call();

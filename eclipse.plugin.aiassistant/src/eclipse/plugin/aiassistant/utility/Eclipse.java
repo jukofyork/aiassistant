@@ -304,6 +304,32 @@ public class Eclipse {
 	}
 
 	/**
+	 * Returns the name of the current project as a string.
+	 * First tries to get the project from the active text editor,
+	 * then falls back to the selected project in the workspace.
+	 *
+	 * @return the current project name or null if no project is found
+	 */
+	public static String getCurrentProjectName() {
+		// First try to get project from active text editor
+		ITextEditor activeTextEditor = getActiveTextEditor();
+		if (activeTextEditor != null) {
+			IProject project = getActiveProject(activeTextEditor);
+			if (project != null) {
+				return project.getName();
+			}
+		}
+
+		// Fall back to selected project
+		IProject selectedProject = getSelectedProject();
+		if (selectedProject != null) {
+			return selectedProject.getName();
+		}
+
+		return null;
+	}
+
+	/**
 	 * Returns the contents of the clipboard as a string.
 	 *
 	 * @return the contents of the clipboard
