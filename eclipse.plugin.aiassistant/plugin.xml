@@ -31,11 +31,16 @@
            defaultHandler="eclipse.plugin.aiassistant.handlers.AddMessagePromptHandler"
            id="eclipse.plugin.aiassistant.AddMessage"
            name="AddMessage">
-     </command>
+     </command> 
      <command
            defaultHandler="eclipse.plugin.aiassistant.handlers.AddContextPromptHandler"
            id="eclipse.plugin.aiassistant.AddContext"
            name="AddContext">
+     </command>
+     <command
+           defaultHandler="eclipse.plugin.aiassistant.handlers.AddFileDiffPromptHandler"
+           id="eclipse.plugin.aiassistant.AddDiff"
+           name="AddDiff">
      </command>
      <command
            defaultHandler="eclipse.plugin.aiassistant.handlers.DiscussPromptHandler"
@@ -103,19 +108,14 @@
            name="FixErrors">
      </command>
      <command
-           defaultHandler="eclipse.plugin.aiassistant.handlers.AddGitDiffPromptHandler"
-           id="eclipse.plugin.aiassistant.AddGitDiff"
-           name="AddGitDiff">
+           defaultHandler="eclipse.plugin.aiassistant.handlers.AddStagedDiffPromptHandler"
+           id="eclipse.plugin.aiassistant.AddStagedDiff"
+           name="AddStagedDiff">
      </command>
      <command
            defaultHandler="eclipse.plugin.aiassistant.handlers.GitCommitCommentPromptHandler"
            id="eclipse.plugin.aiassistant.GitCommitComment"
            name="GitCommitComment">
-     </command>
-     <command
-           defaultHandler="eclipse.plugin.aiassistant.handlers.CopyGitDiffHandler"
-           id="eclipse.plugin.aiassistant.CopyGitDiff"
-           name="CopyGitDiff">
      </command>
   </extension>
   <extension
@@ -139,6 +139,19 @@
                  label="Add As Context"
                  style="push"
                  tooltip="Add the Selected Code or Document as Context">
+           </command>       
+           <command
+                 commandId="eclipse.plugin.aiassistant.AddDiff"
+                 icon="icons/DiffFile.png"
+                 label="Add Git Diff"
+                 style="push"
+                 tooltip="Add the Current File's Diff as a Message">
+              <visibleWhen
+                    checkEnabled="false">
+                 <test
+                       property="eclipse.plugin.aiassistant.GitFileDiffVisibilityHandler">
+                 </test>
+              </visibleWhen>
            </command>
            <separator
                  name="eclipse.plugin.aiassistant.separator1"
@@ -269,25 +282,30 @@
               label="AI Assistant"
               id="eclipse.plugin.aiassistant.team.menu">
            <command
-              commandId="eclipse.plugin.aiassistant.CopyGitDiff"
-              icon="icons/CopyToClipboard.png"
-              label="Copy Git Diff"
-              style="push"
-              tooltip="Copy the Current Git Diff to the Clipboard">
+                commandId="eclipse.plugin.aiassistant.AddStagedDiff"
+                icon="icons/DiffProject.png"
+                label="Add Git Staged Diff"
+                style="push"
+                tooltip="Add the Current Staged Diff as a Message">
+              <visibleWhen
+                    checkEnabled="false">
+                 <test
+                       property="eclipse.plugin.aiassistant.GitStagedDiffVisibilityHandler">
+                 </test>
+              </visibleWhen>
            </command>
            <command
-              commandId="eclipse.plugin.aiassistant.AddGitDiff"
-              icon="icons/Add.png"
-              label="Add Git Diff"
-              style="push"
-              tooltip="Add the Current Git Diff as a Message">
-           </command>
-           <command
-              commandId="eclipse.plugin.aiassistant.GitCommitComment"
-              icon="icons/CodeGeneration.png"
-              label="Git Commit Comment"
-              style="push"
-              tooltip="Generate a Git Commit Comment">
+                commandId="eclipse.plugin.aiassistant.GitCommitComment"
+                icon="icons/CodeGeneration.png"
+                label="Git Commit Comment"
+                style="push"
+                tooltip="Generate a Git Commit Comment from Current Staged Diff">
+              <visibleWhen
+                    checkEnabled="false">
+                 <test
+                       property="eclipse.plugin.aiassistant.GitStagedDiffVisibilityHandler">
+                 </test>
+              </visibleWhen>
            </command>
            <visibleWhen
                  checkEnabled="false">
@@ -346,6 +364,20 @@
            id="eclipse.plugin.aiassistant.TeamMenuVisibilityHandler"
            namespace="eclipse.plugin.aiassistant"
            properties="TeamMenuVisibilityHandler"
+           type="java.lang.Object">
+     </propertyTester>
+     <propertyTester
+           class="eclipse.plugin.aiassistant.handlers.GitStagedDiffVisibilityHandler"
+           id="eclipse.plugin.aiassistant.GitStagedDiffVisibilityHandler"
+           namespace="eclipse.plugin.aiassistant"
+           properties="GitStagedDiffVisibilityHandler"
+           type="java.lang.Object">
+     </propertyTester>
+     <propertyTester
+           class="eclipse.plugin.aiassistant.handlers.GitFileDiffVisibilityHandler"
+           id="eclipse.plugin.aiassistant.GitFileDiffVisibilityHandler"
+           namespace="eclipse.plugin.aiassistant"
+           properties="GitFileDiffVisibilityHandler"
            type="java.lang.Object">
      </propertyTester>
   </extension>

@@ -5,17 +5,17 @@ import org.eclipse.core.expressions.PropertyTester;
 import eclipse.plugin.aiassistant.utility.GitDiff;
 
 /**
- * This class is responsible for handling the visibility of team-related menu items in the Eclipse plugin.
+ * This class is responsible for handling the visibility of staged diff menu items in the Eclipse plugin.
  * It extends the PropertyTester class provided by Eclipse and overrides the test method.
  * The test method checks if there are staged changes in the Git repository and returns a boolean value accordingly.
  */
-public class TeamMenuVisibilityHandler extends PropertyTester {
+public class GitStagedDiffVisibilityHandler extends PropertyTester {
 
 	// The unique identifier for this property tester
-	static final String CONDITION_TESTER = "TeamMenuVisibilityHandler";
+	static final String CONDITION_TESTER = "GitStagedDiffVisibilityHandler";
 
 	/**
-	 * This method is called by Eclipse to test the visibility of team-related menu items.
+	 * This method is called by Eclipse to test the visibility of staged diff menu items.
 	 * It checks if there are staged changes in the Git repository and returns true if there are, false otherwise.
 	 *
 	 * @param receiver The object that the property tester is being applied to.
@@ -26,6 +26,10 @@ public class TeamMenuVisibilityHandler extends PropertyTester {
 	 */
 	@Override
 	public boolean test(Object receiver, String property, Object[] args, Object expectedValue) {
-		return GitDiff.isRepositoryAvailable();
+		try {
+			return GitDiff.isRepositoryAvailable() && !GitDiff.getStagedDiff().isEmpty();
+		} catch (Exception e) {
+			return false;
+		}
 	}
 }

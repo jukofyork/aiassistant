@@ -1,4 +1,4 @@
 ```diff
-<git>
+<staged_diff>
 ```
 <usertext>

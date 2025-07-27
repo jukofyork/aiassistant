@@ -23,7 +23,8 @@ public enum Prompts {
 	FIX_WARNINGS("Fix Warnings", "fix-warnings.txt"),
 	PASTE_MESSAGE("Paste To Message", "paste-message.txt"),
 	PASTE_CONTEXT("Paste As Context", "paste-context.txt"),
-	ADD_GIT_DIFF("Add Git Diff", "add-git-diff.txt"),
+	ADD_FILE_DIFF("Add File Diff", "add-file-diff.txt"),
+	ADD_STAGED_DIFF("Add Staged Diff", "add-staged-diff.txt"),
 	GIT_COMMIT_COMMENT("Git Commit Comment", "git-commit-comment.txt");
 
 	private final String taskName;

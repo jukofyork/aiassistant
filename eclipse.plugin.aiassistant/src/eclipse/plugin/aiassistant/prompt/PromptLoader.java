@@ -48,7 +48,8 @@ public class PromptLoader {
 				"selection", context.getSelectionText(),
 				"lines", context.getLineNumberDescription(),
 				"documentation", context.getDocumentationGenerator(),
-				"git", context.getGitDiff());
+				"file_diff", context.getFileDiff(),
+				"staged_diff", context.getStagedDiff());
 
 		// Un-escape the angle brackets.
 		promptText = unescapeAngleBrackets(promptText);

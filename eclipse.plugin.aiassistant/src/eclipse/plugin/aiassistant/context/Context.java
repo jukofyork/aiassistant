@@ -4,7 +4,7 @@ import org.eclipse.core.resources.IFile;
 import org.eclipse.ui.texteditor.ITextEditor;
 
 import eclipse.plugin.aiassistant.utility.Eclipse;
-import eclipse.plugin.aiassistant.utility.Git;
+import eclipse.plugin.aiassistant.utility.GitDiff;
 import eclipse.plugin.aiassistant.utility.IndentationFormatter;
 import eclipse.plugin.aiassistant.utility.LanguageFileExtensions;
 
@@ -27,7 +27,8 @@ public class Context {
 	private String selectionText = "";
 	private String lineNumberDescription = "";
 	private String documentationGenerator = "";
-	private String gitDiff = "";
+	private String fileDiff = "";
+	private String stagedDiff = "";
 
 	/**
 	 * Constructs a new Context object with the given text editor and user input.
@@ -91,11 +92,16 @@ public class Context {
 		// NOTE: Deliberately not trimming to not effect line numbers and indentation.
 		this.clipboardText = Eclipse.getClipboardContents();
 
-		// Get git diff - can be retrieved even if not in a text editor
+		// Get git diffs
 		try {
-			this.gitDiff = Git.getStagedDiff();
+			this.fileDiff = GitDiff.getCurrentFileWorkingDiff();
 		} catch (Exception e) {
-			this.gitDiff = "Error getting git diff: " + e.getMessage();
+			this.fileDiff = "Error getting current file diff: " + e.getMessage();
+		}
+		try {
+			this.stagedDiff = GitDiff.getStagedDiff();
+		} catch (Exception e) {
+			this.stagedDiff = "Error getting git staged diff: " + e.getMessage();
 		}
 
 		// Remove the indentation from both.
@@ -207,12 +213,21 @@ public class Context {
 	}
 
 	/**
+	 * Returns the git diff of all changes (both staged and unstaged) since HEAD for the current file.
+	 *
+	 * @return The git diff of all changes for the current file or an error message if unable to retrieve.
+	 */
+	public String getFileDiff() {
+		return fileDiff;
+	}
+
+	/**
 	 * Returns the git diff of staged changes for the current repository.
 	 *
 	 * @return The git diff of staged changes or an error message if unable to retrieve.
 	 */
-	public String getGitDiff() {
-		return gitDiff;
+	public String getStagedDiff() {
+		return stagedDiff;
 	}
 
 }

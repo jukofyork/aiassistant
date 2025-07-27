@@ -1,6 +1,6 @@
 # Task: <taskname>
 ```diff
-<git>
+<staged_diff>
 ```
 Create a Git commit comment from the provided Git patch. Ensure the commit message is a single line that does not exceed 72 characters total. Return the commit comment wrapped in a markdown code block.
 <<switch-roles>>

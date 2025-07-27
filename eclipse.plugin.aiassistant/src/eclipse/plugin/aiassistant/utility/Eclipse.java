@@ -135,6 +135,19 @@ public class Eclipse {
 	}
 
 	/**
+	 * Returns the active resource from the active editor.
+	 *
+	 * @return the active resource or null if not found
+	 */
+	public static IResource getActiveResource() {
+		IEditorPart activeEditor = getActiveEditor();
+		if (activeEditor != null) {
+			return activeEditor.getEditorInput().getAdapter(IResource.class);
+		}
+		return null;
+	}
+
+	/**
 	 * Returns the active text editor if the active editor is a text editor,
 	 * otherwise null.
 	 *
@@ -199,6 +212,40 @@ public class Eclipse {
 	public static int getSelectedEndLine(ITextEditor textEditor) {
 		ITextSelection textSelection = (ITextSelection) textEditor.getSelectionProvider().getSelection();
 		return textSelection.getEndLine() + 1; // +1 to match the editor being 1-indexed.
+	}
+
+	/**
+	 * Returns the currently selected project in the workspace.
+	 * This can be used as a fallback when no active editor is available.
+	 *
+	 * @return the selected project or null if no project is selected
+	 */
+	public static IProject getSelectedProject() {
+		IWorkbenchWindow window = getActiveWorkbenchWindow();
+		if (window != null) {
+			IWorkbenchPage page = window.getActivePage();
+			if (page != null) {
+				var selection = page.getSelection();
+				if (selection instanceof org.eclipse.jface.viewers.IStructuredSelection) {
+					var structuredSelection = (org.eclipse.jface.viewers.IStructuredSelection) selection;
+					Object firstElement = structuredSelection.getFirstElement();
+
+					// Handle different types of selected elements
+					if (firstElement instanceof IProject) {
+						return (IProject) firstElement;
+					} else if (firstElement instanceof IResource) {
+						return ((IResource) firstElement).getProject();
+					} else if (firstElement != null) {
+						// Try to adapt to IResource
+						IResource resource = Platform.getAdapterManager().getAdapter(firstElement, IResource.class);
+						if (resource != null) {
+							return resource.getProject();
+						}
+					}
+				}
+			}
+		}
+		return null;
 	}
 
 	/**
