@@ -165,9 +165,12 @@ public class Eclipse {
 	 * Returns the active file in the active text editor.
 	 *
 	 * @param textEditor the active text editor
-	 * @return the active file
+	 * @return the active file, or null if not available
 	 */
 	public static IFile getActiveFile(ITextEditor textEditor) {
+		if (textEditor == null || textEditor.getEditorInput() == null) {
+			return null;
+		}
 		return textEditor.getEditorInput().getAdapter(IFile.class);
 	}
 
@@ -175,10 +178,14 @@ public class Eclipse {
 	 * Returns the active project in the active text editor.
 	 *
 	 * @param textEditor the active text editor
-	 * @return the active project
+	 * @return the active project, or null if not available
 	 */
 	public static IProject getActiveProject(ITextEditor textEditor) {
-		return getActiveFile(textEditor).getProject();
+		IFile activeFile = getActiveFile(textEditor);
+		if (activeFile == null) {
+			return null;
+		}
+		return activeFile.getProject();
 	}
 
 	/**
