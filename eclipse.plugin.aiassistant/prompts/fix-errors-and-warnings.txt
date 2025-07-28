@@ -3,9 +3,11 @@ This source code<if(selection)> snippet<endif> from<if(selection)> <lines> of<en
 ```<tag>
 <if(selection)><selection><else><document><endif>
 ```
-Has the following compiler warnings:
+Has the following compiler errors and warnings:
+
+<errors>
 
 <warnings>
 
-<if(usertext)><usertext><else>Please explain what these warnings mean and provide a solution on how to fix them.<endif>
+<if(usertext)><usertext><else>Please explain what these errors and warnings mean and provide a solution on how to fix them.<endif>
 <<switch-roles>>

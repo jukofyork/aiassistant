@@ -98,6 +98,11 @@
            name="Refactor">
      </command>
      <command
+           defaultHandler="eclipse.plugin.aiassistant.handlers.FixErrorsAndWarningsPromptHandler"
+           id="eclipse.plugin.aiassistant.FixErrorsAndWarnings"
+           name="FixErrorsAndWarnings">
+     </command>
+     <command
            defaultHandler="eclipse.plugin.aiassistant.handlers.FixWarningsPromptHandler"
            id="eclipse.plugin.aiassistant.FixWarnings"
            name="FixWarnings">
@@ -243,6 +248,19 @@
                  visible="true">
            </separator>
            <command
+                 commandId="eclipse.plugin.aiassistant.FixErrorsAndWarnings"
+                 icon="icons/FixErrorsAndWarnings.png"
+                 label="Fix Errors and Warnings"
+                 style="push"
+                 tooltip="Try to Fix Compiler Errors and Warnings">
+              <visibleWhen
+                    checkEnabled="false">
+                 <test
+                       property="eclipse.plugin.aiassistant.FixErrorsAndWarningsVisibilityHandler">
+                 </test>
+              </visibleWhen>
+           </command>
+           <command
                  commandId="eclipse.plugin.aiassistant.FixWarnings"
                  icon="icons/FixWarnings.png"
                  label="Fix Warnings"
@@ -338,6 +356,13 @@
   </extension>
   <extension
         point="org.eclipse.core.expressions.propertyTesters">
+     <propertyTester
+           class="eclipse.plugin.aiassistant.handlers.FixErrorsAndWarningsVisibilityHandler"
+           id="eclipse.plugin.aiassistant.FixErrorsAndWarningsVisibilityHandler"
+           namespace="eclipse.plugin.aiassistant"
+           properties="FixErrorsAndWarningsVisibilityHandler"
+           type="java.lang.Object">
+     </propertyTester>
      <propertyTester
            class="eclipse.plugin.aiassistant.handlers.FixWarningsVisibilityHandler"
            id="eclipse.plugin.aiassistant.FixWarningsVisibilityHandler"

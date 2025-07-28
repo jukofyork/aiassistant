@@ -21,6 +21,7 @@ public enum Prompts {
 	REFACTOR("Refactor", "refactor.txt"),
 	FIX_ERRORS("Fix Errors", "fix-errors.txt"),
 	FIX_WARNINGS("Fix Warnings", "fix-warnings.txt"),
+	FIX_ERRORS_AND_WARNINGS("Fix Errors And Warnings", "fix-errors-and-warnings.txt"),
 	PASTE_MESSAGE("Paste To Message", "paste-message.txt"),
 	PASTE_CONTEXT("Paste As Context", "paste-context.txt"),
 	ADD_FILE_DIFF("Add File Diff", "add-file-diff.txt"),

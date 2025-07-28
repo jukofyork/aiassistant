@@ -7,23 +7,23 @@ import org.eclipse.ui.texteditor.ITextEditor;
 import eclipse.plugin.aiassistant.utility.Eclipse;
 
 /**
- * This class handles the visibility of the "Fix Errors" option in the right click context menu.
- * The "Fix Errors" option is only visible when there are errors from the compiler in the active editor.
+ * This class handles the visibility of the "Fix Errors and Warnings" option in the right click context menu.
+ * The "Fix Errors and Warnings" option is only visible when there are errors or warnings from the compiler in the active editor.
  */
-public class FixErrorsVisibilityHandler extends PropertyTester{
+public class FixErrorsAndWarningsVisibilityHandler extends PropertyTester {
 
 	// The unique identifier for this property tester
-	static final String CONDITION_TESTER = "FixErrorsVisibilityHandler";
+	static final String CONDITION_TESTER = "FixErrorsAndWarningsVisibilityHandler";
 
 	/**
-	 * This method is called by Eclipse to test the visibility of the "Fix Errors" option in the right click context menu.
-	 * It checks if there are any compiler errors in the active editor and returns true if there are, false otherwise.
+	 * This method is called by Eclipse to test the visibility of the "Fix Errors and Warnings" option in the right click context menu.
+	 * It checks if there are any compiler errors or warnings in the active editor and returns true if there are, false otherwise.
 	 *
 	 * @param receiver The object that the property tester is being applied to.
 	 * @param property The name of the property being tested.
 	 * @param args Any arguments passed to the property tester.
 	 * @param expectedValue The expected value of the property.
-	 * @return True if there are compiler errors in the active editor, false otherwise.
+	 * @return True if there are compiler errors or warnings in the active editor, false otherwise.
 	 */
 	@Override
 	public boolean test(Object receiver, String property, Object[] args, Object expectedValue) {
@@ -34,7 +34,7 @@ public class FixErrorsVisibilityHandler extends PropertyTester{
 				IFile activeFile = Eclipse.getActiveFile(textEditor);
 				if (activeFile != null) {
 					return !Eclipse.getCompilerErrors(activeFile).isEmpty() &&
-							Eclipse.getCompilerWarnings(activeFile).isEmpty();
+							!Eclipse.getCompilerWarnings(activeFile).isEmpty();
 				}
 			}
 			return false;
