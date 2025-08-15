@@ -319,8 +319,30 @@ public class OpenAiApiClient {
 				if (choiceNode.has("finish_reason")) {
 					finishReason = "Finish: " + choiceNode.get("finish_reason").asText();
 				}
-				if (choiceNode.has("message") && choiceNode.get("message").has("content")) {
-					String responseContent = choiceNode.get("message").get("content").asText();
+				if (choiceNode.has("message")) {
+					JsonNode messageNode = choiceNode.get("message");
+					StringBuilder responseContent = new StringBuilder();
+
+					// Handle DeepSeek API reasoning content
+					// SEE: https://api-docs.deepseek.com/guides/reasoning_model
+					String deepSeekReasoning = extractFieldText(messageNode, "reasoning_content");
+					if (deepSeekReasoning != null) {
+						responseContent.append("<think>\n").append(deepSeekReasoning).append("\n</think>\n\n");
+					}
+
+					// Handle OpenRouter reasoning content
+					// SEE: https://openrouter.ai/docs/use-cases/reasoning-tokens
+					String openRouterReasoning = extractFieldText(messageNode, "reasoning");
+					if (openRouterReasoning != null) {
+						responseContent.append("<think>\n").append(openRouterReasoning).append("\n</think>\n\n");
+					}
+
+					// Handle normal/non-reasoning content
+					String normalContent = extractFieldText(messageNode, "content");
+					if (normalContent != null) {
+						responseContent.append(normalContent);
+					}
+
 					streamingResponsePublisher.submit(responseContent.toString());
 				}
 			}
@@ -354,7 +376,7 @@ public class OpenAiApiClient {
 		String finishReason = "";
 		String usageReport = "";
 
-		// Used to wrap the thinking block between `<think>` and `</think>` for DeepSeek API.
+		// Used to wrap the thinking block between `<think>` and `</think>` for reasoning APIs.
 		boolean isInThinkingBlock = false;
 
 		try (var inputStream = response.body();
@@ -364,7 +386,7 @@ public class OpenAiApiClient {
 			// These are used so we don't overload the publisher with too many calls.
 			StringBuilder responseContentBuffer = new StringBuilder();
 
-			// Read each streamed packet as we get them from OpenAI.
+			// Read each streamed packet as we get them from the API.
 			String line;
 			while ((line = streamingResponseReader.readLine()) != null && !isCancelled.get()) {
 
@@ -391,28 +413,39 @@ public class OpenAiApiClient {
 								finishReason = "Finish : "+choiceNode.get("finish_reason").asText();
 							}
 							if (choiceNode.has("message") || choiceNode.has("delta")) {
-								JsonNode contentNode = choiceNode.has("message") ? choiceNode.get("message") : choiceNode.get("delta");
-								if (contentNode.has("reasoning_content")) {
-									JsonNode reasoningNode = contentNode.get("reasoning_content");
-									if (!reasoningNode.isNull()) {  // Check for JSON null so string "null" will be preserved!
-										String reasoningContent = reasoningNode.asText();
-										if (!isInThinkingBlock) {
-											responseContentBuffer.append("<think>\n");
-											isInThinkingBlock = true;
-										}
-										responseContentBuffer.append(reasoningContent);
+								JsonNode contentNode = choiceNode.has("message")
+										? choiceNode.get("message") : choiceNode.get("delta");
+
+								// Handle DeepSeek API reasoning content
+								// SEE: https://api-docs.deepseek.com/guides/reasoning_model
+								String deepSeekReasoning = extractFieldText(contentNode, "reasoning_content");
+								if (deepSeekReasoning != null) {
+									if (!isInThinkingBlock) {
+										responseContentBuffer.append("<think>\n");
+										isInThinkingBlock = true;
 									}
+									responseContentBuffer.append(deepSeekReasoning);
 								}
-								if (contentNode.has("content")) {
-									JsonNode contentNodeValue = contentNode.get("content");
-									if (!contentNodeValue.isNull()) {  // Check for JSON null so string "null" will be preserved!
-										String messageContent = contentNodeValue.asText();
-										if (isInThinkingBlock) {
-											responseContentBuffer.append("\n</think>\n\n");
-											isInThinkingBlock = false;
-										}
-										responseContentBuffer.append(messageContent);
+
+								// Handle OpenRouter reasoning content
+								// SEE: https://openrouter.ai/docs/use-cases/reasoning-tokens
+								String openRouterReasoning = extractFieldText(contentNode, "reasoning");
+								if (openRouterReasoning != null) {
+									if (!isInThinkingBlock) {
+										responseContentBuffer.append("<think>\n");
+										isInThinkingBlock = true;
 									}
+									responseContentBuffer.append(openRouterReasoning);
+								}
+
+								// Handle normal/non-reasoning content
+								String normalContent = extractFieldText(contentNode, "content");
+								if (normalContent != null) {
+									if (isInThinkingBlock) {
+										responseContentBuffer.append("\n</think>\n\n");
+										isInThinkingBlock = false;
+									}
+									responseContentBuffer.append(normalContent);
 								}
 							}
 						}
@@ -453,6 +486,23 @@ public class OpenAiApiClient {
 		else {
 			Logger.info(usageReport);
 		}
+	}
+
+	/**
+	 * Safely extracts text content from a JSON field if it exists and is not null.
+	 *
+	 * @param node The JSON node to extract from
+	 * @param fieldName The field name to extract
+	 * @return The text content, or null if field doesn't exist or is null
+	 */
+	private String extractFieldText(JsonNode node, String fieldName) {
+		if (node.has(fieldName)) {
+			JsonNode fieldNode = node.get(fieldName);
+			if (!fieldNode.isNull()) {  // NOTE: Check for JSON null so string "null" will be preserved!
+				return fieldNode.asText();
+			}
+		}
+		return null;
 	}
 
 	/**
