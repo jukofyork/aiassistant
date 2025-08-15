@@ -493,13 +493,18 @@ public class OpenAiApiClient {
 	 *
 	 * @param node The JSON node to extract from
 	 * @param fieldName The field name to extract
-	 * @return The text content, or null if field doesn't exist or is null
+	 * @return The text content, or null if: the field doesn't exist, is null or is empty
 	 */
 	private String extractFieldText(JsonNode node, String fieldName) {
 		if (node.has(fieldName)) {
 			JsonNode fieldNode = node.get(fieldName);
-			if (!fieldNode.isNull()) {  // NOTE: Check for JSON null so string "null" will be preserved!
-				return fieldNode.asText();
+			// NOTE: Check for JSON null so string "null" will be preserved!
+			if (!fieldNode.isNull()) {
+				String fieldContent = fieldNode.asText();
+				// NOTE: Check for only empty strings (ie: isBlank() would also exclude whitespace!).
+				if (!fieldContent.isEmpty()) {
+					return fieldContent;
+				}
 			}
 		}
 		return null;
