@@ -563,10 +563,10 @@ public class OpenAiApiClient {
 	}
 
 	/**
-	 * These are used to determine if the given model is an OpenAI "o" model with limited capabilities.
+	 * These are used to determine if the given model is an OpenAI "o" (or "gpt-5") model with limited capabilities.
 	 */
 	private static boolean isOpenAiReasoningModel(String modelName) {
-		return modelName.matches("^(openai/)?(o\\d(-.*)?|gpt-5)");
+		return modelName.matches("^(openai/)?(o\\d|gpt-5)(-.*)?");
 	}
 	private static boolean isLegacyOpenAiReasoningModel(String modelName) {
 		return modelName.matches("^(openai/)?o1-preview.*") || modelName.matches("^(openai/)?o1-mini-2024-09-12");
