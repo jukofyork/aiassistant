@@ -227,6 +227,49 @@ public class ChatConversation {
 	}
 
 	/**
+	 * Converts the conversation to a markdown-formatted string.
+	 * User messages are prefixed with "### USER:" and assistant messages with "### ASSISTANT:".
+	 * Notification messages are skipped.
+	 *
+	 * @return a markdown-formatted string representation of the conversation
+	 */
+	public String toMarkdown() {
+		StringBuilder markdown = new StringBuilder();
+		boolean first = true;
+
+		for (ChatMessage message : messages) {
+			String content = message.getMessage();
+			if (content == null || content.trim().isEmpty()) {
+				continue; // Skip empty messages
+			}
+
+			switch (message.getRole()) {
+			case USER:
+				if (!first) {
+					markdown.append("\n\n");
+				}
+				markdown.append("### USER:\n\n");
+				markdown.append(content);
+				first = false;
+				break;
+			case ASSISTANT:
+				if (!first) {
+					markdown.append("\n\n");
+				}
+				markdown.append("### ASSISTANT:\n\n");
+				markdown.append(content);
+				first = false;
+				break;
+			case NOTIFICATION:
+				// Skip notification messages as they're internal to the application
+				break;
+			}
+		}
+
+		return markdown.toString();
+	}
+
+	/**
 	 * Serializes this ChatConversation to a JSON string.
 	 *
 	 * @return a JSON string representing this conversation

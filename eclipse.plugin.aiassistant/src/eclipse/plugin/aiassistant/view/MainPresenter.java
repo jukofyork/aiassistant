@@ -1,6 +1,9 @@
 package eclipse.plugin.aiassistant.view;
 
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.Stack;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicReference;
@@ -10,6 +13,8 @@ import org.eclipse.core.runtime.ILogListener;
 import org.eclipse.core.runtime.IStatus;
 import org.eclipse.jface.util.IPropertyChangeListener;
 import org.eclipse.jface.util.PropertyChangeEvent;
+import org.eclipse.swt.SWT;
+import org.eclipse.swt.widgets.FileDialog;
 import org.eclipse.ui.IWorkbench;
 import org.eclipse.ui.IWorkbenchListener;
 
@@ -252,6 +257,96 @@ public class MainPresenter {
 	}
 
 	/**
+	 * Imports a chat conversation from a JSON file. This clears the current conversation
+	 * and undo/redo history.
+	 */
+	public void onImport() {
+		FileDialog fileDialog = new FileDialog(Eclipse.getShell(), SWT.OPEN);
+		fileDialog.setText("Import Chat History");
+		fileDialog.setFilterExtensions(new String[] { "*.json", "*.*" });
+		fileDialog.setFilterNames(new String[] { "JSON Files (*.json)", "All Files (*.*)" });
+
+		String filePath = fileDialog.open();
+		if (filePath != null) {
+			try {
+				onStop(); // Stop any running operations
+
+				// Clear current conversation
+				chatConversation.clear();
+
+				// Read and deserialize the file
+				Path path = Paths.get(filePath);
+				String json = Files.readString(path);
+				ChatConversation importedConversation = ChatConversation.deserialize(json);
+
+				// Restore the imported conversation (this will clear the redo stack)
+				restoreConversation(importedConversation);
+			} catch (IOException e) {
+				Logger.error("Failed to import chat history: " + e.getMessage());
+			} catch (Exception e) {
+				Logger.error("Failed to import chat history: " + e.getMessage());
+			}
+
+			performOnMainView(mainView -> {
+				mainView.updateButtonStates();
+			});
+			onScrollToBottom();
+		}
+	}
+
+	/**
+	 * Exports the current chat conversation to a JSON file.
+	 */
+	public void onExport() {
+		if (!chatConversation.isEmpty()) {
+			FileDialog fileDialog = new FileDialog(Eclipse.getShell(), SWT.SAVE);
+			fileDialog.setText("Export Chat History");
+			fileDialog.setFilterExtensions(new String[] { "*.json", "*.*" });
+			fileDialog.setFilterNames(new String[] { "JSON Files (*.json)", "All Files (*.*)" });
+			fileDialog.setFileName("chat_history.json");
+
+			String filePath = fileDialog.open();
+			if (filePath != null) {
+				try {
+					String json = chatConversation.serialize();
+					Path path = Paths.get(filePath);
+					Files.writeString(path, json);
+				} catch (IOException e) {
+					Logger.error("Failed to export chat history: " + e.getMessage());
+				} catch (Exception e) {
+					Logger.error("Failed to export chat history: " + e.getMessage());
+				}
+			}
+		}
+	}
+
+	/**
+	 * Exports the current chat conversation as markdown to a text file.
+	 */
+	public void onMarkdown() {
+		if (hasConversation()) {
+			FileDialog fileDialog = new FileDialog(Eclipse.getShell(), SWT.SAVE);
+			fileDialog.setText("Export Chat History as Markdown");
+			fileDialog.setFilterExtensions(new String[] { "*.txt", "*.*" });
+			fileDialog.setFilterNames(new String[] { "Text Files (*.txt)", "All Files (*.*)" });
+			fileDialog.setFileName("chat_history.txt");
+
+			String filePath = fileDialog.open();
+			if (filePath != null) {
+				try {
+					String markdown = chatConversation.toMarkdown();
+					Path path = Paths.get(filePath);
+					Files.writeString(path, markdown);
+				} catch (IOException e) {
+					Logger.error("Failed to export markdown: " + e.getMessage());
+				} catch (Exception e) {
+					Logger.error("Failed to export markdown: " + e.getMessage());
+				}
+			}
+		}
+	}
+
+	/**
 	 * Cancels all running jobs.
 	 */
 	public void onStop() {
@@ -263,11 +358,11 @@ public class MainPresenter {
 	}
 
 	/**
-	 * Checks if there are any actions available to undo.
+	 * Checks if there is a conversation with messages.
 	 *
-	 * @return true if undo actions are available, false otherwise
+	 * @return true if there are messages in the conversation, false otherwise
 	 */
-	public boolean canUndo() {
+	public boolean hasConversation() {
 		return !chatConversation.isEmpty();
 	}
 
@@ -278,15 +373,6 @@ public class MainPresenter {
 	 */
 	public boolean canRedo() {
 		return !redoStack.isEmpty();
-	}
-
-	/**
-	 * Checks if there are any messages to clear.
-	 *
-	 * @return true if clear action is available, false otherwise
-	 */
-	public boolean canClear() {
-		return !chatConversation.isEmpty();
 	}
 
 	/**
