@@ -99,7 +99,7 @@ public class MarkdownToHtmlConverter {
 						htmlOutput.append(getThinkingBlockClosingHtml());
 						line = replaceFirstPattern(line, THINKING_BLOCK_CLOSE_PATTERN, "");
 						thinkingBlockCloseMatcher = THINKING_BLOCK_CLOSE_PATTERN.matcher(line);
-						thinkingBlockCount++;
+						thinkingBlockCount--;
 					}
 
 					// Get quote level for current line
