@@ -6,7 +6,7 @@ import java.nio.charset.StandardCharsets;
 
 import org.eclipse.compare.CompareConfiguration;
 import org.eclipse.compare.patch.ApplyPatchOperation;
-import org.eclipse.core.resources.IFile;
+import org.eclipse.core.resources.IProject;
 import org.eclipse.core.resources.IStorage;
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.IPath;
@@ -14,7 +14,6 @@ import org.eclipse.swt.browser.Browser;
 import org.eclipse.ui.IWorkbenchPart;
 import org.eclipse.ui.texteditor.ITextEditor;
 
-import eclipse.plugin.aiassistant.Logger;
 import eclipse.plugin.aiassistant.utility.Eclipse;
 
 /**
@@ -47,17 +46,15 @@ public class ApplyPatchBrowserFunction extends DisableableBrowserFunction {
 		if (isEnabled() && arguments.length > 0 && arguments[0] instanceof String) {
 			String patchString = (String) arguments[0];
 			patchString = removePrefixes(patchString);
+
 			ITextEditor textEditor = Eclipse.getActiveTextEditor();
 			if (textEditor != null) {
-				try (var patchInputStream = new ByteArrayInputStream(patchString.getBytes(StandardCharsets.UTF_8))) {
+				IWorkbenchPart part = Eclipse.getActivePart();
+				IProject target = Eclipse.getActiveProject(textEditor);
+				if (target != null) {
 					var patchStorage = new PatchStorage(patchString);
-					IWorkbenchPart activeWorkbenchPart = Eclipse.getActivePart();
-					IFile targetFile = Eclipse.getActiveFile(textEditor);
-					ApplyPatchOperation operation = new ApplyPatchOperation(activeWorkbenchPart, patchStorage,
-							targetFile, new CompareConfiguration());
+					ApplyPatchOperation operation = new ApplyPatchOperation(part, patchStorage, target, new CompareConfiguration());
 					operation.openWizard();
-				} catch (Exception e) {
-					Logger.error(e.getLocalizedMessage(), e);
 				}
 			}
 		}
