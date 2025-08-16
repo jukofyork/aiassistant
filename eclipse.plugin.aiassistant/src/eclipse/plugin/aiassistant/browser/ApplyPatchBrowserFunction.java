@@ -17,8 +17,11 @@ import org.eclipse.ui.texteditor.ITextEditor;
 import eclipse.plugin.aiassistant.utility.Eclipse;
 
 /**
- * This class represents a JavaScript function that applies a patch to the
- * active text editor.
+ * This class represents a JavaScript function that applies a patch to the active text editor.
+ *
+ * For helpful guides on using Unified diffs with LLMs see:
+ * - https://aider.chat/docs/unified-diffs.html#choose-a-familiar-editing-format
+ * - https://github.com/Aider-AI/aider/blob/main/aider/coders/udiff_prompts.py
  */
 public class ApplyPatchBrowserFunction extends DisableableBrowserFunction {
 
@@ -53,7 +56,9 @@ public class ApplyPatchBrowserFunction extends DisableableBrowserFunction {
 				IProject target = Eclipse.getActiveProject(textEditor);
 				if (target != null) {
 					var patchStorage = new PatchStorage(patchString);
-					ApplyPatchOperation operation = new ApplyPatchOperation(part, patchStorage, target, new CompareConfiguration());
+					CompareConfiguration config = new CompareConfiguration();
+					config.setProperty("IGNORE_WHITESPACE", Boolean.TRUE);
+					ApplyPatchOperation operation = new ApplyPatchOperation(part, patchStorage, target, config);
 					operation.openWizard();
 				}
 			}
