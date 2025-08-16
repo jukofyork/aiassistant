@@ -1,7 +1,7 @@
 package eclipse.plugin.aiassistant.view;
 
 import java.io.IOException;
-import java.util.List;
+import java.util.Stack;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
@@ -13,6 +13,7 @@ import org.eclipse.jface.util.PropertyChangeEvent;
 import org.eclipse.ui.IWorkbench;
 import org.eclipse.ui.IWorkbenchListener;
 
+import eclipse.plugin.aiassistant.Constants;
 import eclipse.plugin.aiassistant.Logger;
 import eclipse.plugin.aiassistant.chat.ChatConversation;
 import eclipse.plugin.aiassistant.chat.ChatMessage;
@@ -40,6 +41,7 @@ public class MainPresenter {
 	private final ChatConversation chatConversation;
 	private final OpenAiApiClient openAiApiClient;
 	private final StreamingChatProcessorJob sendConversationJob;
+	private final Stack<ChatConversation> redoStack;
 
 	private UserMessageHistory userMessageHistory;
 
@@ -56,6 +58,7 @@ public class MainPresenter {
 		chatConversation = new ChatConversation();
 		openAiApiClient = new OpenAiApiClient();
 		sendConversationJob = new StreamingChatProcessorJob(this, openAiApiClient, chatConversation);
+		redoStack = new Stack<>();
 		userMessageHistory = new UserMessageHistory();
 		setupLogListener();
 		setupPropertyChangeListener();
@@ -187,20 +190,44 @@ public class MainPresenter {
 	public void onUndo() {
 		if (!chatConversation.isEmpty()) {
 			onStop(); // Not really needed as we block undo button now when running...
-			List<UUID> removedIds = chatConversation.undo();
-			if (chatConversation.isEmpty()) {
-				saveStateToPreferenceStore(); // So further "Undo" doesn't resurrect the old chat.
+			ChatConversation removedConversation = chatConversation.undo();
+			if (!removedConversation.isEmpty()) {
+				redoStack.push(removedConversation);
 			}
 			performOnMainView(mainView -> {
-				for (UUID id : removedIds) {
-					mainView.getChatMessageArea().removeMessage(id);
+				for (ChatMessage message : removedConversation.messages()) {
+					mainView.getChatMessageArea().removeMessage(message.getId());
 				}
 			});
 			onScrollToBottom();
 		}
-		else {
-			loadStateFromPreferenceStore(); // To revert a misclicked "Clear".
+		performOnMainView(mainView -> {
+			mainView.updateButtonStates();
+		});
+	}
+
+	/**
+	 * Redoes the last undone action in the chat conversation. It also updates the view to
+	 * reflect the changes.
+	 */
+	public void onRedo() {
+		if (!redoStack.isEmpty()) {
+			onStop(); // Stop any running operations
+			ChatConversation conversationToRestore = redoStack.pop();
+
+			// Save the current redo stack state
+			Stack<ChatConversation> savedRedoStack = new Stack<>();
+			savedRedoStack.addAll(redoStack);
+
+			restoreConversation(conversationToRestore);
+
+			// Restore the redo stack state
+			redoStack.clear();
+			redoStack.addAll(savedRedoStack);
 		}
+		performOnMainView(mainView -> {
+			mainView.updateButtonStates();
+		});
 	}
 
 	/**
@@ -210,13 +237,18 @@ public class MainPresenter {
 	public void onClear() {
 		if (!chatConversation.isEmpty()) {
 			onStop(); // Not really needed as we block clear button now when running...
-			saveStateToPreferenceStore(); // To allow us to revert a misclicked "Clear" via "Undo".
-			chatConversation.clear();
+			ChatConversation clearedConversation = chatConversation.clear();
+			if (!clearedConversation.isEmpty()) {
+				redoStack.push(clearedConversation);
+			}
 			performOnMainView(mainView -> {
 				Eclipse.runOnUIThreadAsync(() -> mainView.getChatMessageArea().initialize());
 			});
 			onScrollToBottom();
 		}
+		performOnMainView(mainView -> {
+			mainView.updateButtonStates();
+		});
 	}
 
 	/**
@@ -231,7 +263,34 @@ public class MainPresenter {
 	}
 
 	/**
-	 * Saves the current state of the chat conversation and user message history to the preference store.
+	 * Checks if there are any actions available to undo.
+	 *
+	 * @return true if undo actions are available, false otherwise
+	 */
+	public boolean canUndo() {
+		return !chatConversation.isEmpty();
+	}
+
+	/**
+	 * Checks if there are any actions available to redo.
+	 *
+	 * @return true if redo actions are available, false otherwise
+	 */
+	public boolean canRedo() {
+		return !redoStack.isEmpty();
+	}
+
+	/**
+	 * Checks if there are any messages to clear.
+	 *
+	 * @return true if clear action is available, false otherwise
+	 */
+	public boolean canClear() {
+		return !chatConversation.isEmpty();
+	}
+
+	/**
+	 * Saves the current state of the chat conversation, user message history, and redo stack to the preference store.
 	 * This method ensures that the data is saved synchronously on the UI thread to avoid concurrency issues.
 	 * If saving fails due to an IOException, it logs a warning but does not throw an exception.
 	 */
@@ -254,9 +313,9 @@ public class MainPresenter {
 	}
 
 	/**
-	 * Loads the chat conversation and user message history from the preference store asynchronously.
+	 * Loads the chat conversation, user message history, and redo stack from the preference store asynchronously.
 	 * Messages are processed based on their designated roles and displayed accordingly.
-	 * If loading fails due to an IOException, initializes a new empty conversation and message history.
+	 * If loading fails due to an IOException, initializes new empty objects as fallbacks.
 	 * This method also ensures that the view is scrolled to the bottom after processing.
 	 */
 	public void loadStateFromPreferenceStore() {
@@ -271,28 +330,7 @@ public class MainPresenter {
 					tempConversation = new ChatConversation(); // Fallback to an empty conversation
 				}
 				if (!tempConversation.isEmpty()) {
-					performOnMainView(mainView -> {
-						mainView.getChatMessageArea().setEnabled(false);
-						mainView.getChatMessageArea().setVisible(false);
-					});
-					for (ChatMessage message : tempConversation.messages()) {
-						switch (message.getRole()) {
-						case USER:
-							sendUserMessage(message.getMessage(), false);
-							break;
-						case ASSISTANT:
-							sendAutoReplyAssistantMessage(message.getMessage());
-							break;
-						case NOTIFICATION:
-							displayNotificationMessage(message.getMessage());
-							break;
-						}
-					}
-					performOnMainView(mainView -> {
-						mainView.getChatMessageArea().setVisible(true);
-						mainView.getChatMessageArea().scrollToBottom();
-						mainView.getChatMessageArea().setEnabled(true);
-					});
+					restoreConversation(tempConversation);
 				}
 				try {
 					userMessageHistory = Preferences.loadUserMessageHistory();
@@ -312,7 +350,7 @@ public class MainPresenter {
 	 */
 	public ChatMessage beginMessageFromAssistant() {
 		ChatMessage message = new ChatMessage(ChatRole.ASSISTANT);
-		chatConversation.push(message);
+		pushNewMessage(message);
 		performOnMainView(mainView -> {
 			mainView.getChatMessageArea().newMessage(message);
 			mainView.setInputEnabled(false);
@@ -384,6 +422,49 @@ public class MainPresenter {
 	}
 
 	/**
+	 * Efficiently restores a conversation to both the conversation and view by recreating the messages.
+	 * For large conversations (>MIN_MESSAGE_COUNT_TO_BLANK messages or >MIN_CONTENT_SIZE_TO_BLANK content),
+	 * disables and hides the chat area during processing to improve performance and prevent UI flickering.
+	 * This method recreates messages through the proper channels to ensure state management.
+	 *
+	 * @param conversation the conversation to restore
+	 */
+	private void restoreConversation(ChatConversation conversation) {
+		// Hide UI during restoration for large conversations to improve performance
+		boolean shouldHideUI = (conversation.size() > Constants.MIN_MESSAGE_COUNT_TO_BLANK)
+				|| (conversation.getContentSize() > Constants.MIN_CONTENT_SIZE_TO_BLANK);
+
+		if (shouldHideUI) {
+			performOnMainView(mainView -> {
+				mainView.getChatMessageArea().setEnabled(false);
+				mainView.getChatMessageArea().setVisible(false);
+			});
+		}
+
+		for (ChatMessage message : conversation.messages()) {
+			switch (message.getRole()) {
+			case USER:
+				sendUserMessage(message.getMessage(), false);
+				break;
+			case ASSISTANT:
+				sendAutoReplyAssistantMessage(message.getMessage());
+				break;
+			case NOTIFICATION:
+				displayNotificationMessage(message.getMessage());
+				break;
+			}
+		}
+
+		if (shouldHideUI) {
+			performOnMainView(mainView -> {
+				mainView.getChatMessageArea().setVisible(true);
+				mainView.getChatMessageArea().scrollToBottom();
+				mainView.getChatMessageArea().setEnabled(true);
+			});
+		}
+	}
+
+	/**
 	 * Sends a user message to the chat conversation and schedules a reply if
 	 * requested.
 	 *
@@ -404,7 +485,7 @@ public class MainPresenter {
 		// Don't add blank messages to the chat conversation.
 		if (!messageString.trim().isEmpty()) {
 			ChatMessage message = new ChatMessage(ChatRole.USER, messageString);
-			chatConversation.push(message);
+			pushNewMessage(message);
 			performOnMainView(mainView -> {
 				mainView.getChatMessageArea().newMessage(message);
 			});
@@ -427,7 +508,7 @@ public class MainPresenter {
 	private void sendAutoReplyAssistantMessage(String messageString) {
 		// TODO: Make more robust against blank messages.
 		ChatMessage autoReplyMessage = new ChatMessage(ChatRole.ASSISTANT, messageString);
-		chatConversation.push(autoReplyMessage);
+		pushNewMessage(autoReplyMessage);
 		performOnMainView(mainView -> {
 			mainView.getChatMessageArea().newMessage(autoReplyMessage);
 		});
@@ -441,7 +522,7 @@ public class MainPresenter {
 	 */
 	private void displayNotificationMessage(String text) {
 		ChatMessage message = new ChatMessage(ChatRole.NOTIFICATION, text);
-		chatConversation.push(message);
+		pushNewMessage(message);
 		performOnMainView(mainView -> {
 			mainView.getChatMessageArea().newMessage(message);
 		});
@@ -462,6 +543,19 @@ public class MainPresenter {
 			returnText.set(currentUserText);
 		});
 		return returnText.get();
+	}
+
+	/**
+	 * Adds a new message to the conversation and clears the redo stack.
+	 *
+	 * @param message the message to add
+	 */
+	private void pushNewMessage(ChatMessage message) {
+		chatConversation.push(message);
+		redoStack.clear();
+		performOnMainView(mainView -> {
+			mainView.updateButtonStates();
+		});
 	}
 
 	/**

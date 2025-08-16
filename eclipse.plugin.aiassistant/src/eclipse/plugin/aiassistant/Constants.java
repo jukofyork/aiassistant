@@ -109,4 +109,7 @@ public final class Constants {
 	// Miscellaneous global checkbox settings.
 	public static final boolean DEFAULT_DISABLE_TOOLTIPS = true;
 
+	// UI optimization thresholds for conversation restoration.
+	public static final int MIN_MESSAGE_COUNT_TO_BLANK = 3;
+	public static final int MIN_CONTENT_SIZE_TO_BLANK= 4096;
 }

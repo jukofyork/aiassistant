@@ -226,7 +226,7 @@ public class OpenAiApiClient {
 			}
 
 			// Add the message history so far.
-			for (ChatMessage message : chatConversation.messages()) {
+			for (ChatMessage message : chatConversation.messagesExcludingLastIfEmpty()) {
 				if (Objects.nonNull(message.getMessage())) {
 					var jsonMessage = objectMapper.createObjectNode();
 					String messageContent = message.getMessage();

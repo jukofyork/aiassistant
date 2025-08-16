@@ -1,18 +1,16 @@
 package eclipse.plugin.aiassistant.view;
 
-import org.eclipse.swt.widgets.Composite;
-
 import java.util.Optional;
 
+import org.eclipse.swt.SWT;
+import org.eclipse.swt.custom.SashForm;
+import org.eclipse.swt.widgets.Composite;
 import org.eclipse.ui.IWorkbenchPage;
 import org.eclipse.ui.IWorkbenchWindow;
 import org.eclipse.ui.part.ViewPart;
 
 import eclipse.plugin.aiassistant.Constants;
 import eclipse.plugin.aiassistant.utility.Eclipse;
-
-import org.eclipse.swt.SWT;
-import org.eclipse.swt.custom.SashForm;
 
 /**
  * MainView is responsible for displaying the AI assistant's chat interface
@@ -34,7 +32,7 @@ public class MainView extends ViewPart {
 
 	/**
 	 * Initializes the view components and sets up the presenter.
-	 * 
+	 *
 	 * @param parent The parent composite on which this view is built.
 	 */
 	@Override
@@ -61,7 +59,7 @@ public class MainView extends ViewPart {
 	/**
 	 * Provides access to the MainPresenter which handles the logic for user
 	 * interactions.
-	 * 
+	 *
 	 * @return The MainPresenter instance managing this view.
 	 */
 	public MainPresenter getMainPresenter() {
@@ -78,7 +76,7 @@ public class MainView extends ViewPart {
 
 	/**
 	 * Checks if the main SashForm component is disposed.
-	 * 
+	 *
 	 * @return true if the SashForm is disposed, otherwise false.
 	 */
 	public boolean isDisposed() {
@@ -87,7 +85,7 @@ public class MainView extends ViewPart {
 
 	/**
 	 * Retrieves the ChatMessageArea component.
-	 * 
+	 *
 	 * @return The ChatMessageArea component used for displaying messages.
 	 */
 	public ChatConversationArea getChatMessageArea() {
@@ -96,7 +94,7 @@ public class MainView extends ViewPart {
 
 	/**
 	 * Retrieves the UserInputArea component.
-	 * 
+	 *
 	 * @return The UserInputArea component used for user input.
 	 */
 	public UserInputArea getUserInputArea() {
@@ -105,7 +103,7 @@ public class MainView extends ViewPart {
 
 	/**
 	 * Enables or disables user interaction components based on the specified flag.
-	 * 
+	 *
 	 * @param enabled true to enable interaction, false to disable it.
 	 */
 	public void setInputEnabled(boolean enabled) {
@@ -117,8 +115,15 @@ public class MainView extends ViewPart {
 	}
 
 	/**
+	 * Updates the state of all buttons based on current conditions.
+	 */
+	public void updateButtonStates() {
+		buttonBarArea.updateButtonStates();
+	}
+
+	/**
 	 * Creates and configures the main container for this view.
-	 * 
+	 *
 	 * @param parent The parent composite to which this new container will be added. It provides a context
 	 *               in which the new composite will be displayed.
 	 * @return A newly created and configured Composite instance that serves as the main container for other
@@ -133,7 +138,7 @@ public class MainView extends ViewPart {
 
 	/**
 	 * Attempts to find an instance of MainView in the active workbench window.
-	 * 
+	 *
 	 * @return An Optional containing the MainView if available and not disposed,
 	 *         otherwise an empty Optional.
 	 * @throws IllegalStateException if no active workbench window can be found.

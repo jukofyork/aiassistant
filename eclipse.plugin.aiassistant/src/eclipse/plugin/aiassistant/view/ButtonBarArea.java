@@ -1,20 +1,18 @@
 package eclipse.plugin.aiassistant.view;
 
-import org.eclipse.swt.widgets.Composite;
-import org.eclipse.swt.widgets.Display;
-
-import eclipse.plugin.aiassistant.Constants;
-import eclipse.plugin.aiassistant.preferences.Preferences;
-import eclipse.plugin.aiassistant.utility.Eclipse;
-
-import org.eclipse.swt.widgets.Button;
-
 import java.util.ArrayList;
 import java.util.List;
 
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.events.SelectionAdapter;
 import org.eclipse.swt.events.SelectionEvent;
+import org.eclipse.swt.widgets.Button;
+import org.eclipse.swt.widgets.Composite;
+import org.eclipse.swt.widgets.Display;
+
+import eclipse.plugin.aiassistant.Constants;
+import eclipse.plugin.aiassistant.preferences.Preferences;
+import eclipse.plugin.aiassistant.utility.Eclipse;
 
 /**
  * This class represents the button bar area in the application. It contains
@@ -23,15 +21,18 @@ import org.eclipse.swt.events.SelectionEvent;
  */
 public class ButtonBarArea {
 
-	public static final String CLEAR_NAME = "Clear";
-	public static final String CLEAR_TOOLTIP = "Clear the Chat History";
-	public static final String CLEAR_ICON = "Clear.png";
-	public static final String UNDO_NAME = "Undo";
-	public static final String UNDO_TOOLTIP = "Undo the Last Chat Interaction";
-	public static final String UNDO_ICON = "Undo.png";
 	public static final String STOP_NAME = "Stop";
 	public static final String STOP_TOOLTIP = "Stop the AI";
 	public static final String STOP_ICON = "Stop.png";
+	public static final String UNDO_NAME = "Undo";
+	public static final String UNDO_TOOLTIP = "Undo the Last Chat Interaction";
+	public static final String UNDO_ICON = "Undo.png";
+	public static final String REDO_NAME = "Redo";
+	public static final String REDO_TOOLTIP = "Redo the Last Undone Chat Interaction";
+	public static final String REDO_ICON = "Redo.png";
+	public static final String CLEAR_NAME = "Clear";
+	public static final String CLEAR_TOOLTIP = "Clear the Chat History";
+	public static final String CLEAR_ICON = "Clear.png";
 	public static final String SETTINGS_NAME = "Settings";
 	public static final String SETTINGS_TOOLTIP = "Open the Settings Page";
 	public static final String SETTINGS_ICON = "Settings.png";
@@ -39,9 +40,10 @@ public class ButtonBarArea {
 	private final MainPresenter mainPresenter;
 
 	private final List<ButtonConfig> buttonConfigs = List.of(
-			new ButtonConfig(CLEAR_NAME, CLEAR_TOOLTIP, CLEAR_ICON, this::onClear),
-			new ButtonConfig(UNDO_NAME, UNDO_TOOLTIP, UNDO_ICON, this::onUndo),
 			new ButtonConfig(STOP_NAME, STOP_TOOLTIP, STOP_ICON, this::onStop),
+			new ButtonConfig(UNDO_NAME, UNDO_TOOLTIP, UNDO_ICON, this::onUndo),
+			new ButtonConfig(REDO_NAME, REDO_TOOLTIP, REDO_ICON, this::onRedo),
+			new ButtonConfig(CLEAR_NAME, CLEAR_TOOLTIP, CLEAR_ICON, this::onClear),
 			new ButtonConfig(SETTINGS_NAME, SETTINGS_TOOLTIP, SETTINGS_ICON,
 					this::onSettings));
 
@@ -78,6 +80,27 @@ public class ButtonBarArea {
 					button.setEnabled(enabled);
 				}
 			}
+			if (enabled) {
+				updateButtonStates();
+			}
+		});
+	}
+
+	/**
+	 * Updates the state of all buttons based on current conditions.
+	 */
+	public void updateButtonStates() {
+		Eclipse.runOnUIThreadAsync(() -> {
+			for (int i = 0; i < buttons.size(); i++) {
+				Button button = buttons.get(i);
+				if (button.getText().equals(UNDO_NAME)) {
+					button.setEnabled(mainPresenter.canUndo());
+				} else if (button.getText().equals(REDO_NAME)) {
+					button.setEnabled(mainPresenter.canRedo());
+				} else if (button.getText().equals(CLEAR_NAME)) {
+					button.setEnabled(mainPresenter.canClear());
+				}
+			}
 		});
 	}
 
@@ -103,20 +126,20 @@ public class ButtonBarArea {
 		for (ButtonConfig config : buttonConfigs) {
 			Button button = Eclipse.createButton(buttonContainer, config.name, config.tooltip, config.filename,
 					new SelectionAdapter() {
-						@Override
-						public void widgetSelected(SelectionEvent e) {
-							config.action.run();
-						}
-					});
+				@Override
+				public void widgetSelected(SelectionEvent e) {
+					config.action.run();
+				}
+			});
 			buttons.add(button);
 		}
 	}
 
 	/**
-	 * Handles the 'Clear' button click event by delegating to the main presenter.
+	 * Handles the 'Stop' button click event by delegating to the main presenter.
 	 */
-	private void onClear() {
-		mainPresenter.onClear();
+	private void onStop() {
+		mainPresenter.onStop();
 	}
 
 	/**
@@ -127,10 +150,17 @@ public class ButtonBarArea {
 	}
 
 	/**
-	 * Handles the 'Stop' button click event by delegating to the main presenter.
+	 * Handles the 'Redo' button click event by delegating to the main presenter.
 	 */
-	private void onStop() {
-		mainPresenter.onStop();
+	private void onRedo() {
+		mainPresenter.onRedo();
+	}
+
+	/**
+	 * Handles the 'Clear' button click event by delegating to the main presenter.
+	 */
+	private void onClear() {
+		mainPresenter.onClear();
 	}
 
 	/**

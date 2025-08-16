@@ -1,8 +1,7 @@
 package eclipse.plugin.aiassistant.chat;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.Collections;
 import java.util.Stack;
 import java.util.UUID;
 
@@ -137,12 +136,21 @@ public class ChatConversation {
 	}
 
 	/**
-	 * Returns an iterable of the messages in the conversation,
-	 * skipping the last message if it has no content.
+	 * Returns an iterable of all messages in the conversation.
 	 *
-	 * @return an iterable of the messages in the conversation
+	 * @return an iterable of all messages in the conversation
 	 */
 	public Iterable<ChatMessage> messages() {
+		return messages;
+	}
+
+	/**
+	 * Returns an iterable of messages, skipping the last message if it has no content.
+	 * This is primarily used for API calls where empty messages should be excluded.
+	 *
+	 * @return an iterable of the messages suitable for API transmission
+	 */
+	public Iterable<ChatMessage> messagesExcludingLastIfEmpty() {
 		if (!messages.isEmpty() &&
 				(messages.peek().getMessage() == null || messages.peek().getMessage().isEmpty())) {
 			return messages.subList(0, messages.size() - 1);
@@ -154,25 +162,31 @@ public class ChatConversation {
 	 * This method undoes the last "conversation interaction". It removes messages
 	 * from the stack until it encounters a user message or when the stack is empty.
 	 *
-	 * @return A list of the IDs of the removed messages.
+	 * @return A ChatConversation containing the removed messages in their original order.
 	 */
-	public List<UUID> undo() {
-		List<UUID> removedIds = new ArrayList<>();
+	public ChatConversation undo() {
+		ChatConversation removedConversation = new ChatConversation();
 		while (!messages.isEmpty()) {
 			ChatMessage message = messages.pop();
-			removedIds.add(message.getId());
+			removedConversation.push(message);
 			if (message.getRole() == ChatRole.USER) {
 				break;
 			}
 		}
-		return removedIds;
+		Collections.reverse(removedConversation.messages);
+		return removedConversation;
 	}
 
 	/**
-	 * Clears the conversation.
+	 * Clears the conversation and returns the cleared messages.
+	 *
+	 * @return A ChatConversation containing the cleared messages.
 	 */
-	public void clear() {
+	public ChatConversation clear() {
+		ChatConversation clearedConversation = new ChatConversation();
+		clearedConversation.messages.addAll(messages);
 		messages.clear();
+		return clearedConversation;
 	}
 
 	/**
@@ -193,6 +207,23 @@ public class ChatConversation {
 			}
 		}
 		return false;
+	}
+
+	/**
+	 * Returns the total character count of all message content in the conversation.
+	 * This can be used as a heuristic for determining UI optimization needs.
+	 *
+	 * @return the total number of characters across all messages
+	 */
+	public int getContentSize() {
+		int totalSize = 0;
+		for (ChatMessage message : messages) {
+			String messageText = message.getMessage();
+			if (messageText != null) {
+				totalSize += messageText.length();
+			}
+		}
+		return totalSize;
 	}
 
 	/**
