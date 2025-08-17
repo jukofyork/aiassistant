@@ -295,52 +295,34 @@ public class MainPresenter {
 	}
 
 	/**
-	 * Exports the current chat conversation to a JSON file.
+	 * Exports the current chat conversation to a JSON or Markdown file based on the selected file extension.
 	 */
 	public void onExport() {
 		if (!chatConversation.isEmpty()) {
 			FileDialog fileDialog = new FileDialog(Eclipse.getShell(), SWT.SAVE);
 			fileDialog.setText("Export Chat History");
-			fileDialog.setFilterExtensions(new String[] { "*.json", "*.*" });
-			fileDialog.setFilterNames(new String[] { "JSON Files (*.json)", "All Files (*.*)" });
+			fileDialog.setFilterExtensions(new String[] { "*.json", "*.txt", "*.*" });
+			fileDialog.setFilterNames(new String[] { "JSON Files (*.json)", "Text Files (*.txt)", "All Files (*.*)" });
 			fileDialog.setFileName("chat_history.json");
 
 			String filePath = fileDialog.open();
 			if (filePath != null) {
 				try {
-					String json = chatConversation.serialize();
-					Path path = Paths.get(filePath);
-					Files.writeString(path, json);
+					// Determine format based on file extension
+					if (filePath.toLowerCase().endsWith(".json")) {
+						String json = chatConversation.serialize();
+						Path path = Paths.get(filePath);
+						Files.writeString(path, json);
+					} else {
+						// Export as markdown for .txt or any other extension
+						String markdown = chatConversation.toMarkdown();
+						Path path = Paths.get(filePath);
+						Files.writeString(path, markdown);
+					}
 				} catch (IOException e) {
 					Logger.error("Failed to export chat history: " + e.getMessage());
 				} catch (Exception e) {
 					Logger.error("Failed to export chat history: " + e.getMessage());
-				}
-			}
-		}
-	}
-
-	/**
-	 * Exports the current chat conversation as markdown to a text file.
-	 */
-	public void onMarkdown() {
-		if (hasConversation()) {
-			FileDialog fileDialog = new FileDialog(Eclipse.getShell(), SWT.SAVE);
-			fileDialog.setText("Export Chat History as Markdown");
-			fileDialog.setFilterExtensions(new String[] { "*.txt", "*.*" });
-			fileDialog.setFilterNames(new String[] { "Text Files (*.txt)", "All Files (*.*)" });
-			fileDialog.setFileName("chat_history.txt");
-
-			String filePath = fileDialog.open();
-			if (filePath != null) {
-				try {
-					String markdown = chatConversation.toMarkdown();
-					Path path = Paths.get(filePath);
-					Files.writeString(path, markdown);
-				} catch (IOException e) {
-					Logger.error("Failed to export markdown: " + e.getMessage());
-				} catch (Exception e) {
-					Logger.error("Failed to export markdown: " + e.getMessage());
 				}
 			}
 		}

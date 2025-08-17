@@ -22,7 +22,7 @@ import eclipse.plugin.aiassistant.utility.Eclipse;
 public class ButtonBarArea {
 
 	public static final String STOP_NAME = "Stop";
-	public static final String STOP_TOOLTIP = "Stop the AI";
+	public static final String STOP_TOOLTIP = "Cancel the AI Response";
 	public static final String STOP_ICON = "Stop.png";
 	public static final String CLEAR_NAME = "Clear";
 	public static final String CLEAR_TOOLTIP = "Clear the Chat History";
@@ -34,14 +34,11 @@ public class ButtonBarArea {
 	public static final String REDO_TOOLTIP = "Redo the Last Undone Chat Interaction";
 	public static final String REDO_ICON = "Redo.png";
 	public static final String IMPORT_NAME = "Import";
-	public static final String IMPORT_TOOLTIP = "Import Chat History from File";
+	public static final String IMPORT_TOOLTIP = "Import Chat History (JSON)";
 	public static final String IMPORT_ICON = "Import.png";
 	public static final String EXPORT_NAME = "Export";
-	public static final String EXPORT_TOOLTIP = "Export Chat History to File";
+	public static final String EXPORT_TOOLTIP = "Export Chat History (JSON or Markdown)";
 	public static final String EXPORT_ICON = "Export.png";
-	public static final String MARKDOWN_NAME = "Markdown";
-	public static final String MARKDOWN_TOOLTIP = "Export Chat History as Markdown";
-	public static final String MARKDOWN_ICON = "Markdown.png";
 	public static final String SETTINGS_NAME = "Settings";
 	public static final String SETTINGS_TOOLTIP = "Open the Settings Page";
 	public static final String SETTINGS_ICON = "Settings.png";
@@ -55,7 +52,6 @@ public class ButtonBarArea {
 			new ButtonConfig(REDO_NAME, REDO_TOOLTIP, REDO_ICON, this::onRedo),
 			new ButtonConfig(IMPORT_NAME, IMPORT_TOOLTIP, IMPORT_ICON, this::onImport),
 			new ButtonConfig(EXPORT_NAME, EXPORT_TOOLTIP, EXPORT_ICON, this::onExport),
-			new ButtonConfig(MARKDOWN_NAME, MARKDOWN_TOOLTIP, MARKDOWN_ICON, this::onMarkdown),
 			new ButtonConfig(SETTINGS_NAME, SETTINGS_TOOLTIP, SETTINGS_ICON,
 					this::onSettings));
 
@@ -112,8 +108,6 @@ public class ButtonBarArea {
 				} else if (button.getText().equals(CLEAR_NAME)) {
 					button.setEnabled(mainPresenter.hasConversation());
 				} else if (button.getText().equals(EXPORT_NAME)) {
-					button.setEnabled(mainPresenter.hasConversation());
-				} else if (button.getText().equals(MARKDOWN_NAME)) {
 					button.setEnabled(mainPresenter.hasConversation());
 				}
 			}
@@ -191,13 +185,6 @@ public class ButtonBarArea {
 	 */
 	private void onExport() {
 		mainPresenter.onExport();
-	}
-
-	/**
-	 * Handles the 'Markdown' button click event by delegating to the main presenter.
-	 */
-	private void onMarkdown() {
-		mainPresenter.onMarkdown();
 	}
 
 	/**
