@@ -1,9 +1,5 @@
-# Context
 Review the provided snippet to establish context for the upcoming task(s):
 ```
 <clipboard>
 ```
 <usertext>
-Please await further instructions and simply respond with 'Ready'.
-<<switch-roles>>
-Ready
