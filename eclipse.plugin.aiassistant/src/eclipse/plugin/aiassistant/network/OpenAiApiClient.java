@@ -615,7 +615,7 @@ public class OpenAiApiClient {
 		sb.append(label).append(": ").append(tokens).append(" tokens");
 
 		if (maxTokens > 0) {
-			sb.append(String.format(" (%.1f%% of context)", (tokens * 100.0) / maxTokens));
+			sb.append(String.format(" (%.1f%%)", (tokens * 100.0) / maxTokens));
 		}
 
 		if (additionalInfo != null) {
