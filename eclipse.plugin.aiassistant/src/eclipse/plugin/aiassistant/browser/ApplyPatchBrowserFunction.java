@@ -3,6 +3,7 @@ package eclipse.plugin.aiassistant.browser;
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
+import java.util.regex.Pattern;
 
 import org.eclipse.compare.CompareConfiguration;
 import org.eclipse.compare.patch.ApplyPatchOperation;
@@ -24,6 +25,8 @@ import eclipse.plugin.aiassistant.utility.Eclipse;
  * - https://github.com/Aider-AI/aider/blob/main/aider/coders/udiff_prompts.py
  */
 public class ApplyPatchBrowserFunction extends DisableableBrowserFunction {
+
+	private static final Pattern HUNK_HEADER_PATTERN = Pattern.compile("@@\\s*-\\d+(?:,\\d+)?\\s*\\+\\d+(?:,\\d+)?\\s*@@");
 
 	/**
 	 * Constructs a new instance of the ApplyPatchFunction class.
@@ -49,6 +52,7 @@ public class ApplyPatchBrowserFunction extends DisableableBrowserFunction {
 		if (isEnabled() && arguments.length > 0 && arguments[0] instanceof String) {
 			String patchString = (String) arguments[0];
 			patchString = removePrefixes(patchString);
+			patchString = normalizeHunkHeaders(patchString);
 
 			ITextEditor textEditor = Eclipse.getActiveTextEditor();
 			if (textEditor != null) {
@@ -74,6 +78,16 @@ public class ApplyPatchBrowserFunction extends DisableableBrowserFunction {
 	 */
 	private String removePrefixes(String patchString) {
 		return patchString.replace("--- a/", "--- /").replace("+++ b/", "+++ /");
+	}
+
+	/**
+	 * This method converts hunk headers with line numbers to the generic @@ ... @@ format.
+	 *
+	 * @param patchString The patch string to be processed.
+	 * @return The processed patch string with normalized hunk headers.
+	 */
+	private String normalizeHunkHeaders(String patchString) {
+		return HUNK_HEADER_PATTERN.matcher(patchString).replaceAll("@@ ... @@");
 	}
 
 	/**
