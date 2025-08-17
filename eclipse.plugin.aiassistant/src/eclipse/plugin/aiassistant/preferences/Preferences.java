@@ -132,12 +132,21 @@ public final class Preferences {
 	}
 
 	/**
-	 * Returns the currently selected temperature from the preference store.
+	 * Returns the currently selected JSON overrides from the preference store.
 	 *
-	 * @return The temperature value.
+	 * @return The JSON overrides string.
 	 */
-	public static Double getCurrentTemperature() {
-		return preferenceStore.getDouble(PreferenceConstants.CURRENT_TEMPERATURE);
+	public static String getCurrentJsonOverrides() {
+		return preferenceStore.getString(PreferenceConstants.CURRENT_JSON_OVERRIDES);
+	}
+
+	/**
+	 * Returns the currently selected streaming flag from the preference store.
+	 *
+	 * @return The streaming flag value.
+	 */
+	public static Boolean getCurrentUseStreaming() {
+		return preferenceStore.getBoolean(PreferenceConstants.CURRENT_USE_STREAMING);
 	}
 
 	/**
@@ -150,12 +159,12 @@ public final class Preferences {
 	}
 
 	/**
-	 * Returns the currently selected streaming flag from the preference store.
+	 * Returns the currently selected developer message flag from the preference store.
 	 *
-	 * @return The streaming flag value.
+	 * @return The developer message flag value.
 	 */
-	public static Boolean getCurrentUseStreaming() {
-		return preferenceStore.getBoolean(PreferenceConstants.CURRENT_USE_STREAMING);
+	public static Boolean getCurrentUseDeveloperMessage() {
+		return preferenceStore.getBoolean(PreferenceConstants.CURRENT_USE_DEVELOPER_MESSAGE);
 	}
 
 	/**

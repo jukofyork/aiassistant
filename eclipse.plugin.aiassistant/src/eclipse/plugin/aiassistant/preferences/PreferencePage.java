@@ -32,8 +32,8 @@ import org.eclipse.ui.IWorkbenchPreferencePage;
 import eclipse.plugin.aiassistant.Constants;
 import eclipse.plugin.aiassistant.Logger;
 import eclipse.plugin.aiassistant.network.OpenAiApiClient;
-import eclipse.plugin.aiassistant.utility.DoubleFieldEditor;
 import eclipse.plugin.aiassistant.utility.Eclipse;
+import eclipse.plugin.aiassistant.utility.JsonFieldEditor;
 import eclipse.plugin.aiassistant.utility.PasswordFieldEditor;
 import eclipse.plugin.aiassistant.utility.UrlFieldEditor;
 
@@ -98,9 +98,10 @@ public class PreferencePage extends FieldEditorPreferencePage implements IWorkbe
 	private StringFieldEditor modelNameEditor;
 	private UrlFieldEditor apiUrlEditor;
 	private PasswordFieldEditor apiKeyEditor;
-	private DoubleFieldEditor temperatureEditor;
-	private AccessibleBooleanFieldEditor useSystemMessageEditor;
+	private JsonFieldEditor jsonOverridesEditor;
 	private AccessibleBooleanFieldEditor useStreamingEditor;
+	private AccessibleBooleanFieldEditor useSystemMessageEditor;
+	private AccessibleBooleanFieldEditor useDeveloperMessageEditor;
 
 	private Button bookmarkButton;
 	private Button unbookmarkButton;
@@ -163,9 +164,13 @@ public class PreferencePage extends FieldEditorPreferencePage implements IWorkbe
 		addSettingsChangeListener(modelNameEditor.getTextControl(parent));
 		addSettingsChangeListener(apiUrlEditor.getTextControl(parent));
 		addSettingsChangeListener(apiKeyEditor.getTextControl(parent));
-		addSettingsChangeListener(temperatureEditor.getTextControl(parent));
-		addSettingsChangeListener(useSystemMessageEditor.getCheckboxControl(parent));
+		addSettingsChangeListener(jsonOverridesEditor.getTextControl(parent));
 		addSettingsChangeListener(useStreamingEditor.getCheckboxControl(parent));
+		addSettingsChangeListener(useSystemMessageEditor.getCheckboxControl(parent));
+		addSettingsChangeListener(useDeveloperMessageEditor.getCheckboxControl(parent));
+
+		// Add mutual exclusion logic for system and developer message checkboxes
+		addMutualExclusionLogic(parent);
 	}
 
 	/**
@@ -239,21 +244,54 @@ public class PreferencePage extends FieldEditorPreferencePage implements IWorkbe
 		apiKeyEditor = new PasswordFieldEditor(PreferenceConstants.CURRENT_API_KEY, "API Key:", parent);
 		apiKeyEditor.setEmptyStringAllowed(true);
 
-		temperatureEditor = new DoubleFieldEditor(PreferenceConstants.CURRENT_TEMPERATURE, "Temperature:", parent);
-		temperatureEditor.setValidRange(Constants.MIN_TEMPERATURE, Constants.MAX_TEMPERATURE);
+		jsonOverridesEditor = new JsonFieldEditor(PreferenceConstants.CURRENT_JSON_OVERRIDES, "JSON Overrides:", parent);
+		jsonOverridesEditor.setEmptyStringAllowed(true);
+
+		useStreamingEditor = new AccessibleBooleanFieldEditor(PreferenceConstants.CURRENT_USE_STREAMING,
+				"Use Streaming", BooleanFieldEditor.SEPARATE_LABEL, parent);
 
 		useSystemMessageEditor = new AccessibleBooleanFieldEditor(PreferenceConstants.CURRENT_USE_SYSTEM_MESSAGE,
 				"System Message", BooleanFieldEditor.SEPARATE_LABEL, parent);
 
-		useStreamingEditor = new AccessibleBooleanFieldEditor(PreferenceConstants.CURRENT_USE_STREAMING,
-				"Streaming", BooleanFieldEditor.SEPARATE_LABEL, parent);
+		useDeveloperMessageEditor = new AccessibleBooleanFieldEditor(PreferenceConstants.CURRENT_USE_DEVELOPER_MESSAGE,
+				"Developer Message", BooleanFieldEditor.SEPARATE_LABEL, parent);
 
 		addField(modelNameEditor);
 		addField(apiUrlEditor);
 		addField(apiKeyEditor);
-		addField(temperatureEditor);
-		addField(useSystemMessageEditor);
+		addField(jsonOverridesEditor);
 		addField(useStreamingEditor);
+		addField(useSystemMessageEditor);
+		addField(useDeveloperMessageEditor);
+	}
+
+	/**
+	 * Adds mutual exclusion logic to the system and developer message checkboxes.
+	 * When one is checked, the other is automatically unchecked.
+	 *
+	 * @param parent The parent composite
+	 */
+	private void addMutualExclusionLogic(Composite parent) {
+		Button systemMessageCheckbox = useSystemMessageEditor.getCheckboxControl(parent);
+		Button developerMessageCheckbox = useDeveloperMessageEditor.getCheckboxControl(parent);
+
+		systemMessageCheckbox.addSelectionListener(new SelectionAdapter() {
+			@Override
+			public void widgetSelected(SelectionEvent e) {
+				if (systemMessageCheckbox.getSelection()) {
+					useDeveloperMessageEditor.setBooleanValue(false);
+				}
+			}
+		});
+
+		developerMessageCheckbox.addSelectionListener(new SelectionAdapter() {
+			@Override
+			public void widgetSelected(SelectionEvent e) {
+				if (developerMessageCheckbox.getSelection()) {
+					useSystemMessageEditor.setBooleanValue(false);
+				}
+			}
+		});
 	}
 
 	/**
@@ -282,14 +320,16 @@ public class PreferencePage extends FieldEditorPreferencePage implements IWorkbe
 		table.setLinesVisible(true);
 
 		// Create all columns with weight-based widths
-		createTableColumn("Model Name", 32, SWT.LEFT, tableLayout, e -> ((BookmarkedApiSettings) e).getModelName());
-		createTableColumn("API URL", 32, SWT.LEFT, tableLayout, e -> ((BookmarkedApiSettings) e).getApiUrl());
-		createTableColumn("Temperature", 12, SWT.CENTER, tableLayout,
-				e -> String.valueOf(((BookmarkedApiSettings) e).getTemperature()));
-		createTableColumn("System Message", 12, SWT.CENTER, tableLayout,
-				e -> ((BookmarkedApiSettings) e).getUseSystemMessage() ? "🗹" : "☐");
-		createTableColumn("Streaming", 12, SWT.CENTER, tableLayout,
+		createTableColumn("Model Name", 22, SWT.LEFT, tableLayout, e -> ((BookmarkedApiSettings) e).getModelName());
+		createTableColumn("API URL", 22, SWT.LEFT, tableLayout, e -> ((BookmarkedApiSettings) e).getApiUrl());
+		createTableColumn("JSON Overrides", 26, SWT.LEFT, tableLayout,
+				e -> ((BookmarkedApiSettings) e).getJsonOverrides());
+		createTableColumn("Streaming", 10, SWT.CENTER, tableLayout,
 				e -> ((BookmarkedApiSettings) e).getUseStreaming() ? "🗹" : "☐");
+		createTableColumn("System", 10, SWT.CENTER, tableLayout,
+				e -> ((BookmarkedApiSettings) e).getUseSystemMessage() ? "🗹" : "☐");
+		createTableColumn("Developer", 10, SWT.CENTER, tableLayout,
+				e -> ((BookmarkedApiSettings) e).getUseDeveloperMessage() ? "🗹" : "☐");
 
 		table.addSelectionListener(new SelectionAdapter() {
 			@Override
@@ -301,9 +341,10 @@ public class PreferencePage extends FieldEditorPreferencePage implements IWorkbe
 					apiUrlEditor.setStringValue(selectedSettings.getApiUrl());
 					apiKeyEditor.setStringValue(selectedSettings.getApiKey());
 					apiKeyEditor.setPasswordVisible(apiKeyEditor.getStringValue().isBlank()); // Hide if not blank for safety
-					temperatureEditor.setStringValue(Double.toString(selectedSettings.getTemperature()));
-					useSystemMessageEditor.setBooleanValue(selectedSettings.getUseSystemMessage());
+					jsonOverridesEditor.setStringValue(selectedSettings.getJsonOverrides());
 					useStreamingEditor.setBooleanValue(selectedSettings.getUseStreaming());
+					useSystemMessageEditor.setBooleanValue(selectedSettings.getUseSystemMessage());
+					useDeveloperMessageEditor.setBooleanValue(selectedSettings.getUseDeveloperMessage());
 					updateBookmarkButtonsVisibility();
 				}
 			}
@@ -419,9 +460,10 @@ public class PreferencePage extends FieldEditorPreferencePage implements IWorkbe
 			String currentModelName = modelNameEditor.getStringValue().trim();
 			String currentApiUrl = apiUrlEditor.getStringValue().trim();
 			String currentApiKey = apiKeyEditor.getStringValue().trim();
-			double currentTemperature = temperatureEditor.getDoubleValue();
-			boolean currentUseSystemMessage = useSystemMessageEditor.getBooleanValue();
+			String currentJsonOverrides = jsonOverridesEditor.getStringValue();
 			boolean currentUseStreaming = useStreamingEditor.getBooleanValue();
+			boolean currentUseSystemMessage = useSystemMessageEditor.getBooleanValue();
+			boolean currentUseDeveloperMessage = useDeveloperMessageEditor.getBooleanValue();
 			if (OpenAiApiClient.getApiStatus(currentApiUrl, currentApiKey).equals("OK")) {
 				java.util.List<String> modelNames = OpenAiApiClient.fetchAvailableModelNames(currentApiUrl,
 						currentApiKey);
@@ -429,7 +471,7 @@ public class PreferencePage extends FieldEditorPreferencePage implements IWorkbe
 					// If current model name is a substring of model name (or empty)
 					if (modelName.toLowerCase().contains(currentModelName.toLowerCase())) {
 						BookmarkedApiSettings newSetting = new BookmarkedApiSettings(modelName, currentApiUrl,
-								currentApiKey, currentTemperature, currentUseSystemMessage, currentUseStreaming);
+								currentApiKey, currentJsonOverrides, currentUseStreaming, currentUseSystemMessage, currentUseDeveloperMessage);
 						if (!bookmarkedApiSettings.contains(newSetting)) {
 							bookmarkedApiSettings.add(newSetting);
 						}
@@ -605,16 +647,15 @@ public class PreferencePage extends FieldEditorPreferencePage implements IWorkbe
 			allValid.set(modelNameEditor.isValid()
 					&& apiUrlEditor.isValid()
 					&& apiKeyEditor.isValid()
-					&& temperatureEditor.isValid());
+					&& jsonOverridesEditor.isValid());
 		});
 
 		if (allValid.get()) {
-			// Verify non-blank content for all string fields
-			// NOTE: The API-key is allowed to be blank or empty for use with llama.cpp or other local back-ends
+			// Verify non-blank content for all required string fields
+			// NOTE: The API-key and JSON overrides are allowed to be blank or empty
 			Eclipse.runOnUIThreadSync(() -> {
 				allValid.set(!modelNameEditor.getStringValue().isBlank()
-						&& !apiUrlEditor.getStringValue().isBlank()
-						&& !temperatureEditor.getStringValue().isBlank());
+						&& !apiUrlEditor.getStringValue().isBlank());
 			});
 
 			if (allValid.get()) {
@@ -622,9 +663,10 @@ public class PreferencePage extends FieldEditorPreferencePage implements IWorkbe
 						modelNameEditor.getStringValue(),
 						apiUrlEditor.getStringValue(),
 						apiKeyEditor.getStringValue(),
-						temperatureEditor.getDoubleValue(),
+						jsonOverridesEditor.getStringValue(),
+						useStreamingEditor.getBooleanValue(),
 						useSystemMessageEditor.getBooleanValue(),
-						useStreamingEditor.getBooleanValue());
+						useDeveloperMessageEditor.getBooleanValue());
 			}
 		}
 		return null;

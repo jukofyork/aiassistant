@@ -54,11 +54,11 @@ public final class Constants {
 
 	// Default bookmarked settings, showing 5 of the most common OpenAI compatible end-points.
 	public static final List<BookmarkedApiSettings> DEFAULT_BOOKMARKED_API_SETTINGS = new ArrayList<>(Arrays.asList(
-			new BookmarkedApiSettings("gpt-4.1", "https://api.openai.com/v1", "<YOUR API KEY>", 0.0, true, true),
-			new BookmarkedApiSettings("openai/o1", "https://openrouter.ai/api/v1", "<YOUR API KEY>", 0.0, true, false),
-			new BookmarkedApiSettings("<LLAMA.CPP MODEL NAME>", "http://localhost:8080/v1", "none", 0.0, true, true),
-			new BookmarkedApiSettings("<OLLAMA MODEL NAME>", "http://localhost:11434/v1", "none", 0.0, true, true),
-			new BookmarkedApiSettings("<TABBYAPI MODEL NAME>", "http://localhost:5000/v1", "none", 0.0, true, true)));
+			new BookmarkedApiSettings("o3", "https://api.openai.com/v1", "sk-...", "reasoning_effort = \"low\"", true, false, true),
+			new BookmarkedApiSettings("anthropic/claude-sonnet-4", "https://openrouter.ai/api/v1", "sk-...", "", true, true, false),
+			new BookmarkedApiSettings("<LLAMA.CPP MODEL>", "http://localhost:8080/v1", "", "temperature = 0.0", true, true, false),
+			new BookmarkedApiSettings("<OLLAMA MODEL>", "http://localhost:11434/v1", "", "temperature = 0.2", true, true, false),
+			new BookmarkedApiSettings("<TABBYAPI MODEL>", "http://localhost:5000/v1", "", "", true, true, false)));
 
 	// Widget dimensions and spacing for the main view.
 	public static final int DEFAULT_EXTERNAL_MARGINS = 0;
@@ -70,7 +70,7 @@ public final class Constants {
 	// NOTE: A short connection timeout stops the preference page from stalling.
 	public static final int MIN_CONNECTION_TIMEOUT = 1;
 	public static final int MAX_CONNECTION_TIMEOUT = 10;
-	public static final int DEFAULT_CONNECTION_TIMEOUT = 1;
+	public static final int DEFAULT_CONNECTION_TIMEOUT = 2;
 
 	// Response timeout.
 	// NOTE: The new `o1` models can take ages to reply... 5 minutes should hopefully be enough.
@@ -83,19 +83,18 @@ public final class Constants {
 	public static final int MAX_STREAMING_UPDATE_INTERVAL = 1000;
 	public static final int DEFAULT_STREAMING_UPDATE_INTERVAL = 50;
 
-	// Temperature value.
-	// NOTE: Coding LLMs need a much lower (preferably zero) temperature vs chat LLMs.
-	public static final double MIN_TEMPERATURE = 0.0;		// Zero temperature.
-	public static final double MAX_TEMPERATURE = 2.0;		// Max sane value.
-	public static final double DEFAULT_TEMPERATURE = 0.0;
+	// Miscellaneous global checkbox settings.
+	public static final boolean DEFAULT_DISABLE_TOOLTIPS = true;
 
-	// System message flag.
-	// NOTE: Some model's like OpenAI's "o1-preview" can't use a system message at all.
-	public static final boolean DEFAULT_USE_SYSTEM_MESSAGE = true;
+	// The default JSON overrides.
+	public static final String DEFAULT_JSON_OVERRIDES = "";
 
 	// Streaming flag.
-	// NOTE: Some model's like OpenAI's "o-series" don't allow streaming to be used.
 	public static final boolean DEFAULT_USE_STREAMING = true;
+
+	// System message (or developer message for OpenAI's reasoning models) flag.
+	public static final boolean DEFAULT_USE_SYSTEM_MESSAGE = true;
+	public static final boolean DEFAULT_USE_DEVELOPER_MESSAGE = false;
 
 	// Font sizes.
 	// NOTE: These are just substituted in "main-style.css" using a regex currently.
@@ -104,10 +103,7 @@ public final class Constants {
 	public static final int DEFAULT_CHAT_FONT_SIZE = 14;
 	public static final int MIN_NOTIFICATION_FONT_SIZE = 8;
 	public static final int MAX_NOTIFICATION_FONT_SIZE = 16;
-	public static final int DEFAULT_NOTIFICATION_FONT_SIZE = 10;
-
-	// Miscellaneous global checkbox settings.
-	public static final boolean DEFAULT_DISABLE_TOOLTIPS = true;
+	public static final int DEFAULT_NOTIFICATION_FONT_SIZE = 8;
 
 	// UI optimization thresholds for conversation restoration.
 	public static final int MIN_MESSAGE_COUNT_TO_BLANK = 3;

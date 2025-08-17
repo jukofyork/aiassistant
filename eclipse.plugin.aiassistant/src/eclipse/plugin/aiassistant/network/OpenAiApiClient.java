@@ -22,6 +22,7 @@ import java.util.stream.Collectors;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.dataformat.toml.TomlFactory;
 
 import eclipse.plugin.aiassistant.Constants;
 import eclipse.plugin.aiassistant.Logger;
@@ -192,13 +193,14 @@ public class OpenAiApiClient {
 
 	/**
 	 * Constructs the JSON request body for the chat completion API.
-	 * Handles special cases for different model types and includes
-	 * appropriate configuration based on model capabilities.
+	 * Handles special cases for different model types, includes
+	 * appropriate configuration based on model capabilities, and
+	 * applies any JSON overrides specified in preferences.
 	 *
 	 * @param modelName The name of the model to use
 	 * @param chatConversation The conversation to process
 	 * @return JSON string containing the request body
-	 * @throws Exception if request body creation fails
+	 * @throws Exception if request body creation fails or JSON overrides are invalid
 	 */
 	private String buildChatCompletionRequestBody(String modelName, ChatConversation chatConversation) throws Exception {
 		try {
@@ -210,19 +212,16 @@ public class OpenAiApiClient {
 			requestBody.put("model", modelName);
 
 			// Add the system (or developer message for OpenAI reasoning models).
-			// NOTE: OpenAI's legacy reasoning models can't use a system or developer message.
-			if (Preferences.getCurrentUseSystemMessage() && !isLegacyOpenAiReasoningModel(modelName)) {
+			if (Preferences.getCurrentUseSystemMessage()) {
 				var systemMessage = objectMapper.createObjectNode();
-
-				// "Starting with o1-2024-12-17, o1 models support developer messages rather than system messages"
-				if (!isOpenAiReasoningModel(modelName)) {
-					systemMessage.put("role", "system");
-					systemMessage.put("content", PromptLoader.getSystemPromptText());
-				} else {
-					systemMessage.put("role", "developer");
-					systemMessage.put("content", PromptLoader.getDeveloperPromptText());
-				}
+				systemMessage.put("role", "system");
+				systemMessage.put("content", PromptLoader.getSystemPromptText());
 				jsonMessages.add(systemMessage);
+			} else if (Preferences.getCurrentUseDeveloperMessage()) {
+				var developerMessage = objectMapper.createObjectNode();
+				developerMessage.put("role", "developer");
+				developerMessage.put("content", PromptLoader.getDeveloperPromptText());
+				jsonMessages.add(developerMessage);
 			}
 
 			// Add the message history so far.
@@ -259,23 +258,46 @@ public class OpenAiApiClient {
 			}
 			requestBody.set("messages", jsonMessages);
 
-			// Add the temperature to the request.
-			// NOTE: We can't set a temperature for OpenAI's reasoning models.
-			if (!isOpenAiReasoningModel(modelName)) {
-				requestBody.put("temperature", Preferences.getCurrentTemperature());
-			}
-
-			// Always use "high" reasoning effort for OpenAI's non-legacy reasoning models.
-			if (isOpenAiReasoningModel(modelName) && !isLegacyOpenAiReasoningModel(modelName)) {
-				requestBody.put("reasoning_effort", "high");
-			}
-
 			// Set the streaming flag.
 			if (Preferences.getCurrentUseStreaming()) {
 				requestBody.put("stream", true);
 				var node = objectMapper.createObjectNode();
 				node.put("include_usage", true);
 				requestBody.putPOJO("stream_options", node);
+			}
+
+			// Apply JSON overrides if specified
+			String jsonOverrides = Preferences.getCurrentJsonOverrides();
+			if (jsonOverrides != null && !jsonOverrides.trim().isEmpty()) {
+				try {
+					// Wrap with braces since JsonFieldEditor validates without outer braces
+					String wrappedOverrides = "{ " + jsonOverrides.trim() + " }";
+					JsonNode overridesNode = null;
+
+					// Try JSON first
+					try {
+						overridesNode = objectMapper.readTree(wrappedOverrides);
+					} catch (JsonProcessingException e) {
+						// JSON parsing failed, try TOML
+						try {
+							ObjectMapper tomlMapper = new ObjectMapper(new TomlFactory());
+							String wrappedToml = "temp = " + wrappedOverrides;
+							JsonNode tomlTree = tomlMapper.readTree(wrappedToml);
+							overridesNode = tomlTree.get("temp");
+						} catch (JsonProcessingException tomlException) {
+							throw new Exception("Failed to parse JSON overrides as either JSON or TOML: " + e.getMessage(), e);
+						}
+					}
+
+					// Apply each override field to the request body
+					if (overridesNode != null) {
+						overridesNode.fields().forEachRemaining(entry -> {
+							requestBody.set(entry.getKey(), entry.getValue());
+						});
+					}
+				} catch (JsonProcessingException e) {
+					throw new Exception("Failed to parse JSON overrides: " + e.getMessage(), e);
+				}
 			}
 
 			//Logger.info(objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(requestBody));
@@ -311,13 +333,13 @@ public class OpenAiApiClient {
 
 			// Extract data from the JSON tree
 			if (jsonTree.has("model")) {
-				modelName = "Model: " + jsonTree.get("model").asText();
+				modelName = jsonTree.get("model").asText();
 			}
 
 			if (jsonTree.has("choices") && jsonTree.get("choices").has(0)) {
 				JsonNode choiceNode = jsonTree.get("choices").get(0);
 				if (choiceNode.has("finish_reason")) {
-					finishReason = "Finish: " + choiceNode.get("finish_reason").asText();
+					finishReason = choiceNode.get("finish_reason").asText();
 				}
 				if (choiceNode.has("message")) {
 					JsonNode messageNode = choiceNode.get("message");
@@ -403,14 +425,14 @@ public class OpenAiApiClient {
 
 						// Get the model name.
 						if (modelName.isEmpty() && jsonTree.has("model")) {
-							modelName = "Model: "+jsonTree.get("model").asText();
+							modelName = jsonTree.get("model").asText();
 						}
 
 						// Get the finish reason and/or content from the "choices" sub-tree.
 						if (jsonTree.has("choices") && jsonTree.get("choices").has(0)) {
 							var choiceNode = jsonTree.get("choices").get(0);
 							if (choiceNode.has("finish_reason") && !choiceNode.get("finish_reason").asText().equals("null")) {
-								finishReason = "Finish : "+choiceNode.get("finish_reason").asText();
+								finishReason = choiceNode.get("finish_reason").asText();
 							}
 							if (choiceNode.has("message") || choiceNode.has("delta")) {
 								JsonNode contentNode = choiceNode.has("message")
@@ -524,70 +546,144 @@ public class OpenAiApiClient {
 			return responseStatistics.toString();
 		}
 
-		// Extract the actual model name from the full string
-		String actualModelName = modelName.startsWith("Model: ") ?
-				modelName.substring("Model: ".length()) : modelName;
-
 		long promptTokens = usageNode.get("prompt_tokens").asLong();
 		long completionTokens = usageNode.get("completion_tokens").asLong();
-		long totalTokens = usageNode.get("total_tokens").asLong();
+
+		// Extract cached tokens if available
+		long cachedTokens = 0;
+		if (usageNode.has("prompt_tokens_details")) {
+			JsonNode promptDetails = usageNode.get("prompt_tokens_details");
+			if (promptDetails.has("cached_tokens")) {
+				cachedTokens = promptDetails.get("cached_tokens").asLong();
+			}
+		}
+
+		// Extract reasoning tokens if available
+		long reasoningTokens = 0;
+		if (usageNode.has("completion_tokens_details")) {
+			JsonNode completionDetails = usageNode.get("completion_tokens_details");
+			if (completionDetails.has("reasoning_tokens")) {
+				reasoningTokens = completionDetails.get("reasoning_tokens").asLong();
+			}
+		}
 
 		// Retrieve model-specific data from ApiModelData
 		String provider = ""; // Empty provider will match any provider in ApiModelData
-		int maxInputTokens = ApiMetadata.getMaxInputTokens(actualModelName, provider);
-		int maxOutputTokens = ApiMetadata.getMaxOutputTokens(actualModelName, provider);
-		double inputCost = ApiMetadata.getInputCostPerToken(actualModelName, provider);
-		double outputCost = ApiMetadata.getOutputCostPerToken(actualModelName, provider);
+		int maxInputTokens = ApiMetadata.getMaxInputTokens(modelName, provider);
+		int maxOutputTokens = ApiMetadata.getMaxOutputTokens(modelName, provider);
+		double inputCost = ApiMetadata.getInputCostPerToken(modelName, provider);
+		double outputCost = ApiMetadata.getOutputCostPerToken(modelName, provider);
 
-		responseStatistics.append(modelName).append("\n")
-		.append(finishReason).append("\n");
+		responseStatistics.append("Model: \"").append(modelName).append("\"\n");
+		responseStatistics.append("Finish: \"").append(finishReason).append("\"\n");
 
-		// Include percentages and costs if model data is available
-		if (maxInputTokens > 0 || maxOutputTokens > 0) {
-			appendTokenStats(responseStatistics, "Prompt", promptTokens, maxInputTokens, promptTokens * inputCost);
-			appendTokenStats(responseStatistics, "Response", completionTokens, maxOutputTokens,
-					completionTokens * outputCost);
-			appendTokenStats(responseStatistics, "Total", totalTokens, maxInputTokens,
-					promptTokens * inputCost + completionTokens * outputCost);
-		} else {
-			// Fallback to basic format if no model data found
-			responseStatistics.append("Prompt: ").append(promptTokens).append(" tokens\n")
-			.append("Response: ").append(completionTokens).append(" tokens\n")
-			.append("Total: ").append(totalTokens).append(" tokens\n");
+		// Prompt line
+		appendTokenLine(responseStatistics, "Prompt", promptTokens, maxInputTokens,
+				cachedTokens > 0 ? "Cached: " + cachedTokens + " tokens" : null);
+
+		// Response line - subtract reasoning tokens since they don't count towards output limit
+		long actualResponseTokens = completionTokens - reasoningTokens;
+		appendTokenLine(responseStatistics, "Response", actualResponseTokens, maxOutputTokens,
+				reasoningTokens > 0 ? "Reasoning: " + reasoningTokens + " tokens" : null);
+
+		// Cost line (only if cost data available)
+		double promptCost = promptTokens * inputCost;
+		double responseCost = (completionTokens + reasoningTokens) * outputCost;
+		double totalCost = promptCost + responseCost;
+
+		if (totalCost > 0) {
+			appendChargeLine(responseStatistics, promptCost, responseCost, totalCost);
 		}
 
 		return responseStatistics.toString();
 	}
 
 	/**
-	 * Appends token statistics to the given StringBuilder.
+	 * Appends a formatted token usage line to the provided StringBuilder.
+	 * The line includes the token count and optionally shows the percentage
+	 * of context used and additional information in brackets.
 	 *
-	 * @param sb The StringBuilder to append to.
-	 * @param label The label for the statistic (e.g., "Prompt", "Response").
-	 * @param tokens The number of tokens used.
-	 * @param maxTokens The maximum number of tokens allowed (if available).
-	 * @param cost The cost associated with the tokens (if available).
+	 * @param sb the StringBuilder to append the formatted line to
+	 * @param label the descriptive label for this token type (e.g., "Prompt", "Response")
+	 * @param tokens the number of tokens used
+	 * @param maxTokens the maximum token limit for percentage calculation;
+	 *                  if 0 or negative, no percentage is shown
+	 * @param additionalInfo optional extra information to display in brackets;
+	 *                       if null, no brackets are added
 	 */
-	private void appendTokenStats(StringBuilder sb, String label, long tokens, int maxTokens, double cost) {
+	private void appendTokenLine(StringBuilder sb, String label, long tokens, int maxTokens, String additionalInfo) {
 		sb.append(label).append(": ").append(tokens).append(" tokens");
 
-		if (maxTokens > 0 || cost > 0) {
-			sb.append(" [");
-			if (cost > 0) {
-				int decimalPlaces = Math.max(2, -1 * (int)Math.floor(Math.log10(cost)) + 1);
-				sb.append(String.format("$%." + decimalPlaces + "f", cost));
-			}
-			if (maxTokens > 0) {
-				if (cost > 0) {
-					sb.append(", ");
-				}
-				sb.append(String.format(" %.1f%%", (tokens * 100.0) / maxTokens));
-			}
-			sb.append("]");
+		if (maxTokens > 0) {
+			sb.append(String.format(" (%.1f%% of context)", (tokens * 100.0) / maxTokens));
 		}
+
+		if (additionalInfo != null) {
+			sb.append(" (").append(additionalInfo).append(")");
+		}
+
 		sb.append("\n");
 	}
 
+	/**
+	 * Appends a formatted charge line to the provided StringBuilder.
+	 * Shows the total charge and optionally includes a breakdown of prompt
+	 * and response charges when both are positive values.
+	 *
+	 * @param sb the StringBuilder to append the formatted charge line to
+	 * @param promptCost the charge associated with prompt tokens
+	 * @param responseCost the charge associated with response tokens
+	 * @param totalCost the total charge (should equal promptCost + responseCost)
+	 */
+	private void appendChargeLine(StringBuilder sb, double promptCost, double responseCost, double totalCost) {
+		sb.append("Charge: ");
+
+		if (promptCost > 0 && responseCost > 0) {
+			sb.append(formatCurrency(totalCost))
+			.append(" (")
+			.append(formatCurrency(promptCost))
+			.append(" + ")
+			.append(formatCurrency(responseCost))
+			.append(")");
+		} else {
+			sb.append(formatCurrency(totalCost));
+		}
+
+		sb.append("\n");
+	}
+
+	/**
+	 * Formats a monetary amount using an appropriate currency symbol and precision.
+	 * Uses cents (￠) for amounts less than $1.00 and a fullwidth dollar sign (＄)
+	 * for larger amounts. The fullwidth dollar sign prevents conflicts with LaTeX
+	 * math mode delimiters when this output is displayed in contexts that process LaTeX.
+	 *
+	 * @param amount the monetary amount to format
+	 * @return a formatted currency string (e.g., "25￠", "＄1.50")
+	 */
+	private String formatCurrency(double amount) {
+		if (amount == 0) {
+			return "0￠";
+		}
+
+		if (amount < 1.0) {
+			// Convert to cents
+			double cents = amount * 100;
+
+			// Check if rounding to nearest whole cent would give us 0
+			if (Math.round(cents) == 0) {
+				// Format with 1 significant figure to avoid showing "0￠" for tiny amounts
+				String formatted = String.format("%.1g", cents);
+				return formatted + "￠";
+			} else {
+				// Round to nearest whole cent
+				return String.format("%.0f￠", cents);
+			}
+		} else {
+			// Use fullwidth dollar sign with 2 decimal places fixed
+			return String.format("＄%.2f", amount);
+		}
+	}
 
 	/**
 	 * Verifies that all required fields exist in a JSON tree.
@@ -615,16 +711,6 @@ public class OpenAiApiClient {
 			Logger.error("Invalid API base URL", e);
 			throw new RuntimeException("Invalid API base URL", e);
 		}
-	}
-
-	/**
-	 * These are used to determine if the given model is an OpenAI "o" (or "gpt-5") model with limited capabilities.
-	 */
-	private static boolean isOpenAiReasoningModel(String modelName) {
-		return modelName.matches("^(openai/)?(o\\d|gpt-5)(-.*)?");
-	}
-	private static boolean isLegacyOpenAiReasoningModel(String modelName) {
-		return modelName.matches("^(openai/)?o1-preview.*") || modelName.matches("^(openai/)?o1-mini-2024-09-12");
 	}
 
 }

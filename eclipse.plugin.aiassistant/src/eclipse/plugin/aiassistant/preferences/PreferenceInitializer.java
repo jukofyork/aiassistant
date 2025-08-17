@@ -30,9 +30,10 @@ public class PreferenceInitializer extends AbstractPreferenceInitializer {
 		setDefaultCurrentModelName();
 		setDefaultCurrentApiUrl();
 		setDefaultCurrentApiKey();
-		setDefaultCurrentTemperature();
-		setDefaultCurrentUseSystemMessage();
+		setDefaultCurrentJsonOverrides();
 		setDefaultCurrentUseStreaming();
+		setDefaultCurrentUseSystemMessage();
+		setDefaultCurrentUseDeveloperMessage();
 		setDefaultBookmarkedApiSettings();
 		setDefaultChatConversation();
 		setDefaultUserMessageHistory();
@@ -100,10 +101,18 @@ public class PreferenceInitializer extends AbstractPreferenceInitializer {
 	}
 
 	/**
-	 * Sets the default currently selected temperature setting in the preference store.
+	 * Sets the default JSON overrides setting in the preference store.
 	 */
-	private void setDefaultCurrentTemperature() {
-		Preferences.getDefault().setDefault(PreferenceConstants.CURRENT_TEMPERATURE, Constants.DEFAULT_TEMPERATURE);
+	private void setDefaultCurrentJsonOverrides() {
+		Preferences.getDefault().setDefault(PreferenceConstants.CURRENT_JSON_OVERRIDES,
+				Constants.DEFAULT_JSON_OVERRIDES);
+	}
+
+	/**
+	 * Sets the default currently selected streaming flag setting in the preference store.
+	 */
+	private void setDefaultCurrentUseStreaming() {
+		Preferences.getDefault().setDefault(PreferenceConstants.CURRENT_USE_STREAMING, Constants.DEFAULT_USE_STREAMING);
 	}
 
 	/**
@@ -115,10 +124,11 @@ public class PreferenceInitializer extends AbstractPreferenceInitializer {
 	}
 
 	/**
-	 * Sets the default currently selected streaming flag setting in the preference store.
+	 * Sets the default currently selected developer message flag setting in the preference store.
 	 */
-	private void setDefaultCurrentUseStreaming() {
-		Preferences.getDefault().setDefault(PreferenceConstants.CURRENT_USE_STREAMING, Constants.DEFAULT_USE_STREAMING);
+	private void setDefaultCurrentUseDeveloperMessage() {
+		Preferences.getDefault().setDefault(PreferenceConstants.CURRENT_USE_DEVELOPER_MESSAGE,
+				Constants.DEFAULT_USE_DEVELOPER_MESSAGE);
 	}
 
 	/**

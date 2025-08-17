@@ -9,18 +9,20 @@ public class BookmarkedApiSettings implements Serializable, Comparable<Bookmarke
 	private String modelName;
 	private String apiUrl;
 	private String apiKey;
-	private double temperature;
-	private boolean useSystemMessage;
+	private String jsonOverrides;
 	private boolean useStreaming;
+	private boolean useSystemMessage;
+	private boolean useDeveloperMessage;
 
-	public BookmarkedApiSettings(String modelName, String apiUrl, String apiKey, double temperature,
-			boolean useSystemMessage, boolean useStreaming) {
+	public BookmarkedApiSettings(String modelName, String apiUrl, String apiKey, String jsonOverrides,
+			boolean useStreaming, boolean useSystemMessage, boolean useDeveloperMessage) {
 		this.modelName = modelName;
 		this.apiUrl = apiUrl;
 		this.apiKey = apiKey;
-		this.temperature = temperature;
-		this.useSystemMessage = useSystemMessage;
+		this.jsonOverrides = jsonOverrides;
 		this.useStreaming = useStreaming;
+		this.useSystemMessage = useSystemMessage;
+		this.useDeveloperMessage = useDeveloperMessage;
 	}
 
 	public String getModelName() { return modelName; }
@@ -32,14 +34,17 @@ public class BookmarkedApiSettings implements Serializable, Comparable<Bookmarke
 	public String getApiKey() { return apiKey; }
 	public void setApiKey(String apiKey) { this.apiKey = apiKey; }
 
-	public double getTemperature() { return temperature; }
-	public void setTemperature(double temperature) { this.temperature = temperature; }
+	public String getJsonOverrides() { return jsonOverrides; }
+	public void setJsonOverrides(String jsonOverrides) { this.jsonOverrides = jsonOverrides; }
+
+	public boolean getUseStreaming() { return useStreaming; }
+	public void setUseStreaming(boolean useStreaming) { this.useStreaming = useStreaming; }
 
 	public boolean getUseSystemMessage() { return useSystemMessage; }
 	public void setUseSystemMessage(boolean useSystemMessage) { this.useSystemMessage = useSystemMessage; }
 
-	public boolean getUseStreaming() { return useStreaming; }
-	public void setUseStreaming(boolean useStreaming) { this.useStreaming = useStreaming; }
+	public boolean getUseDeveloperMessage() { return useDeveloperMessage; }
+	public void setUseDeveloperMessage(boolean useDeveloperMessage) { this.useDeveloperMessage = useDeveloperMessage; }
 
 	@Override
 	public int compareTo(BookmarkedApiSettings other) {
@@ -53,14 +58,17 @@ public class BookmarkedApiSettings implements Serializable, Comparable<Bookmarke
 		int keyCompare = this.apiKey.compareTo(other.apiKey);
 		if (keyCompare != 0) return keyCompare;
 
-		int temperatureCompare = Double.compare(this.temperature, other.temperature);
-		if (temperatureCompare != 0) return temperatureCompare;
+		int jsonOverridesCompare = this.jsonOverrides.compareTo(other.jsonOverrides);
+		if (jsonOverridesCompare != 0) return jsonOverridesCompare;
+
+		int useStreamingCompare = Boolean.compare(this.useStreaming, other.useStreaming);
+		if (useStreamingCompare != 0) return useStreamingCompare;
 
 		int useSystemMessageCompare = Boolean.compare(this.useSystemMessage, other.useSystemMessage);
 		if (useSystemMessageCompare != 0) return useSystemMessageCompare;
 
-		int useStreamingCompare = Boolean.compare(this.useStreaming, other.useStreaming);
-		if (useStreamingCompare != 0) return useStreamingCompare;
+		int useDeveloperMessageCompare = Boolean.compare(this.useDeveloperMessage, other.useDeveloperMessage);
+		if (useDeveloperMessageCompare != 0) return useDeveloperMessageCompare;
 
 		return 0;
 	}
@@ -73,14 +81,15 @@ public class BookmarkedApiSettings implements Serializable, Comparable<Bookmarke
 		return Objects.equals(modelName, other.modelName)
 				&& Objects.equals(apiUrl, other.apiUrl)
 				&& Objects.equals(apiKey, other.apiKey)
-				&& (Double.compare(temperature, other.temperature) == 0)
+				&& Objects.equals(jsonOverrides, other.jsonOverrides)
+				&& (Boolean.compare(useStreaming, other.useStreaming) == 0)
 				&& (Boolean.compare(useSystemMessage, other.useSystemMessage) == 0)
-				&& (Boolean.compare(useStreaming, other.useStreaming) == 0);
+				&& (Boolean.compare(useDeveloperMessage, other.useDeveloperMessage) == 0);
 	}
 
 	@Override
 	public int hashCode() {
-		return Objects.hash(modelName, apiUrl, apiKey, temperature, useSystemMessage, useStreaming);
+		return Objects.hash(modelName, apiUrl, apiKey, jsonOverrides, useStreaming, useSystemMessage, useDeveloperMessage);
 	}
 
 }
