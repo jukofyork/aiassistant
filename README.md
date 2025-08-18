@@ -7,8 +7,10 @@ An AI-powered coding assistant plugin for the Eclipse IDE based on a fork of Woj
 - [Features](#features)
 - [System Requirements](#system-requirements)
 - [Installation](#installation)
-  - [Prerequisites](#prerequisites)
-  - [Installing from Source](#installing-from-source)
+  - [Plugin Installation](#plugin-installation)
+  - [From Source](#from-source)
+    - [Prerequisites](#prerequisites)
+    - [Building](#building)
 - [Quick Start](#quick-start)
 - [Initial Setup](#initial-setup)
   - [Opening the AI Assistant View](#opening-the-ai-assistant-view)
@@ -76,7 +78,20 @@ An AI-powered coding assistant plugin for the Eclipse IDE based on a fork of Woj
 
 ## Installation
 
-### Prerequisites
+### Plugin Installation
+
+1. **Download the latest release**:
+   - Go to the [Releases page](https://github.com/jukofyork/aiassistant/releases)
+   - Download [eclipse.plugin.aiassistant_1.0.0.jar](https://github.com/jukofyork/aiassistant/releases/download/v1.0.0/eclipse.plugin.aiassistant_1.0.0.jar)
+
+2. **Install the plugin**:
+   - Copy the JAR file to your Eclipse `dropins` folder (usually `eclipse/dropins/`)
+   - Restart Eclipse
+   - The plugin will be automatically detected and installed
+
+### From Source
+
+#### Prerequisites
 
 1. **Eclipse PDE (Plug-in Development Environment)**:
    - Go to Help → Eclipse Marketplace
@@ -88,7 +103,7 @@ An AI-powered coding assistant plugin for the Eclipse IDE based on a fork of Woj
    - Type "EGit - Git Integration for Eclipse" in find textbox to search
    - Install "EGit - Git Integration for Eclipse X.X.X"
 
-### Installing from Source
+#### Building
 
 1. **Import the project from GitHub**:
    - Go to: *File → Import → Git → Projects from Git*
