@@ -306,6 +306,12 @@ For code blocks marked as `diff`, use Eclipse's built-in patch application:
 
 ![Apply Patch Wizard](website/apply-patch-wizard.png?raw=true)
 
+If any hunks fail to match, you'll get a warning notification that can be pasted back to the AI to help diagnose the problem:
+
+![Failed Patch Example](/website/failed-patch.png?raw=true)
+
+You can either partially apply the successful hunks or ask for a complete redo depending on your choice in the patch wizard.
+
 ## Git Integration
 
 ### Team Context Menu
