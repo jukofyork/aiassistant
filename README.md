@@ -24,7 +24,7 @@ An AI-powered coding assistant plugin for the Eclipse IDE based on a fork of Woj
     - [Spell Checking](#spell-checking)
     - [Context Menu](#context-menu)
   - [Button Bar](#button-bar)
-- [Navigation & Shortcuts](#navigation-shortcuts)
+- [Navigation & Shortcuts](#navigation--shortcuts)
   - [Keyboard Shortcuts](#keyboard-shortcuts)
   - [Mouse Navigation](#mouse-navigation)
 - [Code Analysis Features](#code-analysis-features)
@@ -44,10 +44,10 @@ An AI-powered coding assistant plugin for the Eclipse IDE based on a fork of Woj
   - [Conversation Management](#conversation-management)
 - [Customisation](#customisation)
   - [Prompt Template System](#prompt-template-system)
-  - [JSON/TOML Overrides](#json-toml-overrides)
+  - [JSON/TOML Overrides](#jsontoml-overrides)
   - [UI Preferences](#ui-preferences)
 - [Troubleshooting](#troubleshooting)
-  - [Blank/Grey Browser Widget](#blank-grey-browser-widget)
+  - [Blank/Grey Browser Widget](#blankgrey-browser-widget)
   - [Common Issues](#common-issues)
 - [Security Considerations](#security-considerations)
 - [FAQ](#faq)
@@ -327,13 +327,17 @@ The AI can also analyse file-level Git differences using the right-click context
 
 Right-click in the chat area for additional options:
 
-![Chat Context Menu](website/chat-context-menu.png?raw=true)
+![Chat Context Menu Paste](website/chat-context-menu.png?raw=true)
 
 - **Copy**: Copy selected text to clipboard
 - **Replace Selection**: Replace editor selection with chat text
 - **Review Changes**: Compare chat text with editor selection
 - **Paste To Message**: Add clipboard content as message
 - **Paste As Context**: Add clipboard content as context
+
+The first three options are only enabled when a section of code is selected. These trigger the same action as the buttons, but for the selected section of code only:
+
+![Chat Context Menu Select](website/chat-area-selection-menu.png)
 
 ## Advanced Features
 
