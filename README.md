@@ -57,7 +57,7 @@ An AI-powered coding assistant plugin for the Eclipse IDE based on a fork of Woj
 
 ## Features
 
-- **Multiple AI Provider Support**: Works with OpenAI, OpenRouter, Ollama, llama.cpp, and other OpenAI-compatible APIs
+- **Multiple AI Provider Support**: Works with OpenAI, OpenRouter, Ollama, and other OpenAI-compatible APIs
 - **Advanced Code Analysis**: Comprehensive code review, explanation, debugging, and optimization capabilities
 - **Interactive Code Blocks**: Copy, replace, and review code changes directly from AI responses
 - **Git Integration**: Analyse diffs and generate commit messages from staged changes
@@ -163,8 +163,9 @@ Use the bookmarked settings table to quickly switch between different AI provide
 
 The main chat area displays conversations between you and the AI assistant. Messages are color-coded:
 - **User messages**: Darker background
-- **Assistant responses**: Lighter background  
-- **Notifications**: System messages and status updates
+- **Assistant responses**: Lighter background (darker for collapsible thinking blocks)
+- **Code blocks**: Black background with syntax highlighting based on the detected language
+- **Notifications**: Red background for errors/warnings and blue background for status updates
 
 ### User Input Area
 
@@ -221,7 +222,7 @@ The **Right-click** context menu provides standard text editing operations inclu
 
 - **Ctrl+Scroll**: Navigate to top/bottom of conversation
 - **Shift+Scroll**: Navigate between messages
-- **Shift+Hold**: Highlight current message while scrolling
+- **Shift+Hold**: Highlight current message with a blue border whilst scrolling
 
 ## Code Analysis Features
 
@@ -351,9 +352,9 @@ The usage report provides comprehensive information about the API request:
 
 **Token Usage:**
 - **Prompt**: Input tokens consumed with percentage of model's context window used
-- **Reasoning**: Additional reasoning tokens (shown in brackets for reasoning models)
-- **Response**: Output tokens generated with percentage of model's output limit used
 - **Cached**: Cached tokens from previous requests (shown in brackets when available)
+- **Response**: Output tokens generated with percentage of model's output limit used
+- **Reasoning**: Additional reasoning tokens (shown in brackets for reasoning models)
 
 **Cost Analysis:**
 - **Charge**: Total cost for the request with breakdown showing prompt cost + response cost
@@ -431,10 +432,8 @@ Configure advanced API parameters using either JSON or TOML syntax:
 ```
 
 **TOML Examples:**
-```toml
-temperature = 0.7
-max_tokens = 2000
-reasoning_effort = "high"
+```
+temperature = 0.7, max_tokens = 2000, reasoning_effort = "high"
 ```
 
 ### UI Preferences
