@@ -615,7 +615,16 @@ public class OpenAiApiClient {
 		sb.append(label).append(": ").append(tokens).append(" tokens");
 
 		if (maxTokens > 0) {
-			sb.append(String.format(" (%.1f%%)", (tokens * 100.0) / maxTokens));
+			double percent = (tokens * 100.0) / maxTokens;
+			long roundedPercent = Math.round(percent);
+
+			if (roundedPercent == 0 && percent > 0) {
+				// Use 1 significant figure to avoid showing "0%" for tiny non-zero values
+				String formatted = String.format("%.1g", percent);
+				sb.append(" (").append(formatted).append("%)");
+			} else {
+				sb.append(" (").append(roundedPercent).append("%)");
+			}
 		}
 
 		if (additionalInfo != null) {

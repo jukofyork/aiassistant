@@ -107,7 +107,9 @@
 
 /* Define code block styles */
 .chat-bubble.user pre,
-.chat-bubble.assistant pre {
+.chat-bubble.assistant pre,
+.chat-bubble.notification pre,
+.chat-bubble.error pre {
 	background-color: var(--body-bg-color);
 }
 
