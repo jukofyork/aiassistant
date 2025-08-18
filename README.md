@@ -18,7 +18,13 @@ An AI-powered coding assistant plugin for the Eclipse IDE based on a fork of Woj
 - [Main Interface](#main-interface)
   - [Chat Conversation Area](#chat-conversation-area)
   - [User Input Area](#user-input-area)
+    - [Message History Navigation](#message-history-navigation)
+    - [Spell Checking](#spell-checking)
+    - [Context Menu](#context-menu)
   - [Button Bar](#button-bar)
+- [Navigation & Shortcuts](#navigation-shortcuts)
+  - [Keyboard Shortcuts](#keyboard-shortcuts)
+  - [Mouse Navigation](#mouse-navigation)
 - [Code Analysis Features](#code-analysis-features)
   - [Editor Context Menu](#editor-context-menu)
   - [Adding Context](#adding-context)
@@ -29,21 +35,15 @@ An AI-powered coding assistant plugin for the Eclipse IDE based on a fork of Woj
   - [Team Context Menu](#team-context-menu)
   - [Analysing File-Level Git Diffs](#analysing-file-level-git-diffs)
 - [Chat Area Context Menu](#chat-area-context-menu)
-- [Navigation & Shortcuts](#navigation-shortcuts)
-  - [Keyboard Shortcuts](#keyboard-shortcuts)
-  - [Mouse Navigation](#mouse-navigation)
 - [Advanced Features](#advanced-features)
   - [Reasoning Model Support](#reasoning-model-support)
+  - [Usage Reports](#usage-reports)
   - [LaTeX Mathematical Content](#latex-mathematical-content)
   - [Conversation Management](#conversation-management)
 - [Customisation](#customisation)
   - [Prompt Template System](#prompt-template-system)
   - [JSON/TOML Overrides](#json-toml-overrides)
   - [UI Preferences](#ui-preferences)
-- [Best Practices](#best-practices)
-  - [Effective Prompting](#effective-prompting)
-  - [Workflow Integration](#workflow-integration)
-  - [Performance Tips](#performance-tips)
 - [Troubleshooting](#troubleshooting)
   - [Blank/Grey Browser Widget](#blank-grey-browser-widget)
   - [Common Issues](#common-issues)
@@ -52,6 +52,7 @@ An AI-powered coding assistant plugin for the Eclipse IDE based on a fork of Woj
 - [Contributing](#contributing)
   - [Architecture](#architecture)
   - [Adding Features](#adding-features)
+- [Credits](#credits)
 - [License](#license)
 
 ## Features
@@ -139,8 +140,8 @@ The plugin supports multiple AI providers with pre-configured examples:
 
 | Provider | Example URL | Notes |
 |----------|-------------|-------|
-| OpenAI | `https://api.openai.com/v1` | Supports all OpenAI models including o1 reasoning models |
-| OpenRouter | `https://openrouter.ai/api/v1` | Access to Anthropic Claude and other models |
+| OpenAI | `https://api.openai.com/v1` | Supports all OpenAI's models including reasoning models |
+| OpenRouter | `https://openrouter.ai/api/v1` | Access to Anthropic's Claude and other models |
 | Ollama | `http://localhost:11434/v1` | Local model hosting |
 | llama.cpp | `http://localhost:8080/v1` | Local model hosting |
 | TabbyAPI | `http://localhost:5000/v1` | Local model hosting |
@@ -167,10 +168,32 @@ The main chat area displays conversations between you and the AI assistant. Mess
 
 ### User Input Area
 
-- **Enter**: Send message and request AI response
-- **Shift+Enter**: Insert newline without sending
-- **Ctrl+Enter**: Send message without requesting immediate response
-- **Arrow buttons**: Navigate through previous messages
+The user input area provides a rich text editing experience with navigation and spell-checking capabilities:
+
+#### Message History Navigation
+
+The yellow arrow buttons on the right side of the input area allow you to navigate through your message history:
+
+![User Input Area Navigation](website/user-input-navigation.png?raw=true)
+
+This feature helps you quickly access and reuse previous prompts without retyping them, and the history is saved between sessions.
+
+#### Spell Checking
+
+The input area includes built-in spell checking that highlights misspelled words with red wavy underlines.
+
+![Spell Check Example](website/user-input-spell-check.png?raw=true)
+
+To correct a misspelled word:
+
+1. **Left-click** on the misspelled word to position your cursor
+2. Select the correct spelling from the suggested alternatives
+
+#### Context Menu
+
+The **Right-click** context menu provides standard text editing operations including Undo, Redo, Cut, Copy, Paste, and Select All:
+
+![Spell Check Example](website/user-input-context-menu.png?raw=true)
 
 ### Button Bar
 
@@ -181,6 +204,24 @@ The main chat area displays conversations between you and the AI assistant. Mess
 - **Import**: Load conversation from JSON file
 - **Export**: Save conversation as JSON or Markdown
 - **Settings**: Open preferences dialog
+
+## Navigation & Shortcuts
+
+### Keyboard Shortcuts
+
+| Shortcut | Action |
+|----------|--------|
+| `Enter` | Send message and request AI response |
+| `Shift+Enter` | Insert newline |
+| `Ctrl+Enter` | Send message without requesting immediate response |
+| `Ctrl+Z` | Undo text changes |
+| `Ctrl+Shift+Z` | Redo text changes |
+
+### Mouse Navigation
+
+- **Ctrl+Scroll**: Navigate to top/bottom of conversation
+- **Shift+Scroll**: Navigate between messages
+- **Shift+Hold**: Highlight current message while scrolling
 
 ## Code Analysis Features
 
@@ -262,7 +303,7 @@ Access Git-specific features through the Team menu:
 
 ### Analysing File-Level Git Diffs
 
-The AI can also analsze file-level Git differences using the right-click context menu:
+The AI can also analyse file-level Git differences using the right-click context menu:
 
 ![Git Diff Analysis](website/file-git-diff.png?raw=true)
 
@@ -278,31 +319,52 @@ Right-click in the chat area for additional options:
 - **Paste To Message**: Add clipboard content as message
 - **Paste As Context**: Add clipboard content as context
 
-## Navigation & Shortcuts
-
-### Keyboard Shortcuts
-
-| Shortcut | Action |
-|----------|--------|
-| `Enter` | Send message and request response |
-| `Shift+Enter` | Insert newline |
-| `Ctrl+Enter` | Send message without response |
-| `Ctrl+Z` | Undo in text input |
-| `Ctrl+Shift+Z` | Redo in text input |
-
-### Mouse Navigation
-
-- **Ctrl+Scroll**: Navigate to top/bottom of conversation
-- **Shift+Scroll**: Navigate between messages
-- **Shift+Hold**: Highlight current message while scrolling
-
 ## Advanced Features
 
 ### Reasoning Model Support
 
-Special support for OpenAI's o1 reasoning models with collapsible thinking blocks:
+Special support for reasoning models with collapsible thinking blocks:
 
 ![Thinking Blocks Example](website/thinking-blocks-example.png?raw=true)
+
+When using reasoning models (such as `o3`, `deepseek-reasoner`, `claude-sonnet-4`, and similar models), the AI Assistant automatically detects and displays the model's internal reasoning process in collapsible "Thinking..." blocks. These blocks contain the step-by-step reasoning that the model performs before providing its final answer.
+
+**Key Features:**
+
+- **Collapsible Display**: Thinking blocks are shown as collapsible sections that can be expanded or collapsed
+- **Automatic Detection**: The plugin automatically identifies reasoning content via simple `<think>` tags or from `reasoning`/`reasoning_content` sections in the returned response
+- **Clean Conversation History**: Thinking blocks are automatically removed from messages before they're sent back to the AI model, ensuring the conversation history remains clean and focused on the actual dialogue
+
+**NOTE**: Some providers such as OpenAI and Google do not return their reasoning tokens.
+
+### Usage Reports
+
+After each AI response, a detailed usage report is displayed in the notification area:
+
+![Usage Report Example](website/usage-report.png?raw=true)
+
+The usage report provides comprehensive information about the API request:
+
+**Model Information:**
+- **Model**: The exact model name used for the request
+- **Finish**: Reason the response ended (`stop`, `length`, `content_filter`, etc.)
+
+**Token Usage:**
+- **Prompt**: Input tokens consumed with percentage of model's context window used
+- **Reasoning**: Additional reasoning tokens (shown in brackets for reasoning models)
+- **Response**: Output tokens generated with percentage of model's output limit used
+- **Cached**: Cached tokens from previous requests (shown in brackets when available)
+
+**Cost Analysis:**
+- **Charge**: Total cost for the request with breakdown showing prompt cost + response cost
+- Uses cents (￠) for amounts under $1.00 and dollars (＄) for larger amounts
+- Cost data may not be available for all models/providers
+
+**Availability Notes:**
+- Token percentages require model context limits to be known
+- Reasoning tokens only appear for reasoning-capable models
+- Cached tokens depend on provider support for prompt caching
+- Cost information requires pricing data in the model database
 
 ### LaTeX Mathematical Content
 
@@ -384,29 +446,6 @@ Customize interface settings:
 - **Streaming**: Enable/disable real-time response streaming
 - **Message Types**: Choose between System and Developer messages
 
-## Best Practices
-
-### Effective Prompting
-
-1. **Be Specific**: Provide clear context about what you want to achieve
-2. **Use Selections**: Select relevant code portions rather than entire files
-3. **Add Context**: Use "Add As Context" for background information
-4. **Iterate**: Use "Discuss" for follow-up questions and refinements
-
-### Workflow Integration
-
-1. **Code Review**: Use before committing changes
-2. **Learning**: Use "Explain" on unfamiliar code patterns  
-3. **Debugging**: Combine with Eclipse's error detection
-4. **Documentation**: Generate comments and documentation regularly
-
-### Performance Tips
-
-- Clear conversation history periodically for large projects
-- Use streaming responses for better perceived performance
-- Configure appropriate timeouts for your network conditions
-- Bookmark frequently used API configurations
-
 ## Troubleshooting
 
 ### Blank/Grey Browser Widget
@@ -448,12 +487,15 @@ start eclipse.exe
 ## FAQ
 
 **Q: Can I use this plugin offline?**
+
 A: Yes, with local providers like Ollama or llama.cpp.
 
 **Q: How do I switch between different AI models quickly?**
+
 A: Use the bookmarked API settings feature to save and switch between configurations.
 
 **Q: Can I customise the prompts?**
+
 A: Yes, all prompts are fully customisable through the Prompt Templates preferences page.
 
 ## Contributing
@@ -472,8 +514,13 @@ The plugin follows Eclipse's standard architecture:
 2. **Browser Functions**: Extend `DisableableBrowserFunction` for new interactions
 3. **Context Variables**: Modify `Context` class to add new template variables
 
+## Credits
+
+- [Wojciech Gradkowski](https://github.com/gradusnikov) for the original [AssistAI](https://github.com/gradusnikov/eclipse-chatgpt-plugin) project that this plugin is based on
+- The [Highlight.js](https://github.com/highlightjs/highlight.js) team for code block syntax highlighting
+- The [MathJax](https://github.com/mathjax/MathJax) team for the mathematical notation rendering
+- The [LiteLLM](https://github.com/BerriAI/litellm) team for the [model_prices_and_context_window.json](https://raw.githubusercontent.com/BerriAI/litellm/main/model_prices_and_context_window.json) file this project uses to calculate the API charges and context windows for the usage reports
+
 ## License
 
-MIT License - See [LICENSE](LICENSE) for details.
-
-This project maintains the same license as the original [AssistAI](https://github.com/gradusnikov/eclipse-chatgpt-plugin) project by Wojciech Gradkowski.
+The MIT License is inherited from Wojciech Gradkowski's original [AssistAI](https://github.com/gradusnikov/eclipse-chatgpt-plugin) project - see [LICENSE](LICENSE) for details.
