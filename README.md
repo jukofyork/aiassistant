@@ -82,7 +82,7 @@ An AI-powered coding assistant plugin for the Eclipse IDE based on a fork of Woj
 
 1. **Download the latest release**:
    - Go to the [Releases page](https://github.com/jukofyork/aiassistant/releases)
-   - Download [eclipse.plugin.aiassistant_1.0.0.jar](https://github.com/jukofyork/aiassistant/releases/download/v1.0.0/eclipse.plugin.aiassistant_1.0.0.jar)
+   - Download the latest `eclipse.plugin.aiassistant_X.X.X.jar` file from the most recent release
 
 2. **Install the plugin**:
    - Copy the JAR file to your Eclipse `dropins` folder (usually `eclipse/dropins/`)
