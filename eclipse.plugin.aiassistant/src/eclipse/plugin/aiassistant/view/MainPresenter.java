@@ -4,7 +4,6 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.Stack;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
@@ -14,11 +13,9 @@ import org.eclipse.core.runtime.IStatus;
 import org.eclipse.jface.util.IPropertyChangeListener;
 import org.eclipse.jface.util.PropertyChangeEvent;
 import org.eclipse.swt.SWT;
-import org.eclipse.swt.widgets.FileDialog;
 import org.eclipse.ui.IWorkbench;
 import org.eclipse.ui.IWorkbenchListener;
 
-import eclipse.plugin.aiassistant.Constants;
 import eclipse.plugin.aiassistant.Logger;
 import eclipse.plugin.aiassistant.chat.ChatConversation;
 import eclipse.plugin.aiassistant.chat.ChatMessage;
@@ -34,36 +31,33 @@ import eclipse.plugin.aiassistant.utility.Eclipse;
 
 /**
  * The MainPresenter class is responsible for managing the main view and its
- * interactions with the chat conversation. It also handles user interactions
- * such as sending messages, undoing actions, clearing the chat, and stopping
- * the current process.
+ * interactions with the chat conversation. It handles user interactions
+ * such as sending messages, navigation, undo/redo actions, clearing the chat,
+ * file import/export, and managing the current process state.
  */
 public class MainPresenter {
 
 	private final static UUID SCROLLED_TO_TOP = new UUID(0, 0); // At top, before the first message.
 	private final static UUID SCROLLED_TO_BOTTOM = new UUID(-1, -1); // at bottom, beyond the last message.
 
-	private final ChatConversation chatConversation;
 	private final OpenAiApiClient openAiApiClient;
 	private final StreamingChatProcessorJob sendConversationJob;
-	private final Stack<ChatConversation> redoStack;
 
+	private final ChatConversation chatConversation;
 	private UserMessageHistory userMessageHistory;
 
 	// Used for scrolling through messages using Shift+Scrollwheel combo.
 	private UUID currentlyScrolledToMessageId = SCROLLED_TO_BOTTOM;
 
 	/**
-	 * Initializes the MainPresenter by setting up a new StreamingChatProcessorJob.
-	 * It also sets up a log listener to display
-	 * notification messages and a property change listener to handle font size
-	 * changes and model selection.
+	 * Initializes the MainPresenter by setting up the chat conversation, API client,
+	 * and streaming job. It also sets up listeners for log messages, property changes
+	 * (font size), and application shutdown to ensure proper state management.
 	 */
 	public MainPresenter() {
 		chatConversation = new ChatConversation();
 		openAiApiClient = new OpenAiApiClient();
 		sendConversationJob = new StreamingChatProcessorJob(this, openAiApiClient, chatConversation);
-		redoStack = new Stack<>();
 		userMessageHistory = new UserMessageHistory();
 		setupLogListener();
 		setupPropertyChangeListener();
@@ -75,7 +69,7 @@ public class MainPresenter {
 	 */
 	public void onScrollToTop() {
 		currentlyScrolledToMessageId = SCROLLED_TO_TOP;
-		performOnMainView(mainView -> {
+		performOnMainViewAsync(mainView -> {
 			mainView.getChatMessageArea().scrollToTop();
 		});
 	}
@@ -85,7 +79,7 @@ public class MainPresenter {
 	 */
 	public void onScrollToBottom() {
 		currentlyScrolledToMessageId = SCROLLED_TO_BOTTOM;
-		performOnMainView(mainView -> {
+		performOnMainViewAsync(mainView -> {
 			mainView.getChatMessageArea().scrollToBottom();
 		});
 	}
@@ -106,7 +100,7 @@ public class MainPresenter {
 				onScrollToTop();
 			} else {
 				currentlyScrolledToMessageId = message.getId();
-				performOnMainView(mainView -> {
+				performOnMainViewAsync(mainView -> {
 					mainView.getChatMessageArea().scrollToMessage(currentlyScrolledToMessageId);
 				});
 			}
@@ -129,7 +123,7 @@ public class MainPresenter {
 				onScrollToBottom();
 			} else {
 				currentlyScrolledToMessageId = message.getId();
-				performOnMainView(mainView -> {
+				performOnMainViewAsync(mainView -> {
 					mainView.getChatMessageArea().scrollToMessage(currentlyScrolledToMessageId);
 				});
 			}
@@ -141,7 +135,7 @@ public class MainPresenter {
 	 * key is pressed.
 	 */
 	public void onShiftKeyPressed() {
-		performOnMainView(mainView -> {
+		performOnMainViewAsync(mainView -> {
 			if (chatConversation.contains(currentlyScrolledToMessageId)) {
 				mainView.getChatMessageArea().setSelectionBorder(currentlyScrolledToMessageId);
 			}
@@ -152,7 +146,7 @@ public class MainPresenter {
 	 * Removes all selection borders when the Shift key is released.
 	 */
 	public void onShiftKeyReleased() {
-		performOnMainView(mainView -> {
+		performOnMainViewAsync(mainView -> {
 			mainView.getChatMessageArea().removeAllSelectionBorders();
 		});
 	}
@@ -164,9 +158,7 @@ public class MainPresenter {
 	public void onUpArrowClick() {
 		String previousUserMessage = userMessageHistory.getPreviousMessage();
 		if ((previousUserMessage != null)) {
-			performOnMainView(mainView -> {
-				mainView.getUserInputArea().setText(previousUserMessage);
-			});
+			setUserInputText(previousUserMessage);
 		}
 	}
 
@@ -176,176 +168,136 @@ public class MainPresenter {
 	 * a new message.
 	 */
 	public void onDownArrowClick() {
+		// NOTE: If no next message then a new blank will be added beyond the end.
 		String nextUserMessage = userMessageHistory.getNextMessage();
-		if (nextUserMessage != null) {
-			performOnMainView(mainView -> {
-				mainView.getUserInputArea().setText(nextUserMessage);
-			});
-		} else {
-			performOnMainView(mainView -> {
-				mainView.getUserInputArea().setText(""); // New blank beyond the end.
-			});
-		}
+		setUserInputText(nextUserMessage != null ? nextUserMessage : "");
 	}
 
 	/**
-	 * Undoes the last action in the chat conversation. It also updates the view to
-	 * reflect the changes.
-	 */
-	public void onUndo() {
-		if (!chatConversation.isEmpty()) {
-			onStop(); // Not really needed as we block undo button now when running...
-			ChatConversation removedConversation = chatConversation.undo();
-			if (!removedConversation.isEmpty()) {
-				redoStack.push(removedConversation);
-			}
-			performOnMainView(mainView -> {
-				for (ChatMessage message : removedConversation.messages()) {
-					mainView.getChatMessageArea().removeMessage(message.getId());
-				}
-			});
-			onScrollToBottom();
-		}
-		performOnMainView(mainView -> {
-			mainView.updateButtonStates();
-		});
-	}
-
-	/**
-	 * Redoes the last undone action in the chat conversation. It also updates the view to
-	 * reflect the changes.
-	 */
-	public void onRedo() {
-		if (!redoStack.isEmpty()) {
-			onStop(); // Stop any running operations
-			ChatConversation conversationToRestore = redoStack.pop();
-
-			// Save the current redo stack state
-			Stack<ChatConversation> savedRedoStack = new Stack<>();
-			savedRedoStack.addAll(redoStack);
-
-			restoreConversation(conversationToRestore);
-
-			// Restore the redo stack state
-			redoStack.clear();
-			redoStack.addAll(savedRedoStack);
-		}
-		performOnMainView(mainView -> {
-			mainView.updateButtonStates();
-		});
-	}
-
-	/**
-	 * Clears the entire chat conversation. It also updates the view to reflect the
-	 * changes.
+	 * Clears the entire chat conversation and stops any running operations.
+	 * Updates the view synchronously to avoid operation ordering issues.
 	 */
 	public void onClear() {
 		if (!chatConversation.isEmpty()) {
-			onStop(); // Not really needed as we block clear button now when running...
-			ChatConversation clearedConversation = chatConversation.clear();
-			if (!clearedConversation.isEmpty()) {
-				redoStack.push(clearedConversation);
-			}
-			performOnMainView(mainView -> {
-				Eclipse.runOnUIThreadAsync(() -> mainView.getChatMessageArea().initialize());
+			onStop();
+			chatConversation.clear();
+			performOnMainViewSync(mainView -> {
+				mainView.getChatMessageArea().initialize(); // Sync to avoid operation ordering issues
 			});
-			onScrollToBottom();
+			refreshAfterStatusChange();
 		}
-		performOnMainView(mainView -> {
-			mainView.updateButtonStates();
-		});
+	}
+
+	/**
+	 * Undoes the last action in the chat conversation by removing the most recent
+	 * messages and updating the UI to reflect the changes.
+	 */
+	public void onUndo() {
+		if (!chatConversation.isEmpty()) {
+			onStop();
+			Iterable<ChatMessage> removedMessages = chatConversation.undo();
+			performOnMainViewAsync(mainView -> {
+				for (ChatMessage message : removedMessages) {
+					mainView.getChatMessageArea().removeMessage(message.getId());
+				}
+			});
+			refreshAfterStatusChange();
+		}
+	}
+
+	/**
+	 * Redoes the last undone action in the chat conversation. It also updates the view
+	 * to reflect the changes. Hides the UI during update when redoing from an clear
+	 * operation (empty conversation) to avoid flickering when replaying many messages.
+	 */
+	public void onRedo() {
+		if (chatConversation.canRedo()) {
+			onStop(); // Stop any running operations
+			boolean hideUiDuringUpdate = chatConversation.isEmpty(); // Hide UI when redoing from empty (many messages)
+			Iterable<ChatMessage> redoneMessages = chatConversation.redo();
+			replayMessages(redoneMessages, hideUiDuringUpdate);
+		}
 	}
 
 	/**
 	 * Imports a chat conversation from a JSON file. This clears the current conversation
-	 * and undo/redo history.
+	 * and replaces it with the imported conversation and its redo history.
 	 */
 	public void onImport() {
-		FileDialog fileDialog = new FileDialog(Eclipse.getShell(), SWT.OPEN);
-		fileDialog.setText("Import Chat History");
-		fileDialog.setFilterExtensions(new String[] { "*.json", "*.*" });
-		fileDialog.setFilterNames(new String[] { "JSON Files (*.json)", "All Files (*.*)" });
+		String filePath = Eclipse.showFileDialog(SWT.OPEN, "Import Chat History",
+				new String[] { "*.json", "*.*" },
+				new String[] { "JSON Files (*.json)", "All Files (*.*)" },
+				null);
 
-		String filePath = fileDialog.open();
-		if (filePath != null) {
-			try {
-				onStop(); // Stop any running operations
+		performFileOperation(filePath, path -> {
+			// Clear current conversation (also stop any running operations)
+			onClear();
 
-				// Clear current conversation
-				chatConversation.clear();
+			// Read and deserialize the file
+			Path pathObj = Paths.get(path);
+			String json = Files.readString(pathObj);
 
-				// Read and deserialize the file
-				Path path = Paths.get(filePath);
-				String json = Files.readString(path);
-				ChatConversation importedConversation = ChatConversation.deserialize(json);
-
-				// Restore the imported conversation (this will clear the redo stack)
-				restoreConversation(importedConversation);
-			} catch (IOException e) {
-				Logger.error("Failed to import chat history: " + e.getMessage());
-			} catch (Exception e) {
-				Logger.error("Failed to import chat history: " + e.getMessage());
-			}
-
-			performOnMainView(mainView -> {
-				mainView.updateButtonStates();
-			});
-			onScrollToBottom();
-		}
+			// Restore the imported conversation and replay to the UI
+			chatConversation.resetTo(ChatConversation.fromJson(json));
+			replayMessages(chatConversation.getMessages(), true);
+		}, "import chat history");
 	}
 
 	/**
-	 * Exports the current chat conversation to a JSON or Markdown file based on the selected file extension.
+	 * Exports the current chat conversation and its redo history to a JSON file.
 	 */
 	public void onExport() {
 		if (!chatConversation.isEmpty()) {
-			FileDialog fileDialog = new FileDialog(Eclipse.getShell(), SWT.SAVE);
-			fileDialog.setText("Export Chat History");
-			fileDialog.setFilterExtensions(new String[] { "*.json", "*.txt", "*.*" });
-			fileDialog.setFilterNames(new String[] { "JSON Files (*.json)", "Text Files (*.txt)", "All Files (*.*)" });
-			fileDialog.setFileName("chat_history.json");
+			String filePath = Eclipse.showFileDialog(SWT.SAVE, "Export Chat History",
+					new String[] { "*.json", "*.*" },
+					new String[] { "JSON Files (*.json)", "All Files (*.*)" },
+					"chat_history.json");
 
-			String filePath = fileDialog.open();
-			if (filePath != null) {
-				try {
-					// Determine format based on file extension
-					if (filePath.toLowerCase().endsWith(".json")) {
-						String json = chatConversation.serialize();
-						Path path = Paths.get(filePath);
-						Files.writeString(path, json);
-					} else {
-						// Export as markdown for .txt or any other extension
-						String markdown = chatConversation.toMarkdown();
-						Path path = Paths.get(filePath);
-						Files.writeString(path, markdown);
-					}
-				} catch (IOException e) {
-					Logger.error("Failed to export chat history: " + e.getMessage());
-				} catch (Exception e) {
-					Logger.error("Failed to export chat history: " + e.getMessage());
-				}
-			}
+			performFileOperation(filePath, path -> {
+				String json = chatConversation.toJson();
+				Path pathObj = Paths.get(path);
+				Files.writeString(pathObj, json);
+			}, "export chat history");
 		}
 	}
 
 	/**
-	 * Cancels all running jobs.
+	 * Exports the current chat conversation to a Markdown file. Only exports
+	 * the USER and ASSISTANT messages, excluding notification messages.
 	 */
-	public void onStop() {
-		sendConversationJob.cancel();
-		performOnMainView(mainView -> {
-			mainView.setInputEnabled(true);
-		});
-		onScrollToBottom();
+	public void onExportMarkdown() {
+		if (!chatConversation.isEmpty()) {
+			String filePath = Eclipse.showFileDialog(SWT.SAVE, "Export Chat History as Markdown",
+					new String[] { "*.txt", "*.md", "*.*" },
+					new String[] { "Text Files (*.txt)", "Markdown Files (*.md)", "All Files (*.*)" },
+					"chat_history.txt");
+
+			performFileOperation(filePath, path -> {
+				String markdown = chatConversation.toMarkdown();
+				Path pathObj = Paths.get(path);
+				Files.writeString(pathObj, markdown);
+			}, "export chat history");
+		}
 	}
 
 	/**
-	 * Checks if there is a conversation with messages.
-	 *
-	 * @return true if there are messages in the conversation, false otherwise
+	 * Cancels the streaming chat processor job and re-enables user input.
 	 */
-	public boolean hasConversation() {
-		return !chatConversation.isEmpty();
+	public void onStop() {
+		sendConversationJob.cancel();
+		performOnMainViewAsync(mainView -> {
+			mainView.setInputEnabled(true);
+		});
+		refreshAfterStatusChange();
+	}
+
+	/**
+	 * Checks if there the conversation is empty
+	 *
+	 * @return true if the conversation is empty, false otherwise
+	 */
+	public boolean isConversationEmpty() {
+		return chatConversation.isEmpty();
 	}
 
 	/**
@@ -354,13 +306,12 @@ public class MainPresenter {
 	 * @return true if redo actions are available, false otherwise
 	 */
 	public boolean canRedo() {
-		return !redoStack.isEmpty();
+		return chatConversation.canRedo();
 	}
 
 	/**
-	 * Saves the current state of the chat conversation, user message history, and redo stack to the preference store.
-	 * This method ensures that the data is saved synchronously on the UI thread to avoid concurrency issues.
-	 * If saving fails due to an IOException, it logs a warning but does not throw an exception.
+	 * Saves the current chat conversation with its redo history and user
+	 * message history to the preference store synchronously on the UI thread.
 	 */
 	public void saveStateToPreferenceStore() {
 		Eclipse.runOnUIThreadSync(new Runnable() {
@@ -381,24 +332,19 @@ public class MainPresenter {
 	}
 
 	/**
-	 * Loads the chat conversation, user message history, and redo stack from the preference store asynchronously.
-	 * Messages are processed based on their designated roles and displayed accordingly.
-	 * If loading fails due to an IOException, initializes new empty objects as fallbacks.
-	 * This method also ensures that the view is scrolled to the bottom after processing.
+	 * Loads the chat conversation with undo/redo history and user message history
+	 * from the preference store. Uses empty message history fallback if loading fails.
 	 */
 	public void loadStateFromPreferenceStore() {
 		Eclipse.runOnUIThreadAsync(new Runnable() {
 			@Override
 			public void run() {
-				ChatConversation tempConversation;
 				try {
-					tempConversation = Preferences.loadChatConversation();
+					// Restore the loaded conversation and replay to the UI
+					chatConversation.resetTo(Preferences.loadChatConversation());
+					replayMessages(chatConversation.getMessages(), true);
 				} catch (IOException e) {
 					Logger.warning("Failed to load chat conversation: " + e.getMessage());
-					tempConversation = new ChatConversation(); // Fallback to an empty conversation
-				}
-				if (!tempConversation.isEmpty()) {
-					restoreConversation(tempConversation);
 				}
 				try {
 					userMessageHistory = Preferences.loadUserMessageHistory();
@@ -411,58 +357,56 @@ public class MainPresenter {
 	}
 
 	/**
-	 * Begins a new message from the assistant. It also updates the view to reflect
-	 * the changes.
+	 * Creates and adds a new empty assistant message to the conversation and disables
+	 * user input to indicate an assistant response is in progress.
 	 *
 	 * @return the newly created ChatMessage
 	 */
 	public ChatMessage beginMessageFromAssistant() {
 		ChatMessage message = new ChatMessage(ChatRole.ASSISTANT);
-		pushNewMessage(message);
-		performOnMainView(mainView -> {
-			mainView.getChatMessageArea().newMessage(message);
+		performOnMainViewAsync(mainView -> {
 			mainView.setInputEnabled(false);
 		});
-		onScrollToBottom();
+		pushMessage(message);
 		return message;
 	}
 
 	/**
-	 * Updates an existing message from the assistant. It also updates the view to
-	 * reflect the changes.
+	 * Updates an existing message from the assistant and maintains scroll position
+	 * if user was already at the bottom.
 	 *
 	 * @param message the message to update
 	 */
 	public void updateMessageFromAssistant(ChatMessage message) {
-		AtomicReference<Boolean> needsScrollToBottom = new AtomicReference<>(false);
-		performOnMainView(mainView -> {
-			boolean wasAtBottom = mainView.getChatMessageArea().isScrollbarAtBottom();
+		AtomicReference<Boolean> wasAtBottom = new AtomicReference<>(false);
+		// NOTE: This needs to be synchronous or otherwise fails to set the flag...
+		performOnMainViewSync(mainView -> {
+			wasAtBottom.set(mainView.getChatMessageArea().isScrollbarAtBottom());
 			mainView.getChatMessageArea().updateMessage(message);
-			if (wasAtBottom && !mainView.getChatMessageArea().isScrollbarAtBottom()) {
-				needsScrollToBottom.set(true);
-			}
 		});
-		if (needsScrollToBottom.get()) {
-			onScrollToBottom();
+		if (wasAtBottom.get()) {
+			currentlyScrolledToMessageId = SCROLLED_TO_BOTTOM;
+			performOnMainViewSync(mainView -> {
+				mainView.getChatMessageArea().scrollToBottom(); // Sync to allow update for next wasAtBottom test
+			});
 		}
 	}
 
 	/**
-	 * Ends a message from the assistant. It also updates the view to reflect the
-	 * changes.
+	 * Completes an assistant message response by re-enabling the user input area.
 	 */
 	public void endMessageFromAssistant() {
-		performOnMainView(mainView -> {
+		performOnMainViewAsync(mainView -> {
 			mainView.setInputEnabled(true);
 		});
 	}
 
 	/**
-	 * Sends a predefined prompt to the chat conversation. If the scheduleReply flag
-	 * is set, it schedules a reply from the assistant.
+	 * Processes a predefined prompt by incorporating current user input as context,
+	 * then sends alternating user and assistant messages. Automatically schedules
+	 * an assistant reply if the prompt ends with a blank assistant message.
 	 *
-	 * @param type          the type of the predefined prompt
-	 * @param scheduleReply whether to schedule a reply from the assistant
+	 * @param type the type of the predefined prompt to process
 	 */
 	public void sendPredefinedPrompt(Prompts type) {
 
@@ -475,8 +419,8 @@ public class MainPresenter {
 		// Perform the substitutions and get the messages (and optional auto-replies).
 		String[] messages = PromptLoader.createPredefinedPromptMessage(type, context);
 
-		// Alternate the messages, scheduling a reply is the last message is a blank
-		// assistant message.
+		// Alternate between user and assistant messages, scheduling a reply if
+		// the last message is a blank assistant message.
 		boolean isUserMessage = true;
 		for (int i = 0; i < messages.length; i++) {
 			if (isUserMessage) {
@@ -490,51 +434,9 @@ public class MainPresenter {
 	}
 
 	/**
-	 * Efficiently restores a conversation to both the conversation and view by recreating the messages.
-	 * For large conversations (>MIN_MESSAGE_COUNT_TO_BLANK messages or >MIN_CONTENT_SIZE_TO_BLANK content),
-	 * disables and hides the chat area during processing to improve performance and prevent UI flickering.
-	 * This method recreates messages through the proper channels to ensure state management.
-	 *
-	 * @param conversation the conversation to restore
-	 */
-	private void restoreConversation(ChatConversation conversation) {
-		// Hide UI during restoration for large conversations to improve performance
-		boolean shouldHideUI = (conversation.size() > Constants.MIN_MESSAGE_COUNT_TO_BLANK)
-				|| (conversation.getContentSize() > Constants.MIN_CONTENT_SIZE_TO_BLANK);
-
-		if (shouldHideUI) {
-			performOnMainView(mainView -> {
-				mainView.getChatMessageArea().setEnabled(false);
-				mainView.getChatMessageArea().setVisible(false);
-			});
-		}
-
-		for (ChatMessage message : conversation.messages()) {
-			switch (message.getRole()) {
-			case USER:
-				sendUserMessage(message.getMessage(), false);
-				break;
-			case ASSISTANT:
-				sendAutoReplyAssistantMessage(message.getMessage());
-				break;
-			case NOTIFICATION:
-				displayNotificationMessage(message.getMessage());
-				break;
-			}
-		}
-
-		if (shouldHideUI) {
-			performOnMainView(mainView -> {
-				mainView.getChatMessageArea().setVisible(true);
-				mainView.getChatMessageArea().scrollToBottom();
-				mainView.getChatMessageArea().setEnabled(true);
-			});
-		}
-	}
-
-	/**
-	 * Sends a user message to the chat conversation and schedules a reply if
-	 * requested.
+	 * Adds a user message to the conversation (if non-blank) and optionally schedules
+	 * an assistant reply. Validates the model status before scheduling and can trigger
+	 * replies for previously buffered messages even when the current message is blank.
 	 *
 	 * @param messageString the message content
 	 * @param scheduleReply whether to schedule a reply from the assistant
@@ -553,11 +455,7 @@ public class MainPresenter {
 		// Don't add blank messages to the chat conversation.
 		if (!messageString.trim().isEmpty()) {
 			ChatMessage message = new ChatMessage(ChatRole.USER, messageString);
-			pushNewMessage(message);
-			performOnMainView(mainView -> {
-				mainView.getChatMessageArea().newMessage(message);
-			});
-			onScrollToBottom();
+			pushMessage(message);
 		}
 
 		// Schedule the reply if we have something to send and asked to.
@@ -569,18 +467,15 @@ public class MainPresenter {
 	}
 
 	/**
-	 * Sends an auto-reply assistant message to the chat conversation.
+	 * Adds a pre-written assistant message to the conversation without triggering
+	 * any API calls or user input validation.
 	 *
 	 * @param messageString the message content
 	 */
 	private void sendAutoReplyAssistantMessage(String messageString) {
 		// TODO: Make more robust against blank messages.
 		ChatMessage autoReplyMessage = new ChatMessage(ChatRole.ASSISTANT, messageString);
-		pushNewMessage(autoReplyMessage);
-		performOnMainView(mainView -> {
-			mainView.getChatMessageArea().newMessage(autoReplyMessage);
-		});
-		onScrollToBottom();
+		pushMessage(autoReplyMessage);
 	}
 
 	/**
@@ -590,45 +485,94 @@ public class MainPresenter {
 	 */
 	private void displayNotificationMessage(String text) {
 		ChatMessage message = new ChatMessage(ChatRole.NOTIFICATION, text);
-		pushNewMessage(message);
-		performOnMainView(mainView -> {
-			mainView.getChatMessageArea().newMessage(message);
-		});
-		onScrollToBottom();
+		pushMessage(message);
 	}
 
 	/**
-	 * Stores the current user input and retrieves it for further processing.
+	 * Captures the current user input text, clears the input field, adds the text
+	 * to message history, and returns it for further processing.
 	 *
-	 * @return the current user input
+	 * @return the captured user input text
 	 */
 	private String storeAndRetrieveUserMessage() {
-		AtomicReference<String> returnText = new AtomicReference<>("");
-		performOnMainView(mainView -> {
-			String currentUserText = mainView.getUserInputArea().getText();
-			userMessageHistory.storeMessage(currentUserText);
-			mainView.getUserInputArea().setText("");
-			returnText.set(currentUserText);
+		AtomicReference<String> currentUserText = new AtomicReference<>("");
+		// NOTE: This needs to be synchronous or otherwise fails to return the text...
+		performOnMainViewSync(mainView -> {
+			currentUserText.set(mainView.getUserInputArea().getText());
 		});
-		return returnText.get();
+		userMessageHistory.storeMessage(currentUserText.get());
+		setUserInputText("");
+		return currentUserText.get();
 	}
 
 	/**
-	 * Adds a new message to the conversation and clears the redo stack.
+	 * Adds a message to the conversation, displays it in the UI, scrolls to the bottom,
+	 * and updates button states.
 	 *
-	 * @param message the message to add
+	 * @param message the message to add and display
 	 */
-	private void pushNewMessage(ChatMessage message) {
+	private void pushMessage(ChatMessage message) {
 		chatConversation.push(message);
-		redoStack.clear();
-		performOnMainView(mainView -> {
+		performOnMainViewAsync(mainView -> {
+			mainView.getChatMessageArea().newMessage(message);
+		});
+		refreshAfterStatusChange();
+	}
+
+	/**
+	 * Replays multiple messages to the UI in sequence. Optionally hides the chat area
+	 * during update to prevent flickering when replaying many messages at once.
+	 *
+	 * @param messages the messages to replay in the UI
+	 * @param hideUiDuringUpdate whether to hide the chat area during the update
+	 */
+	private void replayMessages(Iterable<ChatMessage> messages, boolean hideUiDuringUpdate) {
+		if (hideUiDuringUpdate) {
+			performOnMainViewAsync(mainView -> {
+				mainView.getChatMessageArea().setEnabled(false);
+				mainView.getChatMessageArea().setVisible(false);
+			});
+		}
+		performOnMainViewAsync(mainView -> {
+			for (ChatMessage message : messages) {
+				mainView.getChatMessageArea().newMessage(message);
+			}
+		});
+		refreshAfterStatusChange();
+		if (hideUiDuringUpdate) {
+			performOnMainViewAsync(mainView -> {
+				mainView.getChatMessageArea().setVisible(true);
+				mainView.getChatMessageArea().setEnabled(true);
+			});
+		}
+	}
+
+	/**
+	 * Sets the text in the user input area asynchronously.
+	 *
+	 * @param text the text to set in the user input area
+	 */
+	private void setUserInputText(String text) {
+		performOnMainViewAsync(mainView -> {
+			mainView.getUserInputArea().setText(text);
+		});
+	}
+
+	/**
+	 * Refreshes the UI state after a status change by scrolling to the bottom
+	 * and updating button states to reflect the current conversation state.
+	 */
+	private void refreshAfterStatusChange() {
+		onScrollToBottom();
+		performOnMainViewAsync(mainView -> {
 			mainView.updateButtonStates();
 		});
 	}
 
 	/**
-	 * Initializes a log listener that filters and displays notification messages unless they are cancellation exceptions.
-	 * This method is crucial for providing real-time feedback to the user through the UI.
+	 * Initializes a log listener that filters and displays notification messages
+	 * unless they are cancellation exceptions. This method is crucial for providing
+	 * real-time feedback to the user through the UI.
 	 */
 	private void setupLogListener() {
 		Logger.getDefault().addLogListener(new ILogListener() {
@@ -643,8 +587,9 @@ public class MainPresenter {
 	}
 
 	/**
-	 * Registers a property change listener to handle changes in font size preferences.
-	 * This listener reacts to changes in chat and notification font sizes by clearing the display to apply the new settings immediately.
+	 * Registers a property change listener to handle changes in font size
+	 * preferences. This listener reacts to changes in chat and notification font
+	 * sizes by clearing the display to apply the new settings immediately.
 	 */
 	private void setupPropertyChangeListener() {
 		Preferences.getDefault().addPropertyChangeListener(new IPropertyChangeListener() {
@@ -660,8 +605,9 @@ public class MainPresenter {
 	}
 
 	/**
-	 * Sets up a listener to ensure the chat conversation is saved when the workbench is about to shut down.
-	 * This method guarantees that the current state is preserved across sessions by saving before the application closes.
+	 * Sets up a listener to ensure the chat conversation is saved when the
+	 * workbench is about to shut down. This method guarantees that the current
+	 * state is preserved across sessions by saving before the application closes.
 	 */
 	private void setupShutdownListener() {
 		Eclipse.getWorkbench().addWorkbenchListener(new IWorkbenchListener() {
@@ -679,18 +625,54 @@ public class MainPresenter {
 	}
 
 	/**
-	 * Performs an action on the MainView if it exists.
+	 * Performs an action on the MainView asynchronously if it exists. The action
+	 * is executed on the UI thread without blocking the caller.
 	 *
-	 * This method retrieves the MainView from the application model and performs a
-	 * given action on it. If the MainView does not exist, this method does nothing.
-	 *
-	 * @param action The action to be performed on the MainView. It is a Consumer
-	 *               that accepts a MainView as its parameter.
+	 * @param action the action to be performed on the MainView
 	 */
-	private void performOnMainView(Consumer<MainView> action) {
+	private void performOnMainViewAsync(Consumer<MainView> action) {
 		MainView.findMainView().ifPresent(mainView -> {
-			action.accept(mainView);
+			Eclipse.runOnUIThreadAsync(() -> action.accept(mainView));
 		});
+	}
+
+	/**
+	 * Performs an action on the MainView synchronously if it exists. The action
+	 * is executed on the UI thread and blocks the caller until completion.
+	 *
+	 * @param action the action to be performed on the MainView
+	 */
+	private void performOnMainViewSync(Consumer<MainView> action) {
+		MainView.findMainView().ifPresent(mainView -> {
+			Eclipse.runOnUIThreadSync(() -> action.accept(mainView));
+		});
+	}
+
+	/**
+	 * Functional interface for file operations that can throw IOException.
+	 */
+	@FunctionalInterface
+	private interface FileOperation {
+		void execute(String filePath) throws IOException;
+	}
+
+	/**
+	 * Performs a file operation with standardized error handling.
+	 *
+	 * @param filePath the file path to operate on
+	 * @param operation the file operation to perform
+	 * @param operationName the operation name for error messages
+	 */
+	private void performFileOperation(String filePath, FileOperation operation, String operationName) {
+		if (filePath != null) {
+			try {
+				operation.execute(filePath);
+			} catch (IOException e) {
+				Logger.error("Failed to " + operationName + ": " + e.getMessage());
+			} catch (Exception e) {
+				Logger.error("Failed to " + operationName + ": " + e.getMessage());
+			}
+		}
 	}
 
 }

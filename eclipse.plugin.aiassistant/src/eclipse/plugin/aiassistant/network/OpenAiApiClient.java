@@ -225,33 +225,33 @@ public class OpenAiApiClient {
 			}
 
 			// Add the message history so far.
-			for (ChatMessage message : chatConversation.messagesExcludingLastIfEmpty()) {
-				if (Objects.nonNull(message.getMessage())) {
+			for (ChatMessage message : chatConversation.getMessagesExcludingLastIfEmpty()) {
+				if (Objects.nonNull(message.getContent())) {
 					var jsonMessage = objectMapper.createObjectNode();
-					String messageContent = message.getMessage();
+					ChatRole role = message.getRole();
+					String content = message.getContent();
+					String roleName = role.toString().toLowerCase();
 
 					// Process assistant messages to remove <think> tags and any surrounding whitespace that remains
-					if (message.getRole() == ChatRole.ASSISTANT) {
-						messageContent = messageContent.replaceAll("(?s)<think>.*?</think>\\s*", "");
+					if (role == ChatRole.ASSISTANT) {
+						content = content.replaceAll("(?s)<think>.*?</think>\\s*", "");
 					}
 
 					// If the last role was the same, concatenate this message's text.
 					if (jsonMessages.size() > 0) {
 						var lastMessage = jsonMessages.get(jsonMessages.size() - 1);
-						if (lastMessage.get("role").asText().equals(message.getRole().getRoleName())) {
-							jsonMessage.put("role", message.getRole().getRoleName());
-							jsonMessage.put("content",
-									lastMessage.get("content").asText() + "\n" + messageContent);
+						if (lastMessage.get("role").asText().equals(roleName)) {
+							jsonMessage.put("role", roleName);
+							jsonMessage.put("content", lastMessage.get("content").asText() + "\n" + content);
 							jsonMessages.remove(jsonMessages.size() - 1);
 							jsonMessages.add(jsonMessage);
 						}
 					}
 
 					// If not concatenated above and is user or assistant message, add it.
-					if (jsonMessage.isEmpty()
-							&& (message.getRole() == ChatRole.USER || message.getRole() == ChatRole.ASSISTANT)) {
-						jsonMessage.put("role", message.getRole().getRoleName());
-						jsonMessage.put("content", messageContent);
+					if (jsonMessage.isEmpty() && (role == ChatRole.USER || role == ChatRole.ASSISTANT)) {
+						jsonMessage.put("role", roleName);
+						jsonMessage.put("content", content);
 						jsonMessages.add(jsonMessage);
 					}
 				}

@@ -102,13 +102,13 @@ public class ButtonBarArea {
 			for (int i = 0; i < buttons.size(); i++) {
 				Button button = buttons.get(i);
 				if (button.getText().equals(UNDO_NAME)) {
-					button.setEnabled(mainPresenter.hasConversation());
+					button.setEnabled(!mainPresenter.isConversationEmpty());
 				} else if (button.getText().equals(REDO_NAME)) {
 					button.setEnabled(mainPresenter.canRedo());
 				} else if (button.getText().equals(CLEAR_NAME)) {
-					button.setEnabled(mainPresenter.hasConversation());
+					button.setEnabled(!mainPresenter.isConversationEmpty());
 				} else if (button.getText().equals(EXPORT_NAME)) {
-					button.setEnabled(mainPresenter.hasConversation());
+					button.setEnabled(!mainPresenter.isConversationEmpty());
 				}
 			}
 		});

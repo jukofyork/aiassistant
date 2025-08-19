@@ -128,7 +128,7 @@ public class ChatConversationArea {
 	 * @param message The ChatMessage instance to update.
 	 */
 	public void updateMessage(ChatMessage message) {
-		String html = MarkdownToHtmlConverter.convertMarkdownToHtml(message.getMessage(), message.getRole() == ChatRole.ASSISTANT);
+		String html = MarkdownToHtmlConverter.convertMarkdownToHtml(message.getContent(), message.getRole() == ChatRole.ASSISTANT);
 		String script = browserScriptGenerator.generateUpdateMessageScript(html, message.getId());
 		executeScript(script);
 	}

@@ -88,7 +88,7 @@ public class StreamingChatProcessorJob extends Job implements Subscriber<String>
 	public void onNext(String item) {
 		Objects.requireNonNull(message);
 		Objects.requireNonNull(subscription);
-		message.appendMessage(item);
+		message.appendContent(item);
 		mainPresenter.updateMessageFromAssistant(message);
 		subscription.request(1);
 	}

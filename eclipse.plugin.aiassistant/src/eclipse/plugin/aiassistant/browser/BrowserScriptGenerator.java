@@ -204,7 +204,7 @@ public class BrowserScriptGenerator {
 		} else if (message.getRole() == ChatRole.ASSISTANT) {
 			cssClass += "assistant";
 		} else if (message.getRole() == ChatRole.NOTIFICATION) {
-			if (message.getMessage().startsWith("WARNING:") || message.getMessage().startsWith("ERROR:")) {
+			if (message.getContent().startsWith("WARNING:") || message.getContent().startsWith("ERROR:")) {
 				cssClass += "error";
 			} else {
 				cssClass += "notification";

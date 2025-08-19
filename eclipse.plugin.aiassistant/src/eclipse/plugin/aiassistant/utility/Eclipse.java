@@ -38,6 +38,7 @@ import org.eclipse.swt.layout.GridLayout;
 import org.eclipse.swt.widgets.Button;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Display;
+import org.eclipse.swt.widgets.FileDialog;
 import org.eclipse.swt.widgets.Shell;
 import org.eclipse.ui.IEditorPart;
 import org.eclipse.ui.IWorkbench;
@@ -495,6 +496,28 @@ public class Eclipse {
 			Image newIcon = loadIcon(filename);
 			button.setImage(newIcon);
 		});
+	}
+
+	/**
+	 * Creates and shows a file dialog with the specified parameters.
+	 *
+	 * @param style the dialog style (SWT.OPEN or SWT.SAVE)
+	 * @param title the dialog title
+	 * @param extensions the file extension filters
+	 * @param names the filter names
+	 * @param defaultFileName the default filename (null for OPEN dialogs)
+	 * @return the selected file path, or null if cancelled
+	 */
+	public static String showFileDialog(int style, String title, String[] extensions, String[] names,
+			String defaultFileName) {
+		FileDialog fileDialog = new FileDialog(getShell(), style);
+		fileDialog.setText(title);
+		fileDialog.setFilterExtensions(extensions);
+		fileDialog.setFilterNames(names);
+		if (defaultFileName != null) {
+			fileDialog.setFileName(defaultFileName);
+		}
+		return fileDialog.open();
 	}
 
 	/**

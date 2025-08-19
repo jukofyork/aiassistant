@@ -1,47 +1,140 @@
 package eclipse.plugin.aiassistant.chat;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.Stack;
 import java.util.UUID;
 
-import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.JavaType;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 /**
- * This class represents a chat conversation.
+ * Represents a chat conversation with undo/redo capabilities.
  */
 public class ChatConversation {
 
 	private static final ObjectMapper objectMapper = new ObjectMapper();
 
 	private final Stack<ChatMessage> messages = new Stack<>();
+	private final Stack<List<ChatMessage>> redoStack = new Stack<>();
 
 	/**
-	 * Adds a message to the conversation.
+	 * Adds a message to the conversation and clears any pending redo operations.
+	 * Adding a new message invalidates the redo history since the conversation
+	 * has diverged from the previously undone path.
 	 *
 	 * @param message the message to add
 	 */
 	public synchronized void push(ChatMessage message) {
 		messages.push(message);
+		redoStack.clear();
 	}
 
 	/**
-	 * Checks if the conversation has no messages.
-	 *
-	 * @return true if the conversation is empty, false otherwise
+	 * Clears all messages from the conversation and preserves them for redo.
+	 * The cleared messages can be restored using the redo operation.
 	 */
-	public boolean isEmpty() {
-		return messages.isEmpty();
+	public synchronized void clear() {
+		if (!messages.isEmpty()) {
+			redoStack.push(new ArrayList<>(messages));
+			messages.clear();
+		}
+	}
+
+	/**
+	 * Replaces this conversation's internal state with another conversation's state.
+	 * Clears current messages and redo history, then copies both from 'other'.
+	 */
+	public synchronized void resetTo(ChatConversation other) {
+		messages.clear();
+		for (ChatMessage m : other.messages) {
+			messages.add(m);
+		}
+
+		redoStack.clear();
+		for (List<ChatMessage> group : other.redoStack) {
+			redoStack.add(new ArrayList<>(group));
+		}
+	}
+
+	/**
+	 * Undoes the last conversation turn by removing messages from the conversation
+	 * until reaching a natural break point (user message boundary).
+	 *
+	 * @return the messages that were removed from the conversation, in reverse
+	 *         chronological order (most recent first)
+	 */
+	public synchronized Iterable<ChatMessage> undo() {
+		if (messages.isEmpty()) {
+			return Collections.emptyList();
+		}
+
+		List<ChatMessage> removedMessages = new ArrayList<>();
+
+		while (!messages.isEmpty()) {
+			ChatMessage message = messages.pop();
+			removedMessages.add(message);
+			if (message.getRole() == ChatRole.USER) {
+				break;
+			}
+			if (!messages.isEmpty() && messages.peek().getRole() == ChatRole.USER) {
+				break;
+			}
+		}
+
+		if (!removedMessages.isEmpty()) {
+			List<ChatMessage> reversedMessages = new ArrayList<>(removedMessages);
+			Collections.reverse(reversedMessages);
+			redoStack.push(reversedMessages);
+		}
+
+		return Collections.unmodifiableList(removedMessages);
+	}
+
+	/**
+	 * Restores the most recently undone group of messages.
+	 *
+	 * @return an iterable of the messages that were redone
+	 */
+	public synchronized Iterable<ChatMessage> redo() {
+		if (redoStack.isEmpty()) {
+			return Collections.emptyList();
+		}
+		List<ChatMessage> redoneMessages = redoStack.pop();
+		messages.addAll(redoneMessages);
+		return Collections.unmodifiableList(redoneMessages);
 	}
 
 	/**
 	 * Returns the number of messages in the conversation.
 	 *
-	 * @return the number of messages in the conversation
+	 * @return the total number of messages
 	 */
-	public int size() {
+	public synchronized int size() {
 		return messages.size();
+	}
+
+	/**
+	 * Checks if the conversation contains any messages.
+	 *
+	 * @return true if the conversation is empty, false otherwise
+	 */
+	public synchronized boolean isEmpty() {
+		return messages.isEmpty();
+	}
+
+	/**
+	 * Checks if there are operations that can be redone.
+	 *
+	 * @return true if redo operation is available, false otherwise
+	 */
+	public synchronized boolean canRedo() {
+		return !redoStack.isEmpty();
 	}
 
 	/**
@@ -50,9 +143,9 @@ public class ChatConversation {
 	 * @param id the UUID of the message to check
 	 * @return true if the message exists, false otherwise
 	 */
-	public boolean contains(UUID id) {
+	public synchronized boolean contains(UUID id) {
 		for (ChatMessage message : messages) {
-			if (message.getId().equals(id)) {
+			if (id.equals(message.getId())) {
 				return true;
 			}
 		}
@@ -60,143 +153,27 @@ public class ChatConversation {
 	}
 
 	/**
-	 * Returns the first message in the conversation that is not a notification.
+	 * Returns the total character count of all message content in the conversation.
+	 * This can be used as a heuristic for determining UI optimization needs.
 	 *
-	 *  @return the first message in the conversation, or null if there are no
-	 *         messages
+	 * @return the total number of characters across all messages
 	 */
-	public ChatMessage getFirstMessage() {
+	public synchronized int getNumCharacters() {
+		int numCharacters = 0;
 		for (ChatMessage message : messages) {
-			if (message.getRole() != ChatRole.NOTIFICATION) {
-				return message;
-			}
+			numCharacters += message.getContent().length();
 		}
-		return null;
+		return numCharacters;
 	}
 
 	/**
-	 * Returns the last message in the conversation that is not a notification.
+	 * Determines if there are user messages that haven't been responded to by the assistant.
+	 * Scans backwards from the most recent message to check if a USER message appears before
+	 * an ASSISTANT message, indicating unsent user messages awaiting a response.
 	 *
-	 *  @return the last message in the conversation, or null if there are no
-	 *         messages
+	 * @return true if there are unsent user messages, false otherwise
 	 */
-	public ChatMessage getLastMessage() {
-		for (int i = messages.size() - 1; i >= 0; i--) {
-			if (messages.get(i).getRole() != ChatRole.NOTIFICATION) {
-				return messages.get(i);
-			}
-		}
-		return null;
-	}
-
-	/**
-	 * Returns the message with the next lowest index in the conversation that is not a notification.
-	 *
-	 *  @param id the UUID of the message to find
-	 *  @return the next lowest message in the conversation, or null if there is no
-	 *         such message or no previous message
-	 */
-	public ChatMessage getPreviousMessage(UUID id) {
-		int index = -1;
-		for (int i = 0; i < messages.size(); i++) {
-			if (messages.get(i).getId().equals(id)) {
-				index = i;
-				break;
-			}
-		}
-		for (int i = index - 1; i >= 0; i--) {
-			if (messages.get(i).getRole() != ChatRole.NOTIFICATION) {
-				return messages.get(i);
-			}
-		}
-		return null;
-	}
-
-	/**
-	 * Returns the message with the next highest index in the conversation that is not a notification.
-	 *
-	 *  @param id the UUID of the message to find
-	 *  @return the next highest message in the conversation, or null if there is no
-	 *         such message or no next message
-	 */
-	public ChatMessage getNextMessage(UUID id) {
-		int index = -1;
-		for (int i = 0; i < messages.size(); i++) {
-			if (messages.get(i).getId().equals(id)) {
-				index = i;
-				break;
-			}
-		}
-		for (int i = index + 1; i < messages.size(); i++) {
-			if (messages.get(i).getRole() != ChatRole.NOTIFICATION) {
-				return messages.get(i);
-			}
-		}
-		return null;
-	}
-
-	/**
-	 * Returns an iterable of all messages in the conversation.
-	 *
-	 * @return an iterable of all messages in the conversation
-	 */
-	public Iterable<ChatMessage> messages() {
-		return messages;
-	}
-
-	/**
-	 * Returns an iterable of messages, skipping the last message if it has no content.
-	 * This is primarily used for API calls where empty messages should be excluded.
-	 *
-	 * @return an iterable of the messages suitable for API transmission
-	 */
-	public Iterable<ChatMessage> messagesExcludingLastIfEmpty() {
-		if (!messages.isEmpty() &&
-				(messages.peek().getMessage() == null || messages.peek().getMessage().isEmpty())) {
-			return messages.subList(0, messages.size() - 1);
-		}
-		return messages;
-	}
-
-	/**
-	 * This method undoes the last "conversation interaction". It removes messages
-	 * from the stack until it encounters a user message or when the stack is empty.
-	 *
-	 * @return A ChatConversation containing the removed messages in their original order.
-	 */
-	public ChatConversation undo() {
-		ChatConversation removedConversation = new ChatConversation();
-		while (!messages.isEmpty()) {
-			ChatMessage message = messages.pop();
-			removedConversation.push(message);
-			if (message.getRole() == ChatRole.USER) {
-				break;
-			}
-		}
-		Collections.reverse(removedConversation.messages);
-		return removedConversation;
-	}
-
-	/**
-	 * Clears the conversation and returns the cleared messages.
-	 *
-	 * @return A ChatConversation containing the cleared messages.
-	 */
-	public ChatConversation clear() {
-		ChatConversation clearedConversation = new ChatConversation();
-		clearedConversation.messages.addAll(messages);
-		messages.clear();
-		return clearedConversation;
-	}
-
-	/**
-	 * This method scans backwards through the stack and returns true if it finds an
-	 * USER message, but returns false as soon as it finds an ASSISTANT message or
-	 * reaches the beginning finding a USER message.
-	 *
-	 * @return true if it finds an USER message, false otherwise
-	 */
-	public boolean hasUnsentUserMessages() {
+	public synchronized boolean hasUnsentUserMessages() {
 		for (int i = messages.size() - 1; i >= 0; i--) {
 			ChatMessage message = messages.get(i);
 			if (message.getRole() == ChatRole.USER) {
@@ -210,87 +187,225 @@ public class ChatConversation {
 	}
 
 	/**
-	 * Returns the total character count of all message content in the conversation.
-	 * This can be used as a heuristic for determining UI optimization needs.
+	 * Returns the first non-notification message in the conversation.
+	 * NOTIFICATION messages are skipped as they are internal application messages.
 	 *
-	 * @return the total number of characters across all messages
+	 * @return the first message in the conversation, or null if there are no
+	 *         non-notification messages
 	 */
-	public int getContentSize() {
-		int totalSize = 0;
+	public synchronized ChatMessage getFirstMessage() {
 		for (ChatMessage message : messages) {
-			String messageText = message.getMessage();
-			if (messageText != null) {
-				totalSize += messageText.length();
+			if (message.getRole() != ChatRole.NOTIFICATION) {
+				return message;
 			}
 		}
-		return totalSize;
+		return null;
 	}
 
 	/**
-	 * Converts the conversation to a markdown-formatted string.
-	 * User messages are prefixed with "### USER:" and assistant messages with "### ASSISTANT:".
-	 * Notification messages are skipped.
+	 * Returns the last non-notification message in the conversation.
+	 * NOTIFICATION messages are skipped as they are internal application messages.
 	 *
-	 * @return a markdown-formatted string representation of the conversation
+	 * @return the last message in the conversation, or null if there are no
+	 *         non-notification messages
 	 */
-	public String toMarkdown() {
+	public synchronized ChatMessage getLastMessage() {
+		for (int i = messages.size() - 1; i >= 0; i--) {
+			if (messages.get(i).getRole() != ChatRole.NOTIFICATION) {
+				return messages.get(i);
+			}
+		}
+		return null;
+	}
+
+	/**
+	 * Returns the non-notification message that appears before the specified message.
+	 * NOTIFICATION messages are skipped during navigation.
+	 *
+	 * @param id the UUID of the reference message
+	 * @return the previous non-notification message, or null if the message is not found
+	 *         or there is no previous non-notification message
+	 */
+	public synchronized ChatMessage getPreviousMessage(UUID id) {
+		int index = -1;
+		for (int i = 0; i < messages.size(); i++) {
+			if (id.equals(messages.get(i).getId())) {
+				index = i;
+				break;
+			}
+		}
+		for (int i = index - 1; i >= 0; i--) {
+			if (messages.get(i).getRole() != ChatRole.NOTIFICATION) {
+				return messages.get(i);
+			}
+		}
+		return null;
+	}
+
+	/**
+	 * Returns the non-notification message that appears after the specified message.
+	 * NOTIFICATION messages are skipped during navigation.
+	 *
+	 * @param id the UUID of the reference message
+	 * @return the next non-notification message, or null if the message is not found
+	 *         or there is no next non-notification message
+	 */
+	public synchronized ChatMessage getNextMessage(UUID id) {
+		int index = messages.size();
+		for (int i = 0; i < messages.size(); i++) {
+			if (id.equals(messages.get(i).getId())) {
+				index = i;
+				break;
+			}
+		}
+		for (int i = index + 1; i < messages.size(); i++) {
+			if (messages.get(i).getRole() != ChatRole.NOTIFICATION) {
+				return messages.get(i);
+			}
+		}
+		return null;
+	}
+
+	/**
+	 * Returns an unmodifiable snapshot of all messages.
+	 *
+	 * @return an unmodifiable snapshot list of messages
+	 */
+	public synchronized Iterable<ChatMessage> getMessages() {
+		// Unmodifiable snapshot to avoid concurrent modification after returning
+		return Collections.unmodifiableList(new ArrayList<>(messages));
+	}
+
+	/**
+	 * Returns an iterable of messages, excluding the last message if it has no content.
+	 * This is primarily used for API calls where empty messages should be excluded.
+	 *
+	 * @return an iterable of the messages suitable for API transmission
+	 */
+	public synchronized Iterable<ChatMessage> getMessagesExcludingLastIfEmpty() {
+		if (!messages.isEmpty() && messages.peek().getContent().isEmpty()) {
+			// Snapshot excluding the last (empty) message
+			return Collections.unmodifiableList(new ArrayList<>(messages.subList(0, messages.size() - 1)));
+		}
+		// Full snapshot
+		return Collections.unmodifiableList(new ArrayList<>(messages));
+	}
+
+	/**
+	 * Creates a ChatConversation from a JSON string containing only message data.
+	 * This is a simplified deserialization that only restores the message history,
+	 * not the redo stack. For full state restoration, use {@link #deserialize(String)}.
+	 *
+	 * @param json the JSON string containing a "messages" field with message data
+	 * @return a new ChatConversation with the messages from the JSON
+	 * @throws IOException if the JSON cannot be parsed or the expected structure is missing
+	 */
+	public static ChatConversation fromJson(String json) throws IOException {
+		JsonNode root = objectMapper.readTree(json);
+		ChatConversation conversation = new ChatConversation();
+
+		JavaType stackType =
+				objectMapper.getTypeFactory().constructCollectionType(Stack.class, ChatMessage.class);
+		Stack<ChatMessage> messageStack =
+				objectMapper.convertValue(root.get("messages"), stackType);
+		conversation.messages.addAll(messageStack);
+
+		return conversation;
+	}
+
+	/**
+	 * Converts the conversation's message history to a JSON string.
+	 * This is a simplified serialization that only exports the messages,
+	 * not the redo stack. For full state preservation, use {@link #serialize()}.
+	 *
+	 * @return a JSON string containing the conversation's messages
+	 * @throws IOException if the JSON serialization fails
+	 */
+	public synchronized String toJson() throws IOException {
+		Map<String, Object> data = new HashMap<>();
+		data.put("messages", messages);
+		return objectMapper.writeValueAsString(data);
+	}
+
+	/**
+	 * Exports a transcript view to Markdown (USER and ASSISTANT only; skips NOTIFICATION and empty content).
+	 * Each message is prefixed with "### ROLE:" followed by the content. Messages are separated by a blank line.
+	 *
+	 * @return a markdown-formatted transcript string
+	 */
+	public synchronized String toMarkdown() {
 		StringBuilder markdown = new StringBuilder();
-		boolean first = true;
-
-		for (ChatMessage message : messages) {
-			String content = message.getMessage();
-			if (content == null || content.trim().isEmpty()) {
-				continue; // Skip empty messages
-			}
-
-			switch (message.getRole()) {
-			case USER:
-				if (!first) {
-					markdown.append("\n\n");
-				}
-				markdown.append("### USER:\n\n");
-				markdown.append(content);
-				first = false;
-				break;
-			case ASSISTANT:
-				if (!first) {
-					markdown.append("\n\n");
-				}
-				markdown.append("### ASSISTANT:\n\n");
-				markdown.append(content);
-				first = false;
-				break;
-			case NOTIFICATION:
-				// Skip notification messages as they're internal to the application
-				break;
-			}
+		for (ChatMessage message : getTranscriptMessages()) {
+			markdown.append("### ").append(message.getRole()).append(":\n\n")
+			.append(message.getContent()).append("\n\n");
 		}
-
-		return markdown.toString();
+		return markdown.toString().trim();
 	}
 
 	/**
-	 * Serializes this ChatConversation to a JSON string.
+	 * Serializes the full internal state (messages + redo history) to JSON.
+	 * Intended for persistence across sessions (e.g., preferences), not for user-facing export.
 	 *
-	 * @return a JSON string representing this conversation
-	 * @throws IOException if an input/output exception occurs
+	 * @return a JSON string representing the complete conversation state
+	 * @throws IOException if serialization fails
 	 */
 	public synchronized String serialize() throws IOException {
-		return objectMapper.writeValueAsString(messages);
+		Map<String, Object> data = new HashMap<>();
+		data.put("messages", messages);
+		data.put("redoStack", redoStack);
+		return objectMapper.writeValueAsString(data);
 	}
 
 	/**
-	 * Deserializes a JSON string to a ChatConversation.
+	 * Deserializes a JSON string produced by {@link #serialize()} into a conversation
+	 * with full internal state (messages + redo history).
+	 * Expects both "messages" and "redoStack" fields to be present.
 	 *
-	 * @param json the JSON string representing a conversation
-	 * @return a ChatConversation object
-	 * @throws IOException if an input/output exception occurs
+	 * @param json the JSON string representing a full conversation state
+	 * @return a ChatConversation populated with messages and redo history
+	 * @throws IOException if parsing fails or the expected fields are missing
 	 */
 	public static ChatConversation deserialize(String json) throws IOException {
-		Stack<ChatMessage> messageStack = objectMapper.readValue(json, new TypeReference<Stack<ChatMessage>>() {});
+		JsonNode root = objectMapper.readTree(json);
 		ChatConversation conversation = new ChatConversation();
+
+		JavaType stackType =
+				objectMapper.getTypeFactory().constructCollectionType(Stack.class, ChatMessage.class);
+		Stack<ChatMessage> messageStack =
+				objectMapper.convertValue(root.get("messages"), stackType);
 		conversation.messages.addAll(messageStack);
+
+		JavaType redoStackType =
+				objectMapper.getTypeFactory().constructCollectionType(
+						Stack.class,
+						objectMapper.getTypeFactory().constructCollectionType(List.class, ChatMessage.class));
+		Stack<List<ChatMessage>> redoStackData =
+				objectMapper.convertValue(root.get("redoStack"), redoStackType);
+		conversation.redoStack.addAll(redoStackData);
+
 		return conversation;
+	}
+
+	/**
+	 * Creates a snapshot list of messages suitable for transcript export.
+	 * Filters to USER and ASSISTANT roles, skipping any messages with empty content.
+	 * Order is preserved (chronological as stored).
+	 *
+	 * Thread-safety: must be called while holding this instance's monitor;
+	 * it is only invoked from synchronized methods in this class.
+	 *
+	 * @return a snapshot list of transcript messages
+	 */
+	private List<ChatMessage> getTranscriptMessages() {
+		List<ChatMessage> transcriptMessages = new ArrayList<>();
+		for (ChatMessage message : messages) {
+			if (message.getRole() == ChatRole.USER || message.getRole() == ChatRole.ASSISTANT) {
+				if (!message.getContent().trim().isEmpty()) {
+					transcriptMessages.add(message);
+				}
+			}
+		}
+		return transcriptMessages;
 	}
 
 }
