@@ -102,13 +102,21 @@ public class ChatConversationArea {
 	}
 
 	/**
+	 * Sets whether script execution should be performed asynchronously.
+	 *
+	 * @param enabled True to use asynchronous execution (default), false to use synchronous execution.
+	 */
+	public void setAsyncExecution(boolean enabled) {
+		useAsyncExecution = enabled;
+	}
+
+	/**
 	 * Sets the visible state of the chat conversation area.
 	 *
 	 * @param enabled True to enable, false to disable.
 	 */
 	public void setVisible(boolean enabled) {
 		browser.setVisible(enabled);
-		useAsyncExecution = enabled;
 	}
 
 	/**
@@ -195,22 +203,45 @@ public class ChatConversationArea {
 		executeScript(browserScriptGenerator.generateRemoveAllBordersScript());
 	}
 
+	/**
+	 * Gets the Browser widget instance used for displaying the chat conversation.
+	 *
+	 * @return The Browser widget instance.
+	 */
 	public Browser getBrowser() {
 		return browser;
 	}
 
+	/**
+	 * Handles copying the selected text to the clipboard.
+	 * Uses the copy code browser function to perform the copy operation.
+	 *
+	 * @param selectedText The text that was selected in the browser.
+	 */
 	public void handleCopySelection(String selectedText) {
 		if (!selectedText.isEmpty()) {
 			browserFunctions.get(0).function(new Object[]{selectedText});
 		}
 	}
 
+	/**
+	 * Handles replacing the current selection in the active editor with the selected text.
+	 * Uses the replace selection browser function to perform the replacement.
+	 *
+	 * @param selectedText The text that was selected in the browser to replace with.
+	 */
 	public void handleReplaceSelection(String selectedText) {
 		if (!selectedText.isEmpty()) {
 			browserFunctions.get(1).function(new Object[]{selectedText});
 		}
 	}
 
+	/**
+	 * Handles opening a review dialog for the selected text changes.
+	 * Uses the review changes browser function to show the review interface.
+	 *
+	 * @param selectedText The text that was selected in the browser to review.
+	 */
 	public void handleReviewChanges(String selectedText) {
 		if (!selectedText.isEmpty()) {
 			browserFunctions.get(2).function(new Object[]{selectedText});
@@ -343,6 +374,12 @@ public class ChatConversationArea {
 		}
 	}
 
+	/**
+	 * Executes a JavaScript script in the browser widget.
+	 * The execution mode depends on the useAsyncExecution flag.
+	 *
+	 * @param script The JavaScript code to execute in the browser.
+	 */
 	private void executeScript(String script) {
 		if (useAsyncExecution) {
 			Eclipse.executeScript(browser,script);

@@ -124,11 +124,17 @@ public class MainPresenter {
 			mainView.createNewTab();
 		});
 
-		// Switch to the new tab and replay messages into it
+		// Set current tab top last
 		currentTabIndex = chatConversations.size() - 1;
-		replayMessages(clonedConversation.getMessages(), currentTabIndex, true);
+
+		// Reset the user history
 		userMessageHistory.resetPosition();
-		refreshAfterStatusChange();
+
+		// Schedule the actual replay for 2 seconds in the future
+		// TODO: Find a better way to do this...
+		Eclipse.getDisplay().timerExec(2000, () -> {
+			replayMessages(clonedConversation.getMessages(), currentTabIndex, true);
+		});
 	}
 
 	/**
@@ -389,7 +395,7 @@ public class MainPresenter {
 			boolean hideUiDuringUpdate = getCurrentConversation().isEmpty(); // Hide UI when redoing from empty (many messages)
 			Iterable<ChatMessage> redoneMessages = getCurrentConversation().redo();
 			replayMessages(redoneMessages, currentTabIndex, hideUiDuringUpdate);
-			refreshAfterStatusChange();
+			userMessageHistory.resetPosition();
 		}
 	}
 
@@ -414,7 +420,7 @@ public class MainPresenter {
 			// Restore the imported conversation and replay to the UI
 			getCurrentConversation().copyFrom(ChatConversation.fromJson(json));
 			replayMessages(getCurrentConversation().getMessages(), currentTabIndex, true);
-			refreshAfterStatusChange();
+			userMessageHistory.resetPosition();
 		}, "import chat history");
 	}
 
@@ -527,17 +533,15 @@ public class MainPresenter {
 				}
 			});
 
-			// Schedule so there us a couple of seconds between each tab getting loaded
-			// TODO: Find a less horrible way to do this...
+			// Set current tab top last
+			currentTabIndex = chatConversations.size() - 1;
+
+			// Schedule the actual replay for 5 seconds in the future
+			// TODO: Find a better way to do this...
 			for (int i = 0; i < chatConversations.size(); i++) {
 				final int index = i;
-				int delay_time = (i + 1) * 2000; // First will start after 2s, then 4s, and so on...
-				Eclipse.getDisplay().timerExec(delay_time, () -> {
-					performOnMainViewAsync(mainView -> {
-						mainView.selectTab(index);
-						replayMessages(chatConversations.get(index).getMessages(), index, true);
-						refreshAfterStatusChange();
-					});
+				Eclipse.getDisplay().timerExec(5000, () -> {
+					replayMessages(chatConversations.get(index).getMessages(), index, true);
 				});
 			}
 
@@ -703,8 +707,8 @@ public class MainPresenter {
 	}
 
 	/**
-	 * Adds a message to the conversation, displays it in the UI, scrolls to the bottom,
-	 * and updates button states.
+	 * Adds a message to the conversation and displays it in the UI. Automatically
+	 * scrolls to bottom and updates button states after the change.
 	 *
 	 * @param message the message to add and display
 	 */
@@ -717,30 +721,31 @@ public class MainPresenter {
 	}
 
 	/**
-	 * Replays multiple messages to the UI in sequence. Optionally hides the chat area
-	 * during update to prevent flickering when replaying many messages at once.
+	 * Replays multiple messages to a specific tab's chat area. Temporarily disables
+	 * async execution and optionally hides the UI during replay to prevent flickering.
 	 *
-	 * @param messages the messages to replay in the UI
-	 * @param hideUiDuringUpdate whether to hide the chat area during the update
+	 * @param messages the messages to replay in sequence
+	 * @param tabIndex the target tab for message replay
+	 * @param hideUiDuringUpdate whether to hide the chat area during replay
 	 */
 	private void replayMessages(Iterable<ChatMessage> messages, int tabIndex, boolean hideUiDuringUpdate) {
-		if (hideUiDuringUpdate) {
-			performOnMainViewAsync(mainView -> {
-				mainView.getChatAreaAt(tabIndex).setEnabled(false);
-				mainView.getChatAreaAt(tabIndex).setVisible(false);
-			});
-		}
 		performOnMainViewAsync(mainView -> {
+			mainView.getChatAreaAt(tabIndex).setAsyncExecution(false);
+			mainView.getChatAreaAt(tabIndex).setEnabled(false);
+			if (hideUiDuringUpdate) {
+				mainView.getChatAreaAt(tabIndex).setVisible(false);
+			}
 			for (ChatMessage message : messages) {
 				mainView.getChatAreaAt(tabIndex).newMessage(message);
 			}
-		});
-		if (hideUiDuringUpdate) {
-			performOnMainViewAsync(mainView -> {
+			mainView.getChatAreaAt(tabIndex).scrollToBottom();
+			if (hideUiDuringUpdate) {
 				mainView.getChatAreaAt(tabIndex).setVisible(true);
-				mainView.getChatAreaAt(tabIndex).setEnabled(true);
-			});
-		}
+			}
+			mainView.getChatAreaAt(tabIndex).setEnabled(true);
+			mainView.getChatAreaAt(tabIndex).setAsyncExecution(false);
+			mainView.updateButtonStates();
+		});
 	}
 
 	/**
