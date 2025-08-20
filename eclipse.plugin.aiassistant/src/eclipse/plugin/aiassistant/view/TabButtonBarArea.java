@@ -15,7 +15,7 @@ import org.eclipse.swt.widgets.Label;
 import eclipse.plugin.aiassistant.utility.Eclipse;
 
 /**
- * Manages the tab button bar with previous, next, new tab, refresh, import, export, and close all buttons.
+ * Manages the tab button bar with previous, next, new tab, clone tab, refresh, import, export, and close all buttons.
  */
 public class TabButtonBarArea {
 
@@ -28,13 +28,17 @@ public class TabButtonBarArea {
 	public static final String NEW_TAB_NAME = "";
 	public static final String NEW_TAB_TOOLTIP = "New Tab";
 	public static final String NEW_TAB_ICON = "NewTab.png";
+	public static final String CLONE_TAB_NAME = "";
+	public static final String CLONE_TAB_TOOLTIP = "Clone Tab";
+	public static final String CLONE_TAB_ICON = "CloneTab.png";
 
 	private final MainPresenter mainPresenter;
 
 	private final List<ButtonConfig> buttonConfigs = List.of(
 			new ButtonConfig(PREVIOUS_NAME, PREVIOUS_TOOLTIP, PREVIOUS_ICON, this::onPrevious),
 			new ButtonConfig(NEXT_NAME, NEXT_TOOLTIP, NEXT_ICON, this::onNext),
-			new ButtonConfig(NEW_TAB_NAME, NEW_TAB_TOOLTIP, NEW_TAB_ICON, this::onNewTab));
+			new ButtonConfig(NEW_TAB_NAME, NEW_TAB_TOOLTIP, NEW_TAB_ICON, this::onNewTab),
+			new ButtonConfig(CLONE_TAB_NAME, CLONE_TAB_TOOLTIP, CLONE_TAB_ICON, this::onCloneTab));
 
 	private Composite buttonContainer;
 	private List<Button> buttons;
@@ -123,10 +127,6 @@ public class TabButtonBarArea {
 			if (i == 2) {
 				createSeparator();
 			}
-			// Add separator after new tab/refresh buttons (index 3)
-			if (i == 4) {
-				createSeparator();
-			}
 
 			Button button = Eclipse.createButton(buttonContainer, config.name, config.tooltip, config.filename,
 					new SelectionAdapter() {
@@ -169,6 +169,13 @@ public class TabButtonBarArea {
 	 */
 	private void onNewTab() {
 		mainPresenter.onNewTab();
+	}
+
+	/**
+	 * Handles the 'Clone Tab' button click event by delegating to the main presenter.
+	 */
+	private void onCloneTab() {
+		mainPresenter.onCloneTab();
 	}
 
 	/**

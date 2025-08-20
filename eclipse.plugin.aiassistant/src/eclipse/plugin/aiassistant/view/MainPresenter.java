@@ -111,6 +111,27 @@ public class MainPresenter {
 	}
 
 	/**
+	 * Creates a new chat tab with a copy of the current conversation.
+	 */
+	public void onCloneTab() {
+		// Add a deep copy of the current conversation
+		ChatConversation clonedConversation = new ChatConversation();
+		clonedConversation.copyFrom(getCurrentConversation());
+		chatConversations.add(clonedConversation);
+
+		// Create synchronously to be sure it is there for out replay
+		performOnMainViewSync(mainView -> {
+			mainView.createNewTab();
+		});
+
+		// Switch to the new tab and replay messages into it
+		currentTabIndex = chatConversations.size() - 1;
+		replayMessages(clonedConversation.getMessages(), currentTabIndex, true);
+		userMessageHistory.resetPosition();
+		refreshAfterStatusChange();
+	}
+
+	/**
 	 * Navigates to the previous tab.
 	 */
 	public void onPreviousTab() {
