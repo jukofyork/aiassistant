@@ -93,6 +93,8 @@ public class TabButtonBarArea {
 					button.setEnabled(mainPresenter.getTabCount() > 1);
 				} else if (button.getToolTipText().equals(NEXT_TOOLTIP)) {
 					button.setEnabled(mainPresenter.getTabCount() > 1);
+				} else if (button.getToolTipText().equals(CLONE_TAB_TOOLTIP)) {
+					button.setEnabled(!mainPresenter.isConversationEmpty());
 				}
 			}
 		});
