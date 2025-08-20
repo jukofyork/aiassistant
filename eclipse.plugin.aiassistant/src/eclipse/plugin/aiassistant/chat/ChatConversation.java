@@ -153,20 +153,6 @@ public class ChatConversation {
 	}
 
 	/**
-	 * Returns the total character count of all message content in the conversation.
-	 * This can be used as a heuristic for determining UI optimization needs.
-	 *
-	 * @return the total number of characters across all messages
-	 */
-	public synchronized int getNumCharacters() {
-		int numCharacters = 0;
-		for (ChatMessage message : messages) {
-			numCharacters += message.getContent().length();
-		}
-		return numCharacters;
-	}
-
-	/**
 	 * Determines if there are user messages that haven't been responded to by the assistant.
 	 * Scans backwards from the most recent message to check if a USER message appears before
 	 * an ASSISTANT message, indicating unsent user messages awaiting a response.
