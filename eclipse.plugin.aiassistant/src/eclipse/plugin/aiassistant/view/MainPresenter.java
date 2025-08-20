@@ -40,6 +40,7 @@ public class MainPresenter {
 	private final static UUID SCROLLED_TO_TOP = new UUID(0, 0); // At top, before the first message.
 	private final static UUID SCROLLED_TO_BOTTOM = new UUID(-1, -1); // at bottom, beyond the last message.
 
+	private final MainView mainView;
 	private final OpenAiApiClient openAiApiClient;
 	private final StreamingChatProcessorJob sendConversationJob;
 
@@ -54,7 +55,8 @@ public class MainPresenter {
 	 * and streaming job. It also sets up listeners for log messages, property changes
 	 * (font size), and application shutdown to ensure proper state management.
 	 */
-	public MainPresenter() {
+	public MainPresenter(MainView mainView) {
+		this.mainView = mainView;
 		chatConversation = new ChatConversation();
 		openAiApiClient = new OpenAiApiClient();
 		sendConversationJob = new StreamingChatProcessorJob(this, openAiApiClient, chatConversation);
@@ -631,9 +633,9 @@ public class MainPresenter {
 	 * @param action the action to be performed on the MainView
 	 */
 	private void performOnMainViewAsync(Consumer<MainView> action) {
-		MainView.findMainView().ifPresent(mainView -> {
+		if (!mainView.isDisposed()) {
 			Eclipse.runOnUIThreadAsync(() -> action.accept(mainView));
-		});
+		}
 	}
 
 	/**
@@ -643,9 +645,9 @@ public class MainPresenter {
 	 * @param action the action to be performed on the MainView
 	 */
 	private void performOnMainViewSync(Consumer<MainView> action) {
-		MainView.findMainView().ifPresent(mainView -> {
+		if (!mainView.isDisposed()) {
 			Eclipse.runOnUIThreadSync(() -> action.accept(mainView));
-		});
+		}
 	}
 
 	/**

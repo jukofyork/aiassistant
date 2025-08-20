@@ -37,7 +37,7 @@ public class MainView extends ViewPart {
 	 */
 	@Override
 	public void createPartControl(Composite parent) {
-		mainPresenter = new MainPresenter();
+		mainPresenter = new MainPresenter(this);
 		sashForm = new SashForm(parent, SWT.VERTICAL);
 		mainContainer = createMainContainer(sashForm);
 		chatMessageArea = new ChatConversationArea(mainPresenter, mainContainer);
