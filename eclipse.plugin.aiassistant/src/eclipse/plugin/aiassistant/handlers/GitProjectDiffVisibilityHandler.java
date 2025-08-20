@@ -3,6 +3,7 @@ package eclipse.plugin.aiassistant.handlers;
 import org.eclipse.core.expressions.PropertyTester;
 
 import eclipse.plugin.aiassistant.utility.GitDiff;
+import eclipse.plugin.aiassistant.view.MainView;
 
 /**
  * This class is responsible for handling the visibility of project diff menu items in the Eclipse plugin.
@@ -26,6 +27,9 @@ public class GitProjectDiffVisibilityHandler extends PropertyTester {
 	 */
 	@Override
 	public boolean test(Object receiver, String property, Object[] args, Object expectedValue) {
+		if (!MainView.findMainView().isPresent()) {
+			return false;
+		}
 		try {
 			return GitDiff.isRepositoryAvailable() && !GitDiff.getCurrentProjectStagedDiff().isEmpty();
 		} catch (Exception e) {
