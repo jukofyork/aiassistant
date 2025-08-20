@@ -45,7 +45,7 @@ public class MainPresenter {
 	private final StreamingChatProcessorJob sendConversationJob;
 
 	private final ChatConversation chatConversation;
-	private UserMessageHistory userMessageHistory;
+	private final UserMessageHistory userMessageHistory;
 
 	// Used for scrolling through messages using Shift+Scrollwheel combo.
 	private UUID currentlyScrolledToMessageId = SCROLLED_TO_BOTTOM;
@@ -349,10 +349,9 @@ public class MainPresenter {
 					Logger.warning("Failed to load chat conversation: " + e.getMessage());
 				}
 				try {
-					userMessageHistory = Preferences.loadUserMessageHistory();
+					userMessageHistory.resetTo(Preferences.loadUserMessageHistory());
 				} catch (IOException e) {
 					Logger.warning("Failed to load user message history: " + e.getMessage());
-					userMessageHistory = new UserMessageHistory(); // Fallback to an empty message history
 				}
 			}
 		});

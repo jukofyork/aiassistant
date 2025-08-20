@@ -1,10 +1,11 @@
 package eclipse.plugin.aiassistant.view;
 
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 /**
  * The UserMessageHistory class is responsible for storing and retrieving user
@@ -14,17 +15,29 @@ import java.util.List;
 public class UserMessageHistory {
 
 	// Maximum number of messages to serialize
-    private static final int MAX_SERIALIZED_MESSAGES = 100;
+	private static final int MAX_SERIALIZED_MESSAGES = 100;
 
 	private static final ObjectMapper objectMapper = new ObjectMapper();
 	private List<String> storedMessages = new ArrayList<>();
 	private int currentIndex = 0;
 
 	/**
+	 * Replaces this history's internal state with another history's state.
+	 * Clears current stored messages, then copies both messages and current index from 'other'.
+	 */
+	public synchronized void resetTo(UserMessageHistory other) {
+		storedMessages.clear();
+		for (String message : other.storedMessages) {
+			storedMessages.add(message);
+		}
+		currentIndex = other.currentIndex;
+	}
+
+	/**
 	 * Stores a message if it is not empty and not already present in the
 	 * storedMessages list. Updates the currentIndex to point to the last element in
 	 * the list.
-	 * 
+	 *
 	 * @param message The message to be stored.
 	 */
 	public void storeMessage(String message) {
@@ -37,7 +50,7 @@ public class UserMessageHistory {
 	/**
 	 * Retrieves the previous message from the storedMessages list if it exists.
 	 * Decrements the currentIndex by 1 and returns the message at that index.
-	 * 
+	 *
 	 * @return The previous message if it exists, null otherwise.
 	 */
 	public String getPreviousMessage() {
@@ -51,7 +64,7 @@ public class UserMessageHistory {
 	/**
 	 * Retrieves the next message from the storedMessages list if it exists.
 	 * Increments the currentIndex by 1 and returns the message at that index.
-	 * 
+	 *
 	 * @return The next message if it exists, null otherwise.
 	 */
 	public String getNextMessage() {
@@ -63,13 +76,13 @@ public class UserMessageHistory {
 		}
 		return null;
 	}
-	
-    /**
-     * Serializes the UserMessageHistory to a JSON string.
-     *
-     * @return a JSON string representing the stored messages
-     * @throws IOException if an input/output exception occurs
-     */
+
+	/**
+	 * Serializes the UserMessageHistory to a JSON string.
+	 *
+	 * @return a JSON string representing the stored messages
+	 * @throws IOException if an input/output exception occurs
+	 */
 	public synchronized String serialize() throws IOException {
 		List<String> messagesToSerialize;
 		if (storedMessages.size() > MAX_SERIALIZED_MESSAGES) {
@@ -81,23 +94,23 @@ public class UserMessageHistory {
 		return objectMapper.writeValueAsString(messagesToSerialize);
 	}
 
-    /**
-     * Deserializes a JSON string to a UserMessageHistory object.
-     * Handles empty or null JSON input by returning an empty UserMessageHistory instance.
-     *
-     * @param json the JSON string representing the stored messages
-     * @return a UserMessageHistory object
-     * @throws IOException if an input/output exception occurs
-     */
-    public static UserMessageHistory deserialize(String json) throws IOException {
-        if (json == null || json.trim().isEmpty()) {
-            return new UserMessageHistory();  // Return an empty history if input is empty or null
-        }
-        List<String> messages = objectMapper.readValue(json, new TypeReference<List<String>>() {});
-        UserMessageHistory history = new UserMessageHistory();
-        history.storedMessages.addAll(messages);
-        history.currentIndex = messages.size(); // Set currentIndex to point to the last message
-        return history;
-    }
+	/**
+	 * Deserializes a JSON string to a UserMessageHistory object.
+	 * Handles empty or null JSON input by returning an empty UserMessageHistory instance.
+	 *
+	 * @param json the JSON string representing the stored messages
+	 * @return a UserMessageHistory object
+	 * @throws IOException if an input/output exception occurs
+	 */
+	public static UserMessageHistory deserialize(String json) throws IOException {
+		if (json == null || json.trim().isEmpty()) {
+			return new UserMessageHistory();  // Return an empty history if input is empty or null
+		}
+		List<String> messages = objectMapper.readValue(json, new TypeReference<List<String>>() {});
+		UserMessageHistory history = new UserMessageHistory();
+		history.storedMessages.addAll(messages);
+		history.currentIndex = messages.size(); // Set currentIndex to point to the last message
+		return history;
+	}
 
 }
