@@ -15,30 +15,22 @@ import eclipse.plugin.aiassistant.preferences.Preferences;
 import eclipse.plugin.aiassistant.utility.Eclipse;
 
 /**
- * This class represents the button bar area in the application. It contains
- * methods to create and manage buttons, as well as handle user interactions
- * with them.
+ * Manages the button bar with undo, redo, clear, stop, and settings buttons.
  */
 public class ButtonBarArea {
 
-	public static final String STOP_NAME = "Stop";
-	public static final String STOP_TOOLTIP = "Cancel the AI Response";
-	public static final String STOP_ICON = "Stop.png";
-	public static final String CLEAR_NAME = "Clear";
-	public static final String CLEAR_TOOLTIP = "Clear the Chat History";
-	public static final String CLEAR_ICON = "Clear.png";
 	public static final String UNDO_NAME = "Undo";
 	public static final String UNDO_TOOLTIP = "Undo the Last Chat Interaction";
 	public static final String UNDO_ICON = "Undo.png";
 	public static final String REDO_NAME = "Redo";
 	public static final String REDO_TOOLTIP = "Redo the Last Undone Chat Interaction";
 	public static final String REDO_ICON = "Redo.png";
-	public static final String IMPORT_NAME = "Import";
-	public static final String IMPORT_TOOLTIP = "Import Chat History (JSON)";
-	public static final String IMPORT_ICON = "Import.png";
-	public static final String EXPORT_NAME = "Export";
-	public static final String EXPORT_TOOLTIP = "Export Chat History (JSON or Markdown)";
-	public static final String EXPORT_ICON = "Export.png";
+	public static final String CLEAR_NAME = "Clear";
+	public static final String CLEAR_TOOLTIP = "Clear the Chat History";
+	public static final String CLEAR_ICON = "Clear.png";
+	public static final String STOP_NAME = "Stop";
+	public static final String STOP_TOOLTIP = "Cancel the AI Response";
+	public static final String STOP_ICON = "Stop.png";
 	public static final String SETTINGS_NAME = "Settings";
 	public static final String SETTINGS_TOOLTIP = "Open the Settings Page";
 	public static final String SETTINGS_ICON = "Settings.png";
@@ -46,12 +38,10 @@ public class ButtonBarArea {
 	private final MainPresenter mainPresenter;
 
 	private final List<ButtonConfig> buttonConfigs = List.of(
-			new ButtonConfig(STOP_NAME, STOP_TOOLTIP, STOP_ICON, this::onStop),
-			new ButtonConfig(CLEAR_NAME, CLEAR_TOOLTIP, CLEAR_ICON, this::onClear),
 			new ButtonConfig(UNDO_NAME, UNDO_TOOLTIP, UNDO_ICON, this::onUndo),
 			new ButtonConfig(REDO_NAME, REDO_TOOLTIP, REDO_ICON, this::onRedo),
-			new ButtonConfig(IMPORT_NAME, IMPORT_TOOLTIP, IMPORT_ICON, this::onImport),
-			new ButtonConfig(EXPORT_NAME, EXPORT_TOOLTIP, EXPORT_ICON, this::onExport),
+			new ButtonConfig(CLEAR_NAME, CLEAR_TOOLTIP, CLEAR_ICON, this::onClear),
+			new ButtonConfig(STOP_NAME, STOP_TOOLTIP, STOP_ICON, this::onStop),
 			new ButtonConfig(SETTINGS_NAME, SETTINGS_TOOLTIP, SETTINGS_ICON,
 					this::onSettings));
 
@@ -107,8 +97,6 @@ public class ButtonBarArea {
 					button.setEnabled(mainPresenter.canRedo());
 				} else if (button.getText().equals(CLEAR_NAME)) {
 					button.setEnabled(!mainPresenter.isConversationEmpty());
-				} else if (button.getText().equals(EXPORT_NAME)) {
-					button.setEnabled(!mainPresenter.isConversationEmpty());
 				}
 			}
 		});
@@ -146,20 +134,6 @@ public class ButtonBarArea {
 	}
 
 	/**
-	 * Handles the 'Stop' button click event by delegating to the main presenter.
-	 */
-	private void onStop() {
-		mainPresenter.onStop();
-	}
-
-	/**
-	 * Handles the 'Clear' button click event by delegating to the main presenter.
-	 */
-	private void onClear() {
-		mainPresenter.onClear();
-	}
-
-	/**
 	 * Handles the 'Undo' button click event by delegating to the main presenter.
 	 */
 	private void onUndo() {
@@ -174,17 +148,17 @@ public class ButtonBarArea {
 	}
 
 	/**
-	 * Handles the 'Import' button click event by delegating to the main presenter.
+	 * Handles the 'Clear' button click event by delegating to the main presenter.
 	 */
-	private void onImport() {
-		mainPresenter.onImport();
+	private void onClear() {
+		mainPresenter.onClear();
 	}
 
 	/**
-	 * Handles the 'Export' button click event by delegating to the main presenter.
+	 * Handles the 'Stop' button click event by delegating to the main presenter.
 	 */
-	private void onExport() {
-		mainPresenter.onExport();
+	private void onStop() {
+		mainPresenter.onStop();
 	}
 
 	/**
