@@ -120,7 +120,7 @@ public class MainPresenter {
 		chatConversations.add(clonedConversation);
 
 		// Create synchronously to be sure it is there for out replay
-		performOnMainViewSync(mainView -> {
+		performOnMainViewAsync(mainView -> {
 			mainView.createNewTab();
 		});
 
@@ -354,7 +354,7 @@ public class MainPresenter {
 		if (!getCurrentConversation().isEmpty()) {
 			onStop();
 			getCurrentConversation().clear();
-			performOnMainViewSync(mainView -> {
+			performOnMainViewAsync(mainView -> {
 				mainView.getCurrentChatArea().initialize(); // Sync to avoid operation ordering issues
 			});
 			refreshAfterStatusChange();
@@ -520,16 +520,11 @@ public class MainPresenter {
 			chatConversations.clear();
 			chatConversations.addAll(loadedConversations);
 
-			// Create the tabs we are going to need (synchronously)
-			performOnMainViewSync(mainView -> {
+			// Create the tabs we are going to need
+			performOnMainViewAsync(mainView -> {
 				for (int i = 0; i < chatConversations.size(); i++) {
 					mainView.createNewTab();
 				}
-			});
-
-			// Select the first tab (synchronously)
-			performOnMainViewSync(mainView -> {
-				mainView.selectTab(0);
 			});
 
 			// Schedule so there us a couple of seconds between each tab getting loaded
