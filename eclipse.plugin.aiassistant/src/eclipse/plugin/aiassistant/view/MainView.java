@@ -1,9 +1,17 @@
 package eclipse.plugin.aiassistant.view;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
 
 import org.eclipse.swt.SWT;
+import org.eclipse.swt.custom.CTabFolder;
+import org.eclipse.swt.custom.CTabFolder2Adapter;
+import org.eclipse.swt.custom.CTabFolderEvent;
+import org.eclipse.swt.custom.CTabItem;
 import org.eclipse.swt.custom.SashForm;
+import org.eclipse.swt.events.SelectionListener;
+import org.eclipse.swt.graphics.Image;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.ui.IWorkbenchPage;
 import org.eclipse.ui.IWorkbenchWindow;
@@ -26,9 +34,15 @@ public class MainView extends ViewPart {
 
 	private SashForm sashForm;
 	private Composite mainContainer;
-	private ChatConversationArea chatMessageArea;
+	private CTabFolder tabFolder;
+	private TabButtonBarArea tabButtonBarArea;
+	private List<ChatConversationArea> chatAreas;
 	private UserInputArea userInputArea;
 	private ButtonBarArea buttonBarArea;
+
+	private Image tabIcon;
+
+	private int nextTabNumber = 1;
 
 	/**
 	 * Initializes the view components and sets up the presenter.
@@ -40,11 +54,20 @@ public class MainView extends ViewPart {
 		mainPresenter = new MainPresenter(this);
 		sashForm = new SashForm(parent, SWT.VERTICAL);
 		mainContainer = createMainContainer(sashForm);
-		chatMessageArea = new ChatConversationArea(mainPresenter, mainContainer);
+
+		// Create tab folder directly in main container
+		tabIcon = Eclipse.loadIcon("Robot.png");
+		tabFolder = createTabFolder(mainContainer);
+		tabButtonBarArea = new TabButtonBarArea(mainPresenter, tabFolder);
+		tabFolder.setTopRight(tabButtonBarArea.getButtonContainer()); // Place button container in tab folder header
+		chatAreas = new ArrayList<>();
+
+		setupTabListeners();
+
 		userInputArea = new UserInputArea(mainPresenter, mainContainer);
 		buttonBarArea = new ButtonBarArea(mainPresenter, mainContainer);
 		setInputEnabled(true); // Will turn off stop and set everything else on.
-		mainPresenter.loadStateFromPreferenceStore(); // Runs asynchronously on UI thread.
+		mainPresenter.loadStateFromPreferenceStore();
 	}
 
 	/**
@@ -53,6 +76,9 @@ public class MainView extends ViewPart {
 	@Override
 	public void dispose() {
 		super.dispose();
+		if (tabIcon != null && !tabIcon.isDisposed()) {
+			tabIcon.dispose();
+		}
 		mainPresenter.saveStateToPreferenceStore(); // Runs synchronously on UI thread.
 	}
 
@@ -84,12 +110,34 @@ public class MainView extends ViewPart {
 	}
 
 	/**
-	 * Retrieves the ChatMessageArea component.
+	 * Retrieves the currently active ChatConversationArea component.
 	 *
-	 * @return The ChatMessageArea component used for displaying messages.
+	 * @return The current ChatConversationArea component used for displaying messages.
+	 * @throws IllegalStateException if no chat areas exist
 	 */
-	public ChatConversationArea getChatMessageArea() {
-		return chatMessageArea;
+	public ChatConversationArea getCurrentChatArea() {
+		if (chatAreas.isEmpty()) {
+			throw new IllegalStateException("No chat areas available");
+		}
+		int selectedIndex = tabFolder.getSelectionIndex();
+		if (selectedIndex < 0 || selectedIndex >= chatAreas.size()) {
+			throw new IndexOutOfBoundsException("Tab index " + selectedIndex + " is out of bounds (size: " + chatAreas.size() + ")");
+		}
+		return chatAreas.get(selectedIndex);
+	}
+
+	/**
+	 * Retrieves the ChatConversationArea component at the specified tab index.
+	 *
+	 * @param index The index of the chat area to retrieve
+	 * @return The ChatConversationArea at the specified index
+	 * @throws IndexOutOfBoundsException if the index is out of bounds
+	 */
+	public ChatConversationArea getChatAreaAt(int tabIndex) {
+		if (tabIndex < 0 || tabIndex >= chatAreas.size()) {
+			throw new IndexOutOfBoundsException("Tab index " + tabIndex + " is out of bounds (size: " + chatAreas.size() + ")");
+		}
+		return chatAreas.get(tabIndex);
 	}
 
 	/**
@@ -102,15 +150,67 @@ public class MainView extends ViewPart {
 	}
 
 	/**
+	 * Creates a new tab with an empty chat conversation.
+	 */
+	public void createNewTab() {
+		int tabNumber = nextTabNumber++;
+		CTabItem tabItem = new CTabItem(tabFolder, SWT.CLOSE);
+		tabItem.setText("Chat " + tabNumber);
+
+		// Set the conversation icon
+		tabItem.setImage(tabIcon);
+
+		// Create a container for the chat area within the tab
+		Composite tabContentContainer = new Composite(tabFolder, SWT.NONE);
+		tabContentContainer.setLayout(Eclipse.createGridLayout(1, false, 0, 0, 0, 0));
+
+		// Create the chat conversation area
+		ChatConversationArea chatArea = new ChatConversationArea(mainPresenter, tabContentContainer);
+		chatAreas.add(chatArea);
+
+		tabItem.setControl(tabContentContainer);
+		tabFolder.setSelection(tabItem);
+	}
+
+	/**
+	 * Removes a tab and its associated chat area at the specified index.
+	 *
+	 * @param tabIndex the index of the tab to remove
+	 */
+	public void removeTab(int tabIndex) {
+		if (tabIndex >= 0 && tabIndex < chatAreas.size()) {
+			// Dispose the chat area
+			chatAreas.get(tabIndex).getBrowser().dispose();
+			chatAreas.remove(tabIndex);
+
+			// Remove the tab item
+			tabFolder.getItem(tabIndex).dispose();
+		}
+	}
+
+	/**
+	 * Selects the tab at the specified index.
+	 *
+	 * @param tabIndex the index of the tab to select
+	 */
+	public void selectTab(int tabIndex) {
+		if (tabIndex >= 0 && tabIndex < tabFolder.getItemCount()) {
+			tabFolder.setSelection(tabIndex);
+		}
+	}
+
+	/**
 	 * Enables or disables user interaction components based on the specified flag.
 	 *
 	 * @param enabled true to enable interaction, false to disable it.
 	 */
 	public void setInputEnabled(boolean enabled) {
 		Eclipse.runOnUIThreadAsync(() -> {
-			chatMessageArea.setEnabled(enabled); // Blocks Javascript callbacks.
+			getCurrentChatArea().setEnabled(enabled); // Blocks Javascript callbacks.
 			userInputArea.setEnabled(enabled);
 			buttonBarArea.setInputEnabled(enabled);
+			tabFolder.setEnabled(enabled); // Block tab switching during operations
+			tabButtonBarArea.setInputEnabled(enabled);
 		});
 	}
 
@@ -119,21 +219,70 @@ public class MainView extends ViewPart {
 	 */
 	public void updateButtonStates() {
 		buttonBarArea.updateButtonStates();
+		tabButtonBarArea.updateButtonStates();
 	}
 
 	/**
 	 * Creates and configures the main container for this view.
 	 *
-	 * @param parent The parent composite to which this new container will be added. It provides a context
-	 *               in which the new composite will be displayed.
-	 * @return A newly created and configured Composite instance that serves as the main container for other
-	 *         UI components in this view.
+	 * @param parent The parent composite to which this new container will be added.
+	 * @return A newly created and configured Composite instance that serves as the main container.
 	 */
 	private Composite createMainContainer(Composite parent) {
 		Composite container = new Composite(parent, SWT.NONE);
 		container.setLayout(Eclipse.createGridLayout(1, false, Constants.DEFAULT_EXTERNAL_MARGINS,
 				Constants.DEFAULT_EXTERNAL_MARGINS, -1, Constants.DEFAULT_INTERNAL_SPACING));
 		return container;
+	}
+
+	/**
+	 * Creates and configures the tab folder for chat conversations.
+	 *
+	 * @param parent The parent composite for the tab folder.
+	 * @return The created CTabFolder instance.
+	 */
+	private CTabFolder createTabFolder(Composite parent) {
+		CTabFolder folder = new CTabFolder(parent, SWT.BORDER);
+		folder.setLayoutData(Eclipse.createGridData(true, true));
+		folder.setSimple(false);
+		folder.setUnselectedCloseVisible(false);
+		return folder;
+	}
+
+	/**
+	 * Sets up listeners for tab selection and closing events.
+	 */
+	private void setupTabListeners() {
+		// Selection listener for tab switching
+		tabFolder.addSelectionListener(SelectionListener.widgetSelectedAdapter(e -> {
+			int newIndex = tabFolder.getSelectionIndex();
+			mainPresenter.onTabSwitched(newIndex);
+		}));
+
+		// Tab folder listener for close events
+		tabFolder.addCTabFolder2Listener(new CTabFolder2Adapter() {
+			@Override
+			public void close(CTabFolderEvent event) {
+				int tabIndex = tabFolder.indexOf((CTabItem) event.item);
+				boolean shouldClose = mainPresenter.onAttemptCloseTab(tabIndex);
+
+				if (shouldClose) {
+					if (tabIndex < 0 || tabIndex >= chatAreas.size()) {
+						throw new IndexOutOfBoundsException(
+								"Tab index " + tabIndex + " is out of bounds (size: " + chatAreas.size() + ")");
+					}
+
+					// Remove from our chat areas list
+					chatAreas.remove(tabIndex);
+
+					// Update data model AFTER UI is updated
+					mainPresenter.onCloseTab(tabIndex);
+				} else {
+					// Cancel the close operation
+					event.doit = false;
+				}
+			}
+		});
 	}
 
 	/**

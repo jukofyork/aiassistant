@@ -25,7 +25,7 @@ public class UserMessageHistory {
 	 * Replaces this history's internal state with another history's state.
 	 * Clears current stored messages, then copies both messages and current index from 'other'.
 	 */
-	public synchronized void resetTo(UserMessageHistory other) {
+	public synchronized void copyFrom(UserMessageHistory other) {
 		storedMessages.clear();
 		for (String message : other.storedMessages) {
 			storedMessages.add(message);
@@ -48,12 +48,12 @@ public class UserMessageHistory {
 	}
 
 	/**
-	 * Retrieves the previous message from the storedMessages list if it exists.
+	 * Retrieves the older message from the storedMessages list if it exists.
 	 * Decrements the currentIndex by 1 and returns the message at that index.
 	 *
-	 * @return The previous message if it exists, null otherwise.
+	 * @return The older message if it exists, null otherwise.
 	 */
-	public String getPreviousMessage() {
+	public String getOlderMessage() {
 		if (currentIndex > 0) {
 			currentIndex--;
 			return storedMessages.get(currentIndex);
@@ -62,12 +62,12 @@ public class UserMessageHistory {
 	}
 
 	/**
-	 * Retrieves the next message from the storedMessages list if it exists.
+	 * Retrieves the newer message from the storedMessages list if it exists.
 	 * Increments the currentIndex by 1 and returns the message at that index.
 	 *
-	 * @return The next message if it exists, null otherwise.
+	 * @return The newer message if it exists, null otherwise.
 	 */
-	public String getNextMessage() {
+	public String getNewerMessage() {
 		if (currentIndex < storedMessages.size()) {
 			currentIndex++;
 			if (currentIndex < storedMessages.size()) {
@@ -75,6 +75,14 @@ public class UserMessageHistory {
 			}
 		}
 		return null;
+	}
+
+	/**
+	 * Resets the current position to the newest message (end of history).
+	 * This is equivalent to what happens after storing a new message.
+	 */
+	public void resetPosition() {
+		currentIndex = storedMessages.size();
 	}
 
 	/**

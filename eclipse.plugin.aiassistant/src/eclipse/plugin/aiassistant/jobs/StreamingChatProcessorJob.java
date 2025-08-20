@@ -27,39 +27,48 @@ public class StreamingChatProcessorJob extends Job implements Subscriber<String>
 
 	private final MainPresenter mainPresenter;
 	private final OpenAiApiClient openAiApiClient;
-	private final ChatConversation chatConversation;
-	
+
+	private ChatConversation currentChatConversation = null;
+
 	private ChatMessage message;
 
 	private Subscription subscription;
 
 	/**
 	 * Initializes a new job to process chat conversations using OpenAI's API.
-	 * 
+	 *
 	 * @param mainPresenter           Controller for updating the chat UI.
 	 * @param openAiApiClient Client for OpenAI chat API.
 	 * @param chatConversation        The conversation context.
 	 */
-	public StreamingChatProcessorJob(MainPresenter mainPresenter, OpenAiApiClient openAiApiClient,
-			ChatConversation chatConversation) {
+	public StreamingChatProcessorJob(MainPresenter mainPresenter, OpenAiApiClient openAiApiClient) {
 		super(Activator.getDefault().getBundle().getSymbolicName());
 		this.mainPresenter = mainPresenter;
 		this.openAiApiClient = openAiApiClient;
-		this.chatConversation = chatConversation;
+	}
+
+	public synchronized void setConversation(ChatConversation chatConversation) {
+		this.currentChatConversation = chatConversation;
 	}
 
 	/**
 	 * Executes the job of subscribing to and processing chat data.
-	 * 
+	 *
+	 * Note: setConversation(ChatConversation) MUST be called before executing this job.
+	 *
 	 * @param progressMonitor Monitors the progress of the job.
 	 * @return Status of the job execution.
 	 */
 	@Override
 	protected IStatus run(IProgressMonitor progressMonitor) {
+		if (currentChatConversation == null) {
+			return Status.error("No chat conversation set", null);
+		}
+
 		openAiApiClient.subscribe(this);
 		openAiApiClient.setCancelProvider(() -> progressMonitor.isCanceled());
 		try {
-			var future = CompletableFuture.runAsync(openAiApiClient.run(chatConversation)).thenApply(v -> Status.OK_STATUS)
+			var future = CompletableFuture.runAsync(openAiApiClient.run(currentChatConversation)).thenApply(v -> Status.OK_STATUS)
 					.exceptionally(e -> Status.error("Unable to run the task: " + e.getMessage(), e));
 			return future.get();
 		} catch (Exception e) {
@@ -69,7 +78,7 @@ public class StreamingChatProcessorJob extends Job implements Subscriber<String>
 
 	/**
 	 * Handles the subscription setup with the publisher.
-	 * 
+	 *
 	 * @param subscription The subscription to manage data flow.
 	 */
 	@Override
@@ -81,7 +90,7 @@ public class StreamingChatProcessorJob extends Job implements Subscriber<String>
 
 	/**
 	 * Processes each new message received from the OpenAI API.
-	 * 
+	 *
 	 * @param item The message part received.
 	 */
 	@Override
@@ -95,19 +104,19 @@ public class StreamingChatProcessorJob extends Job implements Subscriber<String>
 
 	/**
 	 * Handles errors during the subscription.
-	 * 
+	 *
 	 * @param throwable The exception thrown during streaming.
 	 */
 	@Override
 	public void onError(Throwable throwable) {
-	    mainPresenter.endMessageFromAssistant();
-	    subscription.cancel();
-	    if (throwable instanceof CancellationException) {
-	    	Logger.info("CANCELLED");
-	    }
-	    else {
-	    	Logger.error(throwable.getMessage());
-	    }
+		mainPresenter.endMessageFromAssistant();
+		subscription.cancel();
+		if (throwable instanceof CancellationException) {
+			Logger.info("CANCELLED");
+		}
+		else {
+			Logger.error(throwable.getMessage());
+		}
 	}
 
 	/**

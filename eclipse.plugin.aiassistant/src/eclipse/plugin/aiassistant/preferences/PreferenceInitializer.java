@@ -35,7 +35,7 @@ public class PreferenceInitializer extends AbstractPreferenceInitializer {
 		setDefaultCurrentUseSystemMessage();
 		setDefaultCurrentUseDeveloperMessage();
 		setDefaultBookmarkedApiSettings();
-		setDefaultChatConversation();
+		setDefaultChatConversations();
 		setDefaultUserMessageHistory();
 		loadAndSetDefaultPrompts();
 	}
@@ -144,14 +144,14 @@ public class PreferenceInitializer extends AbstractPreferenceInitializer {
 	}
 
 	/**
-	 * Sets the default value for the chat conversation in the preferences.
-	 * This method initializes the chat conversation setting to an empty string,
+	 * Sets the default value for the chat conversations in the preferences.
+	 * This method initializes the chat conversations setting to an empty string,
 	 * which might be used to represent no initial conversation history.
 	 *
 	 * @see Preferences#setDefault(String, String)
 	 */
-	private void setDefaultChatConversation() {
-		Preferences.getDefault().setDefault(PreferenceConstants.CHAT_CONVERSATION, "");
+	private void setDefaultChatConversations() {
+		Preferences.getDefault().setDefault(PreferenceConstants.CHAT_CONVERSATIONS, "");
 	}
 
 	/**

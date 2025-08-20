@@ -39,6 +39,7 @@ import org.eclipse.swt.widgets.Button;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.widgets.FileDialog;
+import org.eclipse.swt.widgets.MessageBox;
 import org.eclipse.swt.widgets.Shell;
 import org.eclipse.ui.IEditorPart;
 import org.eclipse.ui.IWorkbench;
@@ -496,6 +497,33 @@ public class Eclipse {
 			Image newIcon = loadIcon(filename);
 			button.setImage(newIcon);
 		});
+	}
+
+	/**
+	 * Creates and shows a warning dialog with an OK button.
+	 *
+	 * @param title the dialog title
+	 * @param message the dialog message
+	 */
+	public static void showWarningDialog(String title, String message) {
+		MessageBox messageBox = new MessageBox(getShell(), SWT.OK | SWT.ICON_WARNING);
+		messageBox.setText(title);
+		messageBox.setMessage(message);
+		messageBox.open();
+	}
+
+	/**
+	 * Creates and shows a confirmation dialog with Yes/No buttons.
+	 *
+	 * @param title the dialog title
+	 * @param message the dialog message
+	 * @return true if Yes was clicked, false if No was clicked or dialog was cancelled
+	 */
+	public static boolean showConfirmDialog(String title, String message) {
+		MessageBox messageBox = new MessageBox(getShell(), SWT.YES | SWT.NO | SWT.ICON_QUESTION);
+		messageBox.setText(title);
+		messageBox.setMessage(message);
+		return messageBox.open() == SWT.YES;
 	}
 
 	/**

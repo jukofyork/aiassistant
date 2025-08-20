@@ -227,25 +227,34 @@ public final class Preferences {
 	}
 
 	/**
-	 * Saves the current state of a ChatConversation to the preference store.
+	 * Saves the current state of multiple ChatConversations to the preference store.
 	 *
-	 * @param conversation The ChatConversation object to be saved.
+	 * @param conversations The list of ChatConversation objects to be saved.
 	 * @throws IOException If an error occurs during the serialization process.
 	 */
-	public static void saveChatConversation(ChatConversation conversation) throws IOException {
-		String serializedData = conversation.serialize();
-		preferenceStore.setValue(PreferenceConstants.CHAT_CONVERSATION, serializedData);
+	public static void saveChatConversations(List<ChatConversation> conversations) throws IOException {
+		// Create wrapper object for conversations
+		ChatConversationsWrapper wrapper = new ChatConversationsWrapper(conversations);
+		String serializedData = wrapper.serialize();
+		preferenceStore.setValue(PreferenceConstants.CHAT_CONVERSATIONS, serializedData);
 	}
 
 	/**
-	 * Loads a ChatConversation from the preference store.
+	 * Loads multiple ChatConversations from the preference store.
 	 *
-	 * @return The deserialized ChatConversation object.
+	 * @return The list of deserialized ChatConversation objects.
 	 * @throws IOException If an error occurs during the deserialization process.
 	 */
-	public static ChatConversation loadChatConversation() throws IOException {
-		String serializedData = preferenceStore.getString(PreferenceConstants.CHAT_CONVERSATION);
-		return ChatConversation.deserialize(serializedData);
+	public static List<ChatConversation> loadChatConversations() throws IOException {
+		String serializedData = preferenceStore.getString(PreferenceConstants.CHAT_CONVERSATIONS);
+		if (serializedData == null || serializedData.trim().isEmpty()) {
+			// Return single empty conversation as default
+			List<ChatConversation> defaultConversations = new ArrayList<>();
+			defaultConversations.add(new ChatConversation());
+			return defaultConversations;
+		}
+		ChatConversationsWrapper wrapper = ChatConversationsWrapper.deserialize(serializedData);
+		return wrapper.getConversations();
 	}
 
 	/**
@@ -268,6 +277,99 @@ public final class Preferences {
 	public static UserMessageHistory loadUserMessageHistory() throws IOException {
 		String serializedData = preferenceStore.getString(PreferenceConstants.USER_MESSAGE_HISTORY);
 		return UserMessageHistory.deserialize(serializedData);
+	}
+
+	/**
+	 * Internal wrapper class for serializing/deserializing multiple ChatConversations.
+	 */
+	private static class ChatConversationsWrapper {
+		private List<ChatConversation> conversations;
+
+		public ChatConversationsWrapper(List<ChatConversation> conversations) {
+			this.conversations = conversations;
+		}
+
+		public List<ChatConversation> getConversations() {
+			return conversations;
+		}
+
+		public String serialize() throws IOException {
+			StringBuilder json = new StringBuilder();
+			json.append("{\"conversations\":[");
+			for (int i = 0; i < conversations.size(); i++) {
+				if (i > 0) json.append(",");
+				json.append(conversations.get(i).serialize());
+			}
+			json.append("]}");
+			return json.toString();
+		}
+
+		public static ChatConversationsWrapper deserialize(String json) throws IOException {
+			// Simple JSON parsing - extract conversations array
+			List<ChatConversation> conversations = new ArrayList<>();
+
+			// Find the conversations array
+			int startIdx = json.indexOf("\"conversations\":[") + 17;
+			int endIdx = json.lastIndexOf("]}");
+
+			if (startIdx < 17 || endIdx < 0) {
+				// Fallback for invalid format
+				conversations.add(new ChatConversation());
+				return new ChatConversationsWrapper(conversations);
+			}
+
+			String conversationsJson = json.substring(startIdx, endIdx);
+			if (conversationsJson.trim().isEmpty()) {
+				conversations.add(new ChatConversation());
+				return new ChatConversationsWrapper(conversations);
+			}
+
+			// Split conversations by finding complete JSON objects
+			List<String> conversationJsons = splitConversationJsons(conversationsJson);
+
+			for (String conversationJson : conversationJsons) {
+				try {
+					conversations.add(ChatConversation.deserialize(conversationJson.trim()));
+				} catch (IOException e) {
+					// Skip invalid conversations, continue with others
+				}
+			}
+
+			// Ensure at least one conversation
+			if (conversations.isEmpty()) {
+				conversations.add(new ChatConversation());
+			}
+
+			return new ChatConversationsWrapper(conversations);
+		}
+
+		private static List<String> splitConversationJsons(String conversationsJson) {
+			List<String> result = new ArrayList<>();
+			int braceLevel = 0;
+			int startIdx = 0;
+
+			for (int i = 0; i < conversationsJson.length(); i++) {
+				char c = conversationsJson.charAt(i);
+				if (c == '{') {
+					braceLevel++;
+				} else if (c == '}') {
+					braceLevel--;
+					if (braceLevel == 0) {
+						result.add(conversationsJson.substring(startIdx, i + 1));
+						// Skip comma and whitespace
+						i++;
+						while (i < conversationsJson.length() &&
+								(conversationsJson.charAt(i) == ',' || Character.isWhitespace(conversationsJson.charAt(i)))) {
+							i++;
+						}
+						startIdx = i;
+						i--; // Adjust for loop increment
+					}
+				}
+			}
+
+			return result;
+		}
 	}
 
 }

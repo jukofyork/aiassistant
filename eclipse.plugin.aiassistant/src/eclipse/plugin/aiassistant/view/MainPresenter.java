@@ -4,6 +4,8 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
@@ -44,7 +46,8 @@ public class MainPresenter {
 	private final OpenAiApiClient openAiApiClient;
 	private final StreamingChatProcessorJob sendConversationJob;
 
-	private final ChatConversation chatConversation;
+	private final List<ChatConversation> chatConversations;
+	private int currentTabIndex = 0;
 	private final UserMessageHistory userMessageHistory;
 
 	// Used for scrolling through messages using Shift+Scrollwheel combo.
@@ -57,13 +60,160 @@ public class MainPresenter {
 	 */
 	public MainPresenter(MainView mainView) {
 		this.mainView = mainView;
-		chatConversation = new ChatConversation();
+		chatConversations = new ArrayList<>();
+		chatConversations.add(new ChatConversation()); // Create initial conversation
 		openAiApiClient = new OpenAiApiClient();
-		sendConversationJob = new StreamingChatProcessorJob(this, openAiApiClient, chatConversation);
+		sendConversationJob = new StreamingChatProcessorJob(this, openAiApiClient); // Must call setConversation() before running!
 		userMessageHistory = new UserMessageHistory();
 		setupLogListener();
 		setupPropertyChangeListener();
 		setupShutdownListener();
+	}
+
+	/**
+	 * Gets the currently active chat conversation.
+	 *
+	 * @return the current ChatConversation
+	 */
+	private ChatConversation getCurrentConversation() {
+		return chatConversations.get(currentTabIndex);
+	}
+
+	/**
+	 * Handles tab switching by updating the current tab index
+	 *
+	 * @param newTabIndex the index of the newly selected tab
+	 */
+	public void onTabSwitched(int newTabIndex) {
+		if (newTabIndex >= 0 && newTabIndex < chatConversations.size()) {
+			currentTabIndex = newTabIndex;
+			performOnMainViewAsync(mainView -> {
+				mainView.updateButtonStates();
+			});
+		}
+	}
+
+	/**
+	 * Creates a new chat tab with an empty conversation.
+	 */
+	public void onNewTab() {
+		ChatConversation newConversation = new ChatConversation();
+		chatConversations.add(newConversation);
+
+		performOnMainViewAsync(mainView -> {
+			mainView.createNewTab();
+		});
+
+		// Switch to the new tab
+		currentTabIndex = chatConversations.size() - 1;
+		userMessageHistory.resetPosition();
+		refreshAfterStatusChange();
+	}
+
+	/**
+	 * Navigates to the previous tab.
+	 */
+	public void onPreviousTab() {
+		if (chatConversations.size() > 1) {
+			currentTabIndex = currentTabIndex - 1;
+			if (currentTabIndex < 0) {
+				currentTabIndex = chatConversations.size() - 1; // Wrap to last tab
+			}
+			final int newTabIndex = currentTabIndex;
+			performOnMainViewAsync(mainView -> {
+				mainView.selectTab(newTabIndex);
+			});
+		}
+	}
+
+	/**
+	 * Navigates to the next tab.
+	 */
+	public void onNextTab() {
+		if (chatConversations.size() > 1) {
+			currentTabIndex = currentTabIndex + 1;
+			if (currentTabIndex >= chatConversations.size()) {
+				currentTabIndex = 0; // Wrap to first tab
+			}
+			final int newTabIndex = currentTabIndex;
+			performOnMainViewAsync(mainView -> {
+				mainView.selectTab(newTabIndex);
+			});
+		}
+	}
+
+	/**
+	 * Checks if a tab at the specified index can be closed and shows confirmation dialog
+	 * if the conversation is not empty. Does not update the data model - that is handled
+	 * later by onTabClosed() after the UI has been updated.
+	 *
+	 * @param tabIndex the index of the tab to close
+	 * @return true if the tab should be closed, false if cancelled or not allowed
+	 */
+	public boolean onAttemptCloseTab(int tabIndex) {
+		if (tabIndex < 0 || tabIndex >= chatConversations.size()) {
+			return false;
+		}
+
+		// Can't close the last remaining tab
+		if (chatConversations.size() <= 1) {
+			Eclipse.showWarningDialog(
+					"Cannot Close All Tabs",
+					"At least one tab must remain open."
+					);
+			return false;
+		}
+
+		// Show confirmation dialog if conversation is not empty
+		if (!chatConversations.get(tabIndex).isEmpty()) {
+			boolean confirmed = Eclipse.showConfirmDialog(
+					"Close Tab",
+					"This tab contains chat history. Are you sure you want to close it?"
+					);
+			if (!confirmed) {
+				return false;
+			}
+		}
+
+		// DON'T update data model here - just return true to allow UI closure
+		return true;
+	}
+
+	/**
+	 * Called by the UI after a tab has been successfully removed.
+	 * Updates the data model to match the UI state.
+	 */
+	public void onCloseTab(int closedTabIndex) {
+		// Remove the conversation
+		chatConversations.remove(closedTabIndex);
+
+		// Adjust current tab index if necessary
+		if (currentTabIndex >= closedTabIndex && currentTabIndex > 0) {
+			currentTabIndex--;
+		}
+		if (currentTabIndex >= chatConversations.size()) {
+			currentTabIndex = chatConversations.size() - 1;
+		}
+
+		refreshAfterStatusChange();
+	}
+
+	/**
+	 * Gets the number of chat tabs.
+	 *
+	 * @return the number of tabs
+	 */
+	public int getTabCount() {
+		return chatConversations.size();
+	}
+
+	/**
+	 * Gets the current tab index.
+	 *
+	 * @return the current tab index
+	 */
+	public int getCurrentTabIndex() {
+		return currentTabIndex;
 	}
 
 	/**
@@ -72,7 +222,7 @@ public class MainPresenter {
 	public void onScrollToTop() {
 		currentlyScrolledToMessageId = SCROLLED_TO_TOP;
 		performOnMainViewAsync(mainView -> {
-			mainView.getChatMessageArea().scrollToTop();
+			mainView.getCurrentChatArea().scrollToTop();
 		});
 	}
 
@@ -82,7 +232,7 @@ public class MainPresenter {
 	public void onScrollToBottom() {
 		currentlyScrolledToMessageId = SCROLLED_TO_BOTTOM;
 		performOnMainViewAsync(mainView -> {
-			mainView.getChatMessageArea().scrollToBottom();
+			mainView.getCurrentChatArea().scrollToBottom();
 		});
 	}
 
@@ -94,16 +244,16 @@ public class MainPresenter {
 		if (!currentlyScrolledToMessageId.equals(SCROLLED_TO_TOP)) {
 			ChatMessage message;
 			if (currentlyScrolledToMessageId.equals(SCROLLED_TO_BOTTOM)) {
-				message = chatConversation.getLastMessage();
+				message = getCurrentConversation().getLastMessage();
 			} else {
-				message = chatConversation.getPreviousMessage(currentlyScrolledToMessageId);
+				message = getCurrentConversation().getPreviousMessage(currentlyScrolledToMessageId);
 			}
 			if (message == null) {
 				onScrollToTop();
 			} else {
 				currentlyScrolledToMessageId = message.getId();
 				performOnMainViewAsync(mainView -> {
-					mainView.getChatMessageArea().scrollToMessage(currentlyScrolledToMessageId);
+					mainView.getCurrentChatArea().scrollToMessage(currentlyScrolledToMessageId);
 				});
 			}
 		}
@@ -117,16 +267,16 @@ public class MainPresenter {
 		if (!currentlyScrolledToMessageId.equals(SCROLLED_TO_BOTTOM)) {
 			ChatMessage message;
 			if (currentlyScrolledToMessageId.equals(SCROLLED_TO_TOP)) {
-				message = chatConversation.getFirstMessage();
+				message = getCurrentConversation().getFirstMessage();
 			} else {
-				message = chatConversation.getNextMessage(currentlyScrolledToMessageId);
+				message = getCurrentConversation().getNextMessage(currentlyScrolledToMessageId);
 			}
 			if (message == null) {
 				onScrollToBottom();
 			} else {
 				currentlyScrolledToMessageId = message.getId();
 				performOnMainViewAsync(mainView -> {
-					mainView.getChatMessageArea().scrollToMessage(currentlyScrolledToMessageId);
+					mainView.getCurrentChatArea().scrollToMessage(currentlyScrolledToMessageId);
 				});
 			}
 		}
@@ -138,8 +288,8 @@ public class MainPresenter {
 	 */
 	public void onShiftKeyPressed() {
 		performOnMainViewAsync(mainView -> {
-			if (chatConversation.contains(currentlyScrolledToMessageId)) {
-				mainView.getChatMessageArea().setSelectionBorder(currentlyScrolledToMessageId);
+			if (getCurrentConversation().contains(currentlyScrolledToMessageId)) {
+				mainView.getCurrentChatArea().setSelectionBorder(currentlyScrolledToMessageId);
 			}
 		});
 	}
@@ -149,30 +299,30 @@ public class MainPresenter {
 	 */
 	public void onShiftKeyReleased() {
 		performOnMainViewAsync(mainView -> {
-			mainView.getChatMessageArea().removeAllSelectionBorders();
+			mainView.getCurrentChatArea().removeAllSelectionBorders();
 		});
 	}
 
 	/**
-	 * Handles the up arrow click event by retrieving and displaying the previous
+	 * Handles the up arrow click event by retrieving and displaying the older
 	 * user message, if any.
 	 */
 	public void onUpArrowClick() {
-		String previousUserMessage = userMessageHistory.getPreviousMessage();
-		if ((previousUserMessage != null)) {
-			setUserInputText(previousUserMessage);
+		String olderUserMessage = userMessageHistory.getOlderMessage();
+		if ((olderUserMessage != null)) {
+			setUserInputText(olderUserMessage);
 		}
 	}
 
 	/**
-	 * Handles the down arrow click event by retrieving and displaying the next user
+	 * Handles the down arrow click event by retrieving and displaying the newer user
 	 * message, if any. If there are no more messages, it clears the input area for
 	 * a new message.
 	 */
 	public void onDownArrowClick() {
-		// NOTE: If no next message then a new blank will be added beyond the end.
-		String nextUserMessage = userMessageHistory.getNextMessage();
-		setUserInputText(nextUserMessage != null ? nextUserMessage : "");
+		// NOTE: If no newer message then a new blank will be added beyond the end.
+		String newerUserMessage = userMessageHistory.getNewerMessage();
+		setUserInputText(newerUserMessage != null ? newerUserMessage : "");
 	}
 
 	/**
@@ -180,11 +330,11 @@ public class MainPresenter {
 	 * Updates the view synchronously to avoid operation ordering issues.
 	 */
 	public void onClear() {
-		if (!chatConversation.isEmpty()) {
+		if (!getCurrentConversation().isEmpty()) {
 			onStop();
-			chatConversation.clear();
+			getCurrentConversation().clear();
 			performOnMainViewSync(mainView -> {
-				mainView.getChatMessageArea().initialize(); // Sync to avoid operation ordering issues
+				mainView.getCurrentChatArea().initialize(); // Sync to avoid operation ordering issues
 			});
 			refreshAfterStatusChange();
 		}
@@ -195,12 +345,12 @@ public class MainPresenter {
 	 * messages and updating the UI to reflect the changes.
 	 */
 	public void onUndo() {
-		if (!chatConversation.isEmpty()) {
+		if (!getCurrentConversation().isEmpty()) {
 			onStop();
-			Iterable<ChatMessage> removedMessages = chatConversation.undo();
+			Iterable<ChatMessage> removedMessages = getCurrentConversation().undo();
 			performOnMainViewAsync(mainView -> {
 				for (ChatMessage message : removedMessages) {
-					mainView.getChatMessageArea().removeMessage(message.getId());
+					mainView.getCurrentChatArea().removeMessage(message.getId());
 				}
 			});
 			refreshAfterStatusChange();
@@ -213,11 +363,12 @@ public class MainPresenter {
 	 * operation (empty conversation) to avoid flickering when replaying many messages.
 	 */
 	public void onRedo() {
-		if (chatConversation.canRedo()) {
+		if (getCurrentConversation().canRedo()) {
 			onStop(); // Stop any running operations
-			boolean hideUiDuringUpdate = chatConversation.isEmpty(); // Hide UI when redoing from empty (many messages)
-			Iterable<ChatMessage> redoneMessages = chatConversation.redo();
-			replayMessages(redoneMessages, hideUiDuringUpdate);
+			boolean hideUiDuringUpdate = getCurrentConversation().isEmpty(); // Hide UI when redoing from empty (many messages)
+			Iterable<ChatMessage> redoneMessages = getCurrentConversation().redo();
+			replayMessages(redoneMessages, currentTabIndex, hideUiDuringUpdate);
+			refreshAfterStatusChange();
 		}
 	}
 
@@ -240,8 +391,9 @@ public class MainPresenter {
 			String json = Files.readString(pathObj);
 
 			// Restore the imported conversation and replay to the UI
-			chatConversation.resetTo(ChatConversation.fromJson(json));
-			replayMessages(chatConversation.getMessages(), true);
+			getCurrentConversation().copyFrom(ChatConversation.fromJson(json));
+			replayMessages(getCurrentConversation().getMessages(), currentTabIndex, true);
+			refreshAfterStatusChange();
 		}, "import chat history");
 	}
 
@@ -249,14 +401,14 @@ public class MainPresenter {
 	 * Exports the current chat conversation and its redo history to a JSON file.
 	 */
 	public void onExport() {
-		if (!chatConversation.isEmpty()) {
+		if (!getCurrentConversation().isEmpty()) {
 			String filePath = Eclipse.showFileDialog(SWT.SAVE, "Export Chat History",
 					new String[] { "*.json", "*.*" },
 					new String[] { "JSON Files (*.json)", "All Files (*.*)" },
 					"chat_history.json");
 
 			performFileOperation(filePath, path -> {
-				String json = chatConversation.toJson();
+				String json = getCurrentConversation().toJson();
 				Path pathObj = Paths.get(path);
 				Files.writeString(pathObj, json);
 			}, "export chat history");
@@ -268,14 +420,14 @@ public class MainPresenter {
 	 * the USER and ASSISTANT messages, excluding notification messages.
 	 */
 	public void onExportMarkdown() {
-		if (!chatConversation.isEmpty()) {
+		if (!getCurrentConversation().isEmpty()) {
 			String filePath = Eclipse.showFileDialog(SWT.SAVE, "Export Chat History as Markdown",
 					new String[] { "*.txt", "*.md", "*.*" },
 					new String[] { "Text Files (*.txt)", "Markdown Files (*.md)", "All Files (*.*)" },
 					"chat_history.txt");
 
 			performFileOperation(filePath, path -> {
-				String markdown = chatConversation.toMarkdown();
+				String markdown = getCurrentConversation().toMarkdown();
 				Path pathObj = Paths.get(path);
 				Files.writeString(pathObj, markdown);
 			}, "export chat history");
@@ -299,7 +451,7 @@ public class MainPresenter {
 	 * @return true if the conversation is empty, false otherwise
 	 */
 	public boolean isConversationEmpty() {
-		return chatConversation.isEmpty();
+		return getCurrentConversation().isEmpty();
 	}
 
 	/**
@@ -308,11 +460,11 @@ public class MainPresenter {
 	 * @return true if redo actions are available, false otherwise
 	 */
 	public boolean canRedo() {
-		return chatConversation.canRedo();
+		return getCurrentConversation().canRedo();
 	}
 
 	/**
-	 * Saves the current chat conversation with its redo history and user
+	 * Saves all chat conversations with their redo history and user
 	 * message history to the preference store synchronously on the UI thread.
 	 */
 	public void saveStateToPreferenceStore() {
@@ -320,9 +472,9 @@ public class MainPresenter {
 			@Override
 			public void run() {
 				try {
-					Preferences.saveChatConversation(chatConversation);
+					Preferences.saveChatConversations(chatConversations);
 				} catch (IOException e) {
-					Logger.warning("Failed to save chat conversation: " + e.getMessage());
+					Logger.warning("Failed to save chat conversations: " + e.getMessage());
 				}
 				try {
 					Preferences.saveUserMessageHistory(userMessageHistory);
@@ -334,27 +486,54 @@ public class MainPresenter {
 	}
 
 	/**
-	 * Loads the chat conversation with undo/redo history and user message history
-	 * from the preference store. Uses empty message history fallback if loading fails.
+	 * Loads all chat conversations with undo/redo history and user message history
+	 * from the preference store. Creates the appropriate number of tabs and replays
+	 * messages to each tab.
 	 */
 	public void loadStateFromPreferenceStore() {
-		Eclipse.runOnUIThreadAsync(new Runnable() {
-			@Override
-			public void run() {
-				try {
-					// Restore the loaded conversation and replay to the UI
-					chatConversation.resetTo(Preferences.loadChatConversation());
-					replayMessages(chatConversation.getMessages(), true);
-				} catch (IOException e) {
-					Logger.warning("Failed to load chat conversation: " + e.getMessage());
+		try {
+			// Load all conversations from preferences
+			List<ChatConversation> loadedConversations = Preferences.loadChatConversations();
+
+			// Replace current conversations
+			chatConversations.clear();
+			chatConversations.addAll(loadedConversations);
+
+			// Create the tabs we are going to need (synchronously)
+			performOnMainViewSync(mainView -> {
+				for (int i = 0; i < chatConversations.size(); i++) {
+					mainView.createNewTab();
 				}
-				try {
-					userMessageHistory.resetTo(Preferences.loadUserMessageHistory());
-				} catch (IOException e) {
-					Logger.warning("Failed to load user message history: " + e.getMessage());
-				}
+			});
+
+			// Select the first tab (synchronously)
+			performOnMainViewSync(mainView -> {
+				mainView.selectTab(0);
+			});
+
+			// Schedule so there us a couple of seconds between each tab getting loaded
+			// TODO: Find a less horrible way to do this...
+			for (int i = 0; i < chatConversations.size(); i++) {
+				final int index = i;
+				int delay_time = (i + 1) * 2000; // First will start after 2s, then 4s, and so on...
+				Eclipse.getDisplay().timerExec(delay_time, () -> {
+					performOnMainViewAsync(mainView -> {
+						mainView.selectTab(index);
+						replayMessages(chatConversations.get(index).getMessages(), index, true);
+						refreshAfterStatusChange();
+					});
+				});
 			}
-		});
+
+		} catch (IOException e) {
+			Logger.warning("Failed to load chat conversations: " + e.getMessage());
+		}
+
+		try {
+			userMessageHistory.copyFrom(Preferences.loadUserMessageHistory());
+		} catch (IOException e) {
+			Logger.warning("Failed to load user message history: " + e.getMessage());
+		}
 	}
 
 	/**
@@ -382,13 +561,13 @@ public class MainPresenter {
 		AtomicReference<Boolean> wasAtBottom = new AtomicReference<>(false);
 		// NOTE: This needs to be synchronous or otherwise fails to set the flag...
 		performOnMainViewSync(mainView -> {
-			wasAtBottom.set(mainView.getChatMessageArea().isScrollbarAtBottom());
-			mainView.getChatMessageArea().updateMessage(message);
+			wasAtBottom.set(mainView.getCurrentChatArea().isScrollbarAtBottom());
+			mainView.getCurrentChatArea().updateMessage(message);
 		});
 		if (wasAtBottom.get()) {
 			currentlyScrolledToMessageId = SCROLLED_TO_BOTTOM;
 			performOnMainViewSync(mainView -> {
-				mainView.getChatMessageArea().scrollToBottom(); // Sync to allow update for next wasAtBottom test
+				mainView.getCurrentChatArea().scrollToBottom(); // Sync to allow update for next wasAtBottom test
 			});
 		}
 	}
@@ -445,7 +624,7 @@ public class MainPresenter {
 	private void sendUserMessage(String messageString, boolean scheduleReply) {
 
 		// Check model is valid to use if we are going to schedule the reply.
-		if (scheduleReply && chatConversation.hasUnsentUserMessages()) {
+		if (scheduleReply && getCurrentConversation().hasUnsentUserMessages()) {
 			String modelStatus = openAiApiClient.checkCurrentModelStatus();
 			if (!modelStatus.equals("OK")) {
 				Logger.error(modelStatus);
@@ -461,7 +640,8 @@ public class MainPresenter {
 
 		// Schedule the reply if we have something to send and asked to.
 		// NOTE: This can be triggered by blank messages to send buffered ones, etc.
-		if (scheduleReply && chatConversation.hasUnsentUserMessages()) {
+		if (scheduleReply && getCurrentConversation().hasUnsentUserMessages()) {
+			sendConversationJob.setConversation(getCurrentConversation());
 			sendConversationJob.schedule();
 		}
 
@@ -513,9 +693,9 @@ public class MainPresenter {
 	 * @param message the message to add and display
 	 */
 	private void pushMessage(ChatMessage message) {
-		chatConversation.push(message);
+		getCurrentConversation().push(message);
 		performOnMainViewAsync(mainView -> {
-			mainView.getChatMessageArea().newMessage(message);
+			mainView.getCurrentChatArea().newMessage(message);
 		});
 		refreshAfterStatusChange();
 	}
@@ -527,23 +707,22 @@ public class MainPresenter {
 	 * @param messages the messages to replay in the UI
 	 * @param hideUiDuringUpdate whether to hide the chat area during the update
 	 */
-	private void replayMessages(Iterable<ChatMessage> messages, boolean hideUiDuringUpdate) {
+	private void replayMessages(Iterable<ChatMessage> messages, int tabIndex, boolean hideUiDuringUpdate) {
 		if (hideUiDuringUpdate) {
 			performOnMainViewAsync(mainView -> {
-				mainView.getChatMessageArea().setEnabled(false);
-				mainView.getChatMessageArea().setVisible(false);
+				mainView.getChatAreaAt(tabIndex).setEnabled(false);
+				mainView.getChatAreaAt(tabIndex).setVisible(false);
 			});
 		}
 		performOnMainViewAsync(mainView -> {
 			for (ChatMessage message : messages) {
-				mainView.getChatMessageArea().newMessage(message);
+				mainView.getChatAreaAt(tabIndex).newMessage(message);
 			}
 		});
-		refreshAfterStatusChange();
 		if (hideUiDuringUpdate) {
 			performOnMainViewAsync(mainView -> {
-				mainView.getChatMessageArea().setVisible(true);
-				mainView.getChatMessageArea().setEnabled(true);
+				mainView.getChatAreaAt(tabIndex).setVisible(true);
+				mainView.getChatAreaAt(tabIndex).setEnabled(true);
 			});
 		}
 	}

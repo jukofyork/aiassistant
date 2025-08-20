@@ -50,7 +50,7 @@ public class ChatConversation {
 	 * Replaces this conversation's internal state with another conversation's state.
 	 * Clears current messages and redo history, then copies both from 'other'.
 	 */
-	public synchronized void resetTo(ChatConversation other) {
+	public synchronized void copyFrom(ChatConversation other) {
 		messages.clear();
 		for (ChatMessage m : other.messages) {
 			messages.add(m);

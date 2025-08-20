@@ -21,7 +21,7 @@ public class PreferenceConstants {
 
 	public static final String BOOKMARKED_API_SETTINGS = "BOOKMARKED_API_SETTINGS";
 
-	public static final String CHAT_CONVERSATION = "CHAT_CONVERSATION";
+	public static final String CHAT_CONVERSATIONS = "CHAT_CONVERSATIONS";
 
 	public static final String USER_MESSAGE_HISTORY = "USER_MESSAGE_HISTORY";
 
