@@ -102,7 +102,7 @@ public class MainPresenter {
 		chatConversations.add(newConversation);
 
 		performOnMainViewAsync(mainView -> {
-			mainView.createNewTab();
+			mainView.createNewTab(newConversation);
 		});
 
 		// Switch to the new tab
@@ -120,11 +120,12 @@ public class MainPresenter {
 		// Add a deep copy of the current conversation
 		ChatConversation clonedConversation = new ChatConversation();
 		clonedConversation.copyFrom(getCurrentConversation());
+		clonedConversation.setTitle("Copy of " + getCurrentConversation().getTitle());
 		chatConversations.add(clonedConversation);
 
 		// Create synchronously to be sure it is there for out replay
 		performOnMainViewAsync(mainView -> {
-			mainView.createNewTab();
+			mainView.createNewTab(clonedConversation);
 		});
 
 		// Set current tab top last
@@ -138,6 +139,21 @@ public class MainPresenter {
 		Eclipse.getDisplay().timerExec(Constants.CLONE_TAB_REPLAY_DELAY_MS, () -> {
 			replayMessages(clonedConversation.getMessages(), currentTabIndex, true);
 		});
+	}
+
+	/**
+	 * Handles tab renaming by updating both the conversation title and the UI.
+	 *
+	 * @param tabIndex the index of the tab being renamed
+	 * @param newTitle the new title for the tab
+	 */
+	public void onTabRenamed(int tabIndex, String newTitle) {
+		if (tabIndex >= 0 && tabIndex < chatConversations.size()) {
+			chatConversations.get(tabIndex).setTitle(newTitle);
+			performOnMainViewAsync(mainView -> {
+				mainView.updateTabTitle(tabIndex, newTitle);
+			});
+		}
 	}
 
 	/**
@@ -539,8 +555,8 @@ public class MainPresenter {
 
 		// Create the tabs we are going to need
 		performOnMainViewAsync(mainView -> {
-			for (int i = 0; i < chatConversations.size(); i++) {
-				mainView.createNewTab();
+			for (ChatConversation conversation : chatConversations) {
+				mainView.createNewTab(conversation);
 			}
 		});
 

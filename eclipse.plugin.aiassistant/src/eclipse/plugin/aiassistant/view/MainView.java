@@ -18,6 +18,7 @@ import org.eclipse.ui.IWorkbenchWindow;
 import org.eclipse.ui.part.ViewPart;
 
 import eclipse.plugin.aiassistant.Constants;
+import eclipse.plugin.aiassistant.chat.ChatConversation;
 import eclipse.plugin.aiassistant.utility.Eclipse;
 
 /**
@@ -41,8 +42,6 @@ public class MainView extends ViewPart {
 	private ButtonBarArea buttonBarArea;
 
 	private Image tabIcon;
-
-	private int nextTabNumber = 1;
 
 	/**
 	 * Initializes the view components and sets up the presenter.
@@ -150,12 +149,15 @@ public class MainView extends ViewPart {
 	}
 
 	/**
-	 * Creates a new tab with an empty chat conversation.
+	 * Creates a new tab using the provided conversation's title.
+	 *
+	 * @param conversation the conversation to create a tab for
 	 */
-	public void createNewTab() {
-		int tabNumber = nextTabNumber++;
+	public void createNewTab(ChatConversation conversation) {
+		String tabName = conversation.getTitle();
+
 		CTabItem tabItem = new CTabItem(tabFolder, SWT.CLOSE);
-		tabItem.setText("Chat " + tabNumber);
+		tabItem.setText(tabName);
 
 		// Set the conversation icon
 		tabItem.setImage(tabIcon);
@@ -196,6 +198,18 @@ public class MainView extends ViewPart {
 	public void selectTab(int tabIndex) {
 		if (tabIndex >= 0 && tabIndex < tabFolder.getItemCount()) {
 			tabFolder.setSelection(tabIndex);
+		}
+	}
+
+	/**
+	 * Updates the title of the tab at the specified index.
+	 *
+	 * @param tabIndex the index of the tab to update
+	 * @param title the new title for the tab
+	 */
+	public void updateTabTitle(int tabIndex, String title) {
+		if (tabIndex >= 0 && tabIndex < tabFolder.getItemCount()) {
+			tabFolder.getItem(tabIndex).setText(title);
 		}
 	}
 
@@ -259,6 +273,20 @@ public class MainView extends ViewPart {
 			mainPresenter.onTabSwitched(newIndex);
 		}));
 
+		// Mouse listener for double-click to rename tabs
+		tabFolder.addMouseListener(new org.eclipse.swt.events.MouseAdapter() {
+			@Override
+			public void mouseDoubleClick(org.eclipse.swt.events.MouseEvent e) {
+				CTabItem item = tabFolder.getItem(new org.eclipse.swt.graphics.Point(e.x, e.y));
+				if (item != null) {
+					int tabIndex = tabFolder.indexOf(item);
+					if (tabIndex >= 0) {
+						openRenameTabDialog(tabIndex);
+					}
+				}
+			}
+		});
+
 		// Tab folder listener for close events
 		tabFolder.addCTabFolder2Listener(new CTabFolder2Adapter() {
 			@Override
@@ -280,6 +308,38 @@ public class MainView extends ViewPart {
 				} else {
 					// Cancel the close operation
 					event.doit = false;
+				}
+			}
+		});
+	}
+
+	/**
+	 * Shows a dialog to rename the tab at the specified index.
+	 *
+	 * @param tabIndex the index of the tab to rename
+	 */
+	private void openRenameTabDialog(int tabIndex) {
+		if (tabIndex < 0 || tabIndex >= tabFolder.getItemCount()) {
+			return;
+		}
+
+		CTabItem tabItem = tabFolder.getItem(tabIndex);
+		String currentName = tabItem.getText();
+
+		Eclipse.runOnUIThreadAsync(() -> {
+			org.eclipse.jface.dialogs.InputDialog dialog = new org.eclipse.jface.dialogs.InputDialog(
+					sashForm.getShell(),
+					"Rename Tab",
+					"Enter new tab name:",
+					currentName,
+					null
+					);
+
+			if (dialog.open() == org.eclipse.jface.window.Window.OK) {
+				String newName = dialog.getValue();
+				if (newName != null) {
+					// Update through presenter to keep conversation title in sync
+					mainPresenter.onTabRenamed(tabIndex, newName.trim());
 				}
 			}
 		});

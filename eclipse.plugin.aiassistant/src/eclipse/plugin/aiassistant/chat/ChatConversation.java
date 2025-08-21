@@ -25,6 +25,26 @@ public class ChatConversation implements Serializable {
 	private final Stack<ChatMessage> messages = new Stack<>();
 	private final Stack<List<ChatMessage>> redoStack = new Stack<>();
 
+	private String title = "New Conversation";
+
+	/**
+	 * Gets the title of this conversation.
+	 *
+	 * @return the conversation title
+	 */
+	public synchronized String getTitle() {
+		return title;
+	}
+
+	/**
+	 * Sets the title of this conversation.
+	 *
+	 * @param title the new conversation title
+	 */
+	public synchronized void setTitle(String title) {
+		this.title = title != null ? title : "";
+	}
+
 	/**
 	 * Adds a message to the conversation and clears any pending redo operations.
 	 * Adding a new message invalidates the redo history since the conversation
@@ -53,6 +73,8 @@ public class ChatConversation implements Serializable {
 	 * Clears current messages and redo history, then copies both from 'other'.
 	 */
 	public synchronized void copyFrom(ChatConversation other) {
+		title = other.title;
+
 		messages.clear();
 		for (ChatMessage m : other.messages) {
 			messages.add(m);
@@ -288,6 +310,7 @@ public class ChatConversation implements Serializable {
 	 */
 	public synchronized String toJson() throws IOException {
 		Map<String, Object> data = new HashMap<>();
+		data.put("title", title);
 		data.put("messages", messages);
 		data.put("redoStack", redoStack);
 		return objectMapper.writeValueAsString(data);
@@ -297,13 +320,15 @@ public class ChatConversation implements Serializable {
 	 * Creates a ChatConversation from a JSON string containing full conversation state.
 	 * Restores both message history and redo stack for complete state restoration.
 	 *
-	 * @param json the JSON string containing "messages" and "redoStack" fields
+	 * @param json the JSON string containing "title", "messages" and "redoStack" fields
 	 * @return a new ChatConversation with complete state from the JSON
 	 * @throws IOException if the JSON cannot be parsed or the expected structure is missing
 	 */
 	public static ChatConversation fromJson(String json) throws IOException {
 		JsonNode root = objectMapper.readTree(json);
 		ChatConversation conversation = new ChatConversation();
+
+		conversation.title = root.get("title").asText();
 
 		JavaType stackType =
 				objectMapper.getTypeFactory().constructCollectionType(Stack.class, ChatMessage.class);
@@ -331,6 +356,8 @@ public class ChatConversation implements Serializable {
 	 */
 	public synchronized String toMarkdown() {
 		StringBuilder markdown = new StringBuilder();
+		markdown.append("# ").append(title).append("\n\n");
+
 		for (ChatMessage message : messages) {
 			if (message.getRole() == ChatRole.USER || message.getRole() == ChatRole.ASSISTANT) {
 				if (!message.getContent().trim().isEmpty()) {
