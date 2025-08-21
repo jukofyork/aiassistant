@@ -30,9 +30,11 @@ public class UserInputArea {
 	public static final String ARROW_UP_TOOLTIP = "Older User Messages";
 	public static final String ARROW_DOWN_TOOLTIP = "Newer User Messages";
 	public static final String CLEAR_MESSAGES_TOOLTIP = "Clear Message History";
+	public static final String SETTINGS_TOOLTIP = "Open the Settings Page";
 	public static final String ARROW_UP_ICON = "ArrowUp.png";
 	public static final String ARROW_DOWN_ICON = "ArrowDown.png";
 	public static final String CLEAR_MESSAGES_ICON = "ClearMessages.png";
+	public static final String SETTINGS_ICON = "Settings.png";
 	public static final String INPUT_AREA_TOOLTIP = """
 			Ctrl+Enter: Delay the Assistant's Response
 			Shift+Enter: Insert a Newline""";
@@ -46,6 +48,7 @@ public class UserInputArea {
 	private Button upArrowButton;
 	private Button downArrowButton;
 	private Button clearButton;
+	private Button settingsButton;
 
 	/**
 	 * Constructs a new UserInputArea instance with the given parent composite and
@@ -63,6 +66,7 @@ public class UserInputArea {
 		upArrowButton = createUpArrowButton(arrowButtonContainer);
 		downArrowButton = createDownArrowButton(arrowButtonContainer);
 		clearButton = createClearButton(arrowButtonContainer);
+		settingsButton = createSettingsButton(arrowButtonContainer);
 		setupPropertyChangeListener();
 	}
 
@@ -110,6 +114,7 @@ public class UserInputArea {
 			upArrowButton.setEnabled(enabled);
 			downArrowButton.setEnabled(enabled);
 			clearButton.setEnabled(enabled);
+			settingsButton.setEnabled(enabled);
 			if (enabled) {
 				updateButtonStates();
 			}
@@ -127,6 +132,7 @@ public class UserInputArea {
 			upArrowButton.setEnabled(messageHistory.hasOlderMessages());
 			downArrowButton.setEnabled(messageHistory.hasNewerMessages());
 			clearButton.setEnabled(!messageHistory.isEmpty());
+			// Settings button is always enabled when input is enabled
 		});
 	}
 
@@ -230,6 +236,24 @@ public class UserInputArea {
 	}
 
 	/**
+	 * Creates the settings button component.
+	 *
+	 * @param buttonContainer The parent composite for the settings button.
+	 * @return The created button.
+	 */
+	private Button createSettingsButton(Composite buttonContainer) {
+		SelectionAdapter listener = new SelectionAdapter() {
+			@Override
+			public void widgetSelected(SelectionEvent e) {
+				if (spellCheckedTextBox.getEnabled()) {
+					onSettings();
+				}
+			}
+		};
+		return Eclipse.createButton(buttonContainer, "", SETTINGS_TOOLTIP, SETTINGS_ICON, listener);
+	}
+
+	/**
 	 * Registers a property change listener to handle changes in font size preferences.
 	 * This listener reacts to changes in chat font size by updating the input area font immediately.
 	 */
@@ -259,6 +283,13 @@ public class UserInputArea {
 		} else if ((stateMask & SWT.MODIFIER_MASK) != SWT.MOD2) {
 			mainPresenter.sendPredefinedPrompt(Prompts.DEFAULT);
 		}
+	}
+
+	/**
+	 * Opens the Preferences dialog when the 'Settings' button is clicked.
+	 */
+	private void onSettings() {
+		Preferences.openPreferenceDialog();
 	}
 
 }

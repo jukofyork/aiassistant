@@ -11,11 +11,10 @@ import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Display;
 
 import eclipse.plugin.aiassistant.Constants;
-import eclipse.plugin.aiassistant.preferences.Preferences;
 import eclipse.plugin.aiassistant.utility.Eclipse;
 
 /**
- * Manages the button bar with undo, redo, clear, stop, and settings buttons.
+ * Manages the button bar with undo, redo, clear, and stop buttons.
  */
 public class ButtonBarArea {
 
@@ -31,9 +30,6 @@ public class ButtonBarArea {
 	public static final String STOP_NAME = "Stop";
 	public static final String STOP_TOOLTIP = "Cancel the AI Response";
 	public static final String STOP_ICON = "Stop.png";
-	public static final String SETTINGS_NAME = "Settings";
-	public static final String SETTINGS_TOOLTIP = "Open the Settings Page";
-	public static final String SETTINGS_ICON = "Settings.png";
 
 	private final MainPresenter mainPresenter;
 
@@ -41,9 +37,7 @@ public class ButtonBarArea {
 			new ButtonConfig(UNDO_NAME, UNDO_TOOLTIP, UNDO_ICON, this::onUndo),
 			new ButtonConfig(REDO_NAME, REDO_TOOLTIP, REDO_ICON, this::onRedo),
 			new ButtonConfig(CLEAR_NAME, CLEAR_TOOLTIP, CLEAR_ICON, this::onClear),
-			new ButtonConfig(STOP_NAME, STOP_TOOLTIP, STOP_ICON, this::onStop),
-			new ButtonConfig(SETTINGS_NAME, SETTINGS_TOOLTIP, SETTINGS_ICON,
-					this::onSettings));
+			new ButtonConfig(STOP_NAME, STOP_TOOLTIP, STOP_ICON, this::onStop));
 
 	private Composite buttonContainer;
 	private List<Button> buttons;
@@ -169,13 +163,6 @@ public class ButtonBarArea {
 	 */
 	private void onStop() {
 		mainPresenter.onStop();
-	}
-
-	/**
-	 * Opens the Preferences dialog when the 'Settings' button is clicked.
-	 */
-	private void onSettings() {
-		Preferences.openPreferenceDialog();
 	}
 
 	/**
