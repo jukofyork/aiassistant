@@ -431,9 +431,11 @@ public class MainPresenter {
 	public void onRedo() {
 		if (getCurrentConversation().canRedo()) {
 			onStop();
+			// NOTE: Only hide the UI when doing a potentially large redo from a cleared state
+			boolean hideUiDuringUpdate = getCurrentConversation().isEmpty();
 			// NOTE: This will also update the buttons state and scroll to bottom
 			Iterable<ChatMessage> redoneMessages = getCurrentConversation().redo();
-			replayMessages(redoneMessages, currentTabIndex, getCurrentConversation().isEmpty());
+			replayMessages(redoneMessages, currentTabIndex, hideUiDuringUpdate);
 		}
 	}
 
