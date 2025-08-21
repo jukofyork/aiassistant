@@ -105,7 +105,8 @@ public final class Constants {
 	public static final int MAX_NOTIFICATION_FONT_SIZE = 16;
 	public static final int DEFAULT_NOTIFICATION_FONT_SIZE = 8;
 
-	// UI optimization thresholds for conversation restoration.
-	public static final int MIN_MESSAGE_COUNT_TO_BLANK = 3;
-	public static final int MIN_CONTENT_SIZE_TO_BLANK= 4096;
+	// Timing delays for tab-related UI synchronization hacks.
+	// NOTE: These delays are used to ensure UI components are fully initialized before replaying messages.
+	public static final int CLONE_TAB_REPLAY_DELAY_MS = 2000;
+	public static final int STATE_RESTORE_REPLAY_DELAY_MS = 5000;
 }

@@ -3,7 +3,7 @@ package eclipse.plugin.aiassistant.prompt;
 public enum Prompts {
 
 	SYSTEM("System Message", "system.txt"),
-	DEVELOPER("Developer Message (OpenAI reasoning models ONLY)", "developer.txt"),
+	DEVELOPER("Developer Message (for OpenAI reasoning models)", "developer.txt"),
 	DEFAULT("Default", "default.txt"),
 	DEFAULT_DELAYED("Default Delayed", "default-delayed.txt"),
 	ADD_MESSAGE("Add To Message", "add-message.txt"),

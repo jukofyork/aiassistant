@@ -18,6 +18,7 @@ import org.eclipse.swt.SWT;
 import org.eclipse.ui.IWorkbench;
 import org.eclipse.ui.IWorkbenchListener;
 
+import eclipse.plugin.aiassistant.Constants;
 import eclipse.plugin.aiassistant.Logger;
 import eclipse.plugin.aiassistant.chat.ChatConversation;
 import eclipse.plugin.aiassistant.chat.ChatMessage;
@@ -111,7 +112,9 @@ public class MainPresenter {
 	}
 
 	/**
-	 * Creates a new chat tab with a copy of the current conversation.
+	 * Creates a new chat tab with a copy of the current conversation. Uses a timing
+	 * delay hack to ensure the UI tab is fully created before replaying messages,
+	 * as no more reliable synchronization mechanism has been found.
 	 */
 	public void onCloneTab() {
 		// Add a deep copy of the current conversation
@@ -132,7 +135,7 @@ public class MainPresenter {
 
 		// Schedule the actual replay for 2 seconds in the future
 		// TODO: Find a better way to do this...
-		Eclipse.getDisplay().timerExec(2000, () -> {
+		Eclipse.getDisplay().timerExec(Constants.CLONE_TAB_REPLAY_DELAY_MS, () -> {
 			replayMessages(clonedConversation.getMessages(), currentTabIndex, true);
 		});
 	}
@@ -515,7 +518,9 @@ public class MainPresenter {
 	/**
 	 * Loads all chat conversations with undo/redo history and user message history
 	 * from the preference store. Creates the appropriate number of tabs and replays
-	 * messages to each tab.
+	 * messages to each tab. Uses a timing delay hack to ensure all UI tabs are
+	 * fully created before replaying messages, as no more reliable synchronization
+	 * mechanism has been found.
 	 */
 	public void loadStateFromPreferenceStore() {
 		try {
@@ -540,7 +545,7 @@ public class MainPresenter {
 			// TODO: Find a better way to do this...
 			for (int i = 0; i < chatConversations.size(); i++) {
 				final int index = i;
-				Eclipse.getDisplay().timerExec(5000, () -> {
+				Eclipse.getDisplay().timerExec(Constants.STATE_RESTORE_REPLAY_DELAY_MS, () -> {
 					replayMessages(chatConversations.get(index).getMessages(), index, true);
 				});
 			}
