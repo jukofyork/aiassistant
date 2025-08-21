@@ -471,10 +471,14 @@ public class MainPresenter {
 	 */
 	public void onExport() {
 		if (!getCurrentConversation().isEmpty()) {
+			String title = getCurrentConversation().getTitle();
+			String sanitizedTitle = sanitizeFilename(title);
+			String defaultFilename = sanitizedTitle.isEmpty() ? "chat_history" : sanitizedTitle;
+
 			String filePath = Eclipse.showFileDialog(SWT.SAVE, "Export Chat History",
 					new String[] { "*.json", "*.*" },
 					new String[] { "JSON Files (*.json)", "All Files (*.*)" },
-					"chat_history.json");
+					defaultFilename + ".json");
 
 			performFileOperation(filePath, path -> {
 				String json = getCurrentConversation().toJson();
@@ -490,10 +494,14 @@ public class MainPresenter {
 	 */
 	public void onExportMarkdown() {
 		if (!getCurrentConversation().isEmpty()) {
+			String title = getCurrentConversation().getTitle();
+			String sanitizedTitle = sanitizeFilename(title);
+			String defaultFilename = sanitizedTitle.isEmpty() ? "chat_history" : sanitizedTitle;
+
 			String filePath = Eclipse.showFileDialog(SWT.SAVE, "Export Chat History as Markdown",
 					new String[] { "*.txt", "*.md", "*.*" },
 					new String[] { "Text Files (*.txt)", "Markdown Files (*.md)", "All Files (*.*)" },
-					"chat_history.txt");
+					defaultFilename + ".txt");
 
 			performFileOperation(filePath, path -> {
 				String markdown = getCurrentConversation().toMarkdown();
@@ -911,6 +919,20 @@ public class MainPresenter {
 				Logger.error("Failed to " + operationName + ": " + e.getMessage());
 			}
 		}
+	}
+
+	/**
+	 * Sanitizes a string to make it safe for use as a filename by removing
+	 * or replacing invalid characters.
+	 */
+	private static String sanitizeFilename(String filename) {
+		if (filename == null) {
+			return "";
+		}
+		// Remove or replace invalid filename characters
+		return filename.replaceAll("[/\\\\:*?\"<>|]", "_")
+				.replaceAll("\\s+", "_")
+				.trim();
 	}
 
 }
