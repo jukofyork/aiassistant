@@ -8,39 +8,55 @@ import org.eclipse.swt.events.SelectionAdapter;
 import org.eclipse.swt.events.SelectionEvent;
 import org.eclipse.swt.widgets.Button;
 import org.eclipse.swt.widgets.Composite;
-import org.eclipse.swt.widgets.Display;
 
 import eclipse.plugin.aiassistant.Constants;
+import eclipse.plugin.aiassistant.preferences.PreferenceConstants;
+import eclipse.plugin.aiassistant.preferences.Preferences;
+import eclipse.plugin.aiassistant.prompt.Prompts;
 import eclipse.plugin.aiassistant.utility.Eclipse;
 
 /**
- * Manages the button bar with undo, redo, clear, and stop buttons.
+ * Manages the button bar with undo, redo, clear, and start/stop buttons.
+ * Provides dynamic tooltip updates for the start button based on current API settings.
  */
 public class ButtonBarArea {
 
+	// Button configuration constants
 	public static final String UNDO_NAME = "Undo";
 	public static final String UNDO_TOOLTIP = "Undo the Last Chat Interaction";
 	public static final String UNDO_ICON = "Undo.png";
+
 	public static final String REDO_NAME = "Redo";
 	public static final String REDO_TOOLTIP = "Redo the Last Undone Chat Interaction";
 	public static final String REDO_ICON = "Redo.png";
+
 	public static final String CLEAR_NAME = "Clear";
 	public static final String CLEAR_TOOLTIP = "Clear the Chat History";
 	public static final String CLEAR_ICON = "Clear.png";
+
+	public static final String START_NAME = "Start";
+	public static final String START_ICON = "Start.png";
+	public static final String START_TOOLTIP = "Start Response"; // Default only - will be overridden from preference store data
+
 	public static final String STOP_NAME = "Stop";
-	public static final String STOP_TOOLTIP = "Cancel the AI Response";
+	public static final String STOP_TOOLTIP = "Cancel Response";
 	public static final String STOP_ICON = "Stop.png";
 
+	// Core components
 	private final MainPresenter mainPresenter;
-
 	private final List<ButtonConfig> buttonConfigs = List.of(
 			new ButtonConfig(UNDO_NAME, UNDO_TOOLTIP, UNDO_ICON, this::onUndo),
 			new ButtonConfig(REDO_NAME, REDO_TOOLTIP, REDO_ICON, this::onRedo),
 			new ButtonConfig(CLEAR_NAME, CLEAR_TOOLTIP, CLEAR_ICON, this::onClear),
-			new ButtonConfig(STOP_NAME, STOP_TOOLTIP, STOP_ICON, this::onStop));
+			new ButtonConfig(START_NAME, START_TOOLTIP, START_ICON, this::onStartStop));
 
+	// UI components
 	private Composite buttonContainer;
 	private List<Button> buttons;
+	private Button startStopButton;
+
+	// Cached tooltip showing current API configuration for the start button
+	private String currentStartTooltip;
 
 	/**
 	 * Constructs a new ButtonBarArea instance with the given main presenter and
@@ -53,27 +69,40 @@ public class ButtonBarArea {
 		this.mainPresenter = mainPresenter;
 		buttonContainer = createButtonContainer(parent);
 		createButtons();
+		setupTooltipListener();
+		updateStartTooltip(); // Initialize tooltip
 	}
 
 	/**
 	 * Controls the enabled/disabled state of all buttons in the button bar.
 	 *
 	 * @param enabled true to enable buttons, false to disable them
-	 * @param invertStop when true, the Stop button will have the opposite enabled state
-	 *                   of other buttons (enabled when others are disabled, and vice versa).
-	 *                   When false, all buttons including Stop follow the same enabled state.
-	 *                   Also sets a hand cursor on the Stop button when it's the only enabled button.
+	 * @param overrideStartStop when true, overrides normal enable/disable behavior for the
+	 *                          start/stop button. Instead shows "Stop" state when enabled=false
+	 *                          (during processing) and "Start" state when enabled=true (when idle).
+	 *                          When false, all buttons including start/stop follow normal enable/disable.
 	 */
-	public void setInputEnabled(boolean enabled, boolean invertStop) {
+	public void setInputEnabled(boolean enabled, boolean overrideStartStop) {
 		Eclipse.runOnUIThreadAsync(() -> {
 			for (int i = 0; i < buttons.size(); i++) {
 				Button button = buttons.get(i);
-				if (invertStop && button.getText().equals(STOP_NAME)) {
-					// Stop has opposite enabled/disabled status to other buttons
-					button.setEnabled(!enabled);
+				if (overrideStartStop && (button.getText().equals(STOP_NAME) || button.getText().equals(START_NAME))) {
 					if (!enabled) {
-						// Stop will be the only control without the SWT.CURSOR_WAIT spinning cursor
-						button.setCursor(Display.getCurrent().getSystemCursor(SWT.CURSOR_HAND));
+						// Show Stop button when processing - only change if currently Start
+						if (button.getText().equals(START_NAME)) {
+							button.setText(STOP_NAME);
+							button.setToolTipText(STOP_TOOLTIP);
+							Eclipse.setButtonIcon(button, STOP_ICON);
+						}
+						button.setEnabled(true);
+					} else {
+						// Show Start button when idle - only change if currently Stop
+						if (button.getText().equals(STOP_NAME)) {
+							button.setText(START_NAME);
+							button.setToolTipText(currentStartTooltip);
+							Eclipse.setButtonIcon(button, START_ICON);
+						}
+						button.setEnabled(false);
 					}
 				} else {
 					button.setEnabled(enabled);
@@ -87,6 +116,8 @@ public class ButtonBarArea {
 
 	/**
 	 * Updates the state of all buttons based on current conditions.
+	 * Enables/disables buttons based on conversation state and ensures the
+	 * start/stop button shows as "Start" when in idle state.
 	 */
 	public void updateButtonStates() {
 		Eclipse.runOnUIThreadAsync(() -> {
@@ -98,10 +129,47 @@ public class ButtonBarArea {
 					button.setEnabled(mainPresenter.canRedo());
 				} else if (button.getText().equals(CLEAR_NAME)) {
 					button.setEnabled(!mainPresenter.isConversationEmpty());
-				} else if (button.getText().equals(STOP_NAME)) {
-					// Stop button is only enabled during active operations via setInputEnabled()
-					button.setEnabled(false);
+				} else if (button.getText().equals(STOP_NAME) || button.getText().equals(START_NAME)) {
+					// Ensure start/stop button shows as "Start" when idle
+					if (button.getText().equals(STOP_NAME)) {
+						button.setText(START_NAME);
+						button.setToolTipText(currentStartTooltip);
+						Eclipse.setButtonIcon(button, START_ICON);
+					}
+					button.setEnabled(!mainPresenter.isConversationEmpty());
 				}
+			}
+		});
+	}
+
+	/**
+	 * Registers a property change listener to handle changes in API settings
+	 * preferences. Updates the start button tooltip when any relevant setting changes.
+	 */
+	private void setupTooltipListener() {
+		Preferences.getDefault().addPropertyChangeListener(event -> {
+			// React to changes in API settings
+			if (event.getProperty().equals(PreferenceConstants.CURRENT_MODEL_NAME)
+					|| event.getProperty().equals(PreferenceConstants.CURRENT_API_URL)
+					|| event.getProperty().equals(PreferenceConstants.CURRENT_JSON_OVERRIDES)
+					|| event.getProperty().equals(PreferenceConstants.CURRENT_USE_STREAMING)
+					|| event.getProperty().equals(PreferenceConstants.CURRENT_USE_SYSTEM_MESSAGE)
+					|| event.getProperty().equals(PreferenceConstants.CURRENT_USE_DEVELOPER_MESSAGE)) {
+				updateStartTooltip();
+			}
+		});
+	}
+
+	/**
+	 * Updates the cached start button tooltip and applies it to the button if it's
+	 * currently showing as "Start".
+	 */
+	private void updateStartTooltip() {
+		currentStartTooltip = generateModelDetailsTooltip();
+
+		Eclipse.runOnUIThreadAsync(() -> {
+			if (startStopButton != null && startStopButton.getText().equals(START_NAME)) {
+				startStopButton.setToolTipText(currentStartTooltip);
 			}
 		});
 	}
@@ -122,6 +190,7 @@ public class ButtonBarArea {
 
 	/**
 	 * Creates and initializes buttons based on the provided button configurations.
+	 * Also stores a reference to the start/stop button for later state management.
 	 */
 	private void createButtons() {
 		buttons = new ArrayList<>();
@@ -134,6 +203,11 @@ public class ButtonBarArea {
 				}
 			});
 			buttons.add(button);
+
+			// Store reference to start/stop button for state management
+			if (config.name.equals(START_NAME)) {
+				startStopButton = button;
+			}
 		}
 	}
 
@@ -159,10 +233,51 @@ public class ButtonBarArea {
 	}
 
 	/**
-	 * Handles the 'Stop' button click event by delegating to the main presenter.
+	 * Handles the 'Start/Stop' button click event by delegating to the appropriate main presenter method.
+	 * When in "Start" state, sends a default prompt. When in "Stop" state, cancels the current operation.
 	 */
-	private void onStop() {
-		mainPresenter.onStop();
+	private void onStartStop() {
+		if (startStopButton.getText().equals(START_NAME)) {
+			mainPresenter.sendPredefinedPrompt(Prompts.DEFAULT);
+		} else {
+			mainPresenter.onStop();
+		}
+	}
+
+	/**
+	 * Generates a tooltip string showing current API configuration.
+	 * Always shows model name and API URL, then conditionally adds other settings
+	 * only if they are set/enabled.
+	 *
+	 * @return formatted tooltip string with current API settings
+	 */
+	private String generateModelDetailsTooltip() {
+		StringBuilder tooltip = new StringBuilder();
+
+		// Model name and API URL on separate lines
+		String modelName = Preferences.getCurrentModelName();
+		String apiUrl = Preferences.getCurrentApiUrl();
+		tooltip.append(modelName).append("\n\n").append(apiUrl);
+
+		// Add JSON overrides if not blank (with double newline)
+		String jsonOverrides = Preferences.getCurrentJsonOverrides();
+		if (jsonOverrides != null && !jsonOverrides.trim().isEmpty()) {
+			tooltip.append("\n\n").append(jsonOverrides.trim());
+		}
+
+		// Options section - streaming always shows, system/developer only if checked
+		tooltip.append("\n\n");
+		tooltip.append(Preferences.getCurrentUseStreaming() ? "🗹" : "☐").append(" Streaming");
+
+		if (Preferences.getCurrentUseSystemMessage()) {
+			tooltip.append("\n🗹 System");
+		}
+
+		if (Preferences.getCurrentUseDeveloperMessage()) {
+			tooltip.append("\n🗹 Developer");
+		}
+
+		return tooltip.toString();
 	}
 
 	/**
