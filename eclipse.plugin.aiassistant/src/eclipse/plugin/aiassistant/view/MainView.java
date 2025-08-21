@@ -56,7 +56,7 @@ public class MainView extends ViewPart {
 		mainContainer = createMainContainer(sashForm);
 
 		// Create tab folder directly in main container
-		tabIcon = Eclipse.loadIcon("Robot.png");
+		tabIcon = Eclipse.loadIcon("Conversation.png");
 		tabFolder = createTabFolder(mainContainer);
 		tabButtonBarArea = new TabButtonBarArea(mainPresenter, tabFolder);
 		tabFolder.setTopRight(tabButtonBarArea.getButtonContainer()); // Place button container in tab folder header
