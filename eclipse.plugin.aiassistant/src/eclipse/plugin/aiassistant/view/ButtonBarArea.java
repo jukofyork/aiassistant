@@ -8,6 +8,7 @@ import org.eclipse.swt.events.SelectionAdapter;
 import org.eclipse.swt.events.SelectionEvent;
 import org.eclipse.swt.widgets.Button;
 import org.eclipse.swt.widgets.Composite;
+import org.eclipse.swt.widgets.Display;
 
 import eclipse.plugin.aiassistant.Constants;
 import eclipse.plugin.aiassistant.preferences.PreferenceConstants;
@@ -94,6 +95,8 @@ public class ButtonBarArea {
 							button.setToolTipText(STOP_TOOLTIP);
 							Eclipse.setButtonIcon(button, STOP_ICON);
 						}
+						// Stop will be the only control without the SWT.CURSOR_WAIT spinning cursor
+						button.setCursor(Display.getCurrent().getSystemCursor(SWT.CURSOR_HAND));
 						button.setEnabled(true);
 					} else {
 						// Show Start button when idle - only change if currently Stop
