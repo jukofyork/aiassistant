@@ -80,6 +80,10 @@ public class MainPresenter {
 		return chatConversations.get(currentTabIndex);
 	}
 
+	public UserMessageHistory getUserMessageHistory() {
+		return userMessageHistory;
+	}
+
 	/**
 	 * Handles tab switching by updating the current tab index
 	 *
@@ -88,9 +92,7 @@ public class MainPresenter {
 	public void onTabSwitched(int newTabIndex) {
 		if (newTabIndex >= 0 && newTabIndex < chatConversations.size()) {
 			currentTabIndex = newTabIndex;
-			performOnMainViewAsync(mainView -> {
-				mainView.updateButtonStates();
-			});
+			performOnMainViewAsync(mainView -> { mainView.updateButtonStates(); });
 		}
 	}
 
@@ -101,14 +103,14 @@ public class MainPresenter {
 		ChatConversation newConversation = new ChatConversation();
 		chatConversations.add(newConversation);
 
-		performOnMainViewAsync(mainView -> {
-			mainView.createNewTab(newConversation);
-		});
+		performOnMainViewAsync(mainView -> { mainView.createNewTab(newConversation); });
 
 		// Switch to the new tab
 		currentTabIndex = chatConversations.size() - 1;
 		userMessageHistory.resetPosition();
-		refreshAfterStatusChange();
+
+		performOnMainViewAsync(mainView -> { mainView.updateButtonStates(); });
+		onScrollToBottom();
 	}
 
 	/**
@@ -117,6 +119,10 @@ public class MainPresenter {
 	 * as no more reliable synchronization mechanism has been found.
 	 */
 	public void onCloneTab() {
+
+		// We will notify that we are busy until the delayed replayMessages call resets the status
+		performOnMainViewAsync(mainView -> { mainView.setBusyWait(true); });
+
 		// Add a deep copy of the current conversation
 		ChatConversation clonedConversation = new ChatConversation();
 		clonedConversation.copyFrom(getCurrentConversation());
@@ -124,9 +130,7 @@ public class MainPresenter {
 		chatConversations.add(clonedConversation);
 
 		// Create synchronously to be sure it is there for out replay
-		performOnMainViewAsync(mainView -> {
-			mainView.createNewTab(clonedConversation);
-		});
+		performOnMainViewAsync(mainView -> { mainView.createNewTab(clonedConversation); });
 
 		// Set current tab top last
 		currentTabIndex = chatConversations.size() - 1;
@@ -137,6 +141,7 @@ public class MainPresenter {
 		// Schedule the actual replay for 2 seconds in the future
 		// TODO: Find a better way to do this...
 		Eclipse.getDisplay().timerExec(Constants.CLONE_TAB_REPLAY_DELAY_MS, () -> {
+			// NOTE: This will also update the busy status, the buttons state, and scroll to bottom
 			replayMessages(clonedConversation.getMessages(), currentTabIndex, true);
 		});
 	}
@@ -150,9 +155,7 @@ public class MainPresenter {
 	public void onTabRenamed(int tabIndex, String newTitle) {
 		if (tabIndex >= 0 && tabIndex < chatConversations.size()) {
 			chatConversations.get(tabIndex).setTitle(newTitle);
-			performOnMainViewAsync(mainView -> {
-				mainView.updateTabTitle(tabIndex, newTitle);
-			});
+			performOnMainViewAsync(mainView -> { mainView.updateTabTitle(tabIndex, newTitle); });
 		}
 	}
 
@@ -168,6 +171,7 @@ public class MainPresenter {
 			final int newTabIndex = currentTabIndex;
 			performOnMainViewAsync(mainView -> {
 				mainView.selectTab(newTabIndex);
+				mainView.updateButtonStates();
 			});
 		}
 	}
@@ -184,6 +188,7 @@ public class MainPresenter {
 			final int newTabIndex = currentTabIndex;
 			performOnMainViewAsync(mainView -> {
 				mainView.selectTab(newTabIndex);
+				mainView.updateButtonStates();
 			});
 		}
 	}
@@ -214,7 +219,7 @@ public class MainPresenter {
 		if (!chatConversations.get(tabIndex).isEmpty()) {
 			boolean confirmed = Eclipse.showConfirmDialog(
 					"Close Tab",
-					"This tab contains chat history. Are you sure you want to close it?"
+					"This conversation is not empty. Are you sure you want to close it?"
 					);
 			if (!confirmed) {
 				return false;
@@ -241,7 +246,7 @@ public class MainPresenter {
 			currentTabIndex = chatConversations.size() - 1;
 		}
 
-		refreshAfterStatusChange();
+		performOnMainViewAsync(mainView -> { mainView.updateButtonStates(); });
 	}
 
 	/**
@@ -263,13 +268,27 @@ public class MainPresenter {
 	}
 
 	/**
+	 * Handles the clear messages button click. Shows a confirmation dialog
+	 * and clears the message history if confirmed.
+	 */
+	public void onAttemptClearMessages() {
+		boolean confirmed = Eclipse.showConfirmDialog(
+				"Clear Message History",
+				"Are you sure you want to clear all stored user messages?"
+				);
+
+		if (confirmed) {
+			userMessageHistory.clear();
+			performOnMainViewAsync(mainView -> { mainView.updateButtonStates(); });
+		}
+	}
+
+	/**
 	 * Scrolls to the top of the chat message area.
 	 */
 	public void onScrollToTop() {
 		currentlyScrolledToMessageId = SCROLLED_TO_TOP;
-		performOnMainViewAsync(mainView -> {
-			mainView.getCurrentChatArea().scrollToTop();
-		});
+		performOnMainViewAsync(mainView -> { mainView.getCurrentChatArea().scrollToTop(); });
 	}
 
 	/**
@@ -277,9 +296,7 @@ public class MainPresenter {
 	 */
 	public void onScrollToBottom() {
 		currentlyScrolledToMessageId = SCROLLED_TO_BOTTOM;
-		performOnMainViewAsync(mainView -> {
-			mainView.getCurrentChatArea().scrollToBottom();
-		});
+		performOnMainViewAsync(mainView -> { mainView.getCurrentChatArea().scrollToBottom(); });
 	}
 
 	/**
@@ -358,6 +375,7 @@ public class MainPresenter {
 		if ((olderUserMessage != null)) {
 			setUserInputText(olderUserMessage);
 		}
+		performOnMainViewAsync(mainView -> { mainView.updateButtonStates(); });
 	}
 
 	/**
@@ -369,6 +387,7 @@ public class MainPresenter {
 		// NOTE: If no newer message then a new blank will be added beyond the end.
 		String newerUserMessage = userMessageHistory.getNewerMessage();
 		setUserInputText(newerUserMessage != null ? newerUserMessage : "");
+		performOnMainViewAsync(mainView -> { mainView.updateButtonStates(); });
 	}
 
 	/**
@@ -379,10 +398,10 @@ public class MainPresenter {
 		if (!getCurrentConversation().isEmpty()) {
 			onStop();
 			getCurrentConversation().clear();
-			performOnMainViewAsync(mainView -> {
-				mainView.getCurrentChatArea().initialize(); // Sync to avoid operation ordering issues
-			});
-			refreshAfterStatusChange();
+			// NOTE: Synchronous to avoid operation ordering issues
+			performOnMainViewAsync(mainView -> { mainView.getCurrentChatArea().initialize(); });
+			performOnMainViewAsync(mainView -> { mainView.updateButtonStates(); });
+			onScrollToBottom();
 		}
 	}
 
@@ -398,8 +417,9 @@ public class MainPresenter {
 				for (ChatMessage message : removedMessages) {
 					mainView.getCurrentChatArea().removeMessage(message.getId());
 				}
+				mainView.updateButtonStates();
 			});
-			refreshAfterStatusChange();
+			onScrollToBottom();
 		}
 	}
 
@@ -410,11 +430,10 @@ public class MainPresenter {
 	 */
 	public void onRedo() {
 		if (getCurrentConversation().canRedo()) {
-			onStop(); // Stop any running operations
-			boolean hideUiDuringUpdate = getCurrentConversation().isEmpty(); // Hide UI when redoing from empty (many messages)
+			onStop();
+			// NOTE: This will also update the buttons state and scroll to bottom
 			Iterable<ChatMessage> redoneMessages = getCurrentConversation().redo();
-			replayMessages(redoneMessages, currentTabIndex, hideUiDuringUpdate);
-			userMessageHistory.resetPosition();
+			replayMessages(redoneMessages, currentTabIndex, getCurrentConversation().isEmpty());
 		}
 	}
 
@@ -429,17 +448,19 @@ public class MainPresenter {
 				null);
 
 		performFileOperation(filePath, path -> {
-			// Clear current conversation (also stop any running operations)
+			// Clear current conversation (also stops any running operations)
 			onClear();
 
 			// Read and deserialize the file
 			Path pathObj = Paths.get(path);
 			String json = Files.readString(pathObj);
 
-			// Restore the imported conversation and replay to the UI
+			// NOTE:Update first so replayMessages can update the buttons state...
+			userMessageHistory.resetPosition();
+
+			// NOTE: This will also update the buttons state and scroll to bottom
 			getCurrentConversation().copyFrom(ChatConversation.fromJson(json));
 			replayMessages(getCurrentConversation().getMessages(), currentTabIndex, true);
-			userMessageHistory.resetPosition();
 		}, "import chat history");
 	}
 
@@ -487,8 +508,9 @@ public class MainPresenter {
 		sendConversationJob.cancel();
 		performOnMainViewAsync(mainView -> {
 			mainView.setInputEnabled(true);
+			mainView.updateButtonStates();
 		});
-		refreshAfterStatusChange();
+		onScrollToBottom();
 	}
 
 	/**
@@ -540,6 +562,18 @@ public class MainPresenter {
 	 */
 	public void loadStateFromPreferenceStore() {
 
+		// We will notify that we are busy until the delayed replayMessages call resets the status
+		performOnMainViewAsync(mainView -> { mainView.setBusyWait(true); });
+
+		// Load user message history from preferences, fall back to empty history on failure
+		// NOTE: Do this first so replayMessages can update the buttons state...
+		try {
+			userMessageHistory.copyFrom(Preferences.loadUserMessageHistory());
+		} catch (IOException | ClassNotFoundException e) {
+			Logger.warning("Failed to load user message history: " + e.getMessage());
+			userMessageHistory.copyFrom(new UserMessageHistory());
+		}
+
 		// Load all conversations from preferences, fall back to empty list on failure
 		List<ChatConversation> loadedConversations;
 		try {
@@ -568,16 +602,9 @@ public class MainPresenter {
 		for (int i = 0; i < chatConversations.size(); i++) {
 			final int index = i;
 			Eclipse.getDisplay().timerExec(Constants.STATE_RESTORE_REPLAY_DELAY_MS, () -> {
+				// NOTE: This will also update the busy status, the buttons state, and scroll to bottom
 				replayMessages(chatConversations.get(index).getMessages(), index, true);
 			});
-		}
-
-		// Load user message history from preferences, fall back to empty history on failure
-		try {
-			userMessageHistory.copyFrom(Preferences.loadUserMessageHistory());
-		} catch (IOException | ClassNotFoundException e) {
-			Logger.warning("Failed to load user message history: " + e.getMessage());
-			userMessageHistory.copyFrom(new UserMessageHistory());
 		}
 	}
 
@@ -589,32 +616,22 @@ public class MainPresenter {
 	 */
 	public ChatMessage beginMessageFromAssistant() {
 		ChatMessage message = new ChatMessage(ChatRole.ASSISTANT);
-		performOnMainViewAsync(mainView -> {
-			mainView.setInputEnabled(false);
-		});
+		performOnMainViewAsync(mainView -> { mainView.setInputEnabled(false); });
 		pushMessage(message);
 		return message;
 	}
 
 	/**
-	 * Updates an existing message from the assistant and maintains scroll position
-	 * if user was already at the bottom.
+	 * Updates an existing message from the assistant and maintains scroll position.
+	 * Always scrolls to bottom to ensure the latest content is visible during streaming.
 	 *
 	 * @param message the message to update
 	 */
 	public void updateMessageFromAssistant(ChatMessage message) {
-		AtomicReference<Boolean> wasAtBottom = new AtomicReference<>(false);
-		// NOTE: This needs to be synchronous or otherwise fails to set the flag...
-		performOnMainViewSync(mainView -> {
-			wasAtBottom.set(mainView.getCurrentChatArea().isScrollbarAtBottom());
+		performOnMainViewAsync(mainView -> {
 			mainView.getCurrentChatArea().updateMessage(message);
 		});
-		if (wasAtBottom.get()) {
-			currentlyScrolledToMessageId = SCROLLED_TO_BOTTOM;
-			performOnMainViewSync(mainView -> {
-				mainView.getCurrentChatArea().scrollToBottom(); // Sync to allow update for next wasAtBottom test
-			});
-		}
+		onScrollToBottom();
 	}
 
 	/**
@@ -623,6 +640,7 @@ public class MainPresenter {
 	public void endMessageFromAssistant() {
 		performOnMainViewAsync(mainView -> {
 			mainView.setInputEnabled(true);
+			mainView.updateButtonStates();
 		});
 	}
 
@@ -727,6 +745,7 @@ public class MainPresenter {
 			currentUserText.set(mainView.getUserInputArea().getText());
 		});
 		userMessageHistory.storeMessage(currentUserText.get());
+		performOnMainViewAsync(mainView -> { mainView.updateButtonStates(); });
 		setUserInputText("");
 		return currentUserText.get();
 	}
@@ -741,8 +760,9 @@ public class MainPresenter {
 		getCurrentConversation().push(message);
 		performOnMainViewAsync(mainView -> {
 			mainView.getCurrentChatArea().newMessage(message);
+			mainView.updateButtonStates();
 		});
-		refreshAfterStatusChange();
+		onScrollToBottom();
 	}
 
 	/**
@@ -755,6 +775,7 @@ public class MainPresenter {
 	 */
 	private void replayMessages(Iterable<ChatMessage> messages, int tabIndex, boolean hideUiDuringUpdate) {
 		performOnMainViewAsync(mainView -> {
+			mainView.setBusyWait(true);
 			mainView.getChatAreaAt(tabIndex).setAsyncExecution(false);
 			mainView.getChatAreaAt(tabIndex).setEnabled(false);
 			if (hideUiDuringUpdate) {
@@ -770,7 +791,9 @@ public class MainPresenter {
 			mainView.getChatAreaAt(tabIndex).setEnabled(true);
 			mainView.getChatAreaAt(tabIndex).setAsyncExecution(false);
 			mainView.updateButtonStates();
+			mainView.setBusyWait(false);
 		});
+		onScrollToBottom();
 	}
 
 	/**
@@ -779,20 +802,7 @@ public class MainPresenter {
 	 * @param text the text to set in the user input area
 	 */
 	private void setUserInputText(String text) {
-		performOnMainViewAsync(mainView -> {
-			mainView.getUserInputArea().setText(text);
-		});
-	}
-
-	/**
-	 * Refreshes the UI state after a status change by scrolling to the bottom
-	 * and updating button states to reflect the current conversation state.
-	 */
-	private void refreshAfterStatusChange() {
-		onScrollToBottom();
-		performOnMainViewAsync(mainView -> {
-			mainView.updateButtonStates();
-		});
+		performOnMainViewAsync(mainView -> { mainView.getUserInputArea().setText(text); });
 	}
 
 	/**

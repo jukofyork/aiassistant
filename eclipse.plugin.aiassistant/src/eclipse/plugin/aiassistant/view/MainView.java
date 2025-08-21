@@ -13,6 +13,7 @@ import org.eclipse.swt.custom.SashForm;
 import org.eclipse.swt.events.SelectionListener;
 import org.eclipse.swt.graphics.Image;
 import org.eclipse.swt.widgets.Composite;
+import org.eclipse.swt.widgets.Display;
 import org.eclipse.ui.IWorkbenchPage;
 import org.eclipse.ui.IWorkbenchWindow;
 import org.eclipse.ui.part.ViewPart;
@@ -214,15 +215,47 @@ public class MainView extends ViewPart {
 	}
 
 	/**
-	 * Enables or disables user interaction components based on the specified flag.
+	 * Enables or disables user input across the entire view interface.
+	 * When input is disabled, the Stop button remains enabled to allow
+	 * cancellation of ongoing operations.
 	 *
-	 * @param enabled true to enable interaction, false to disable it.
+	 * @param enabled true to enable user input, false to disable it
 	 */
 	public void setInputEnabled(boolean enabled) {
+		setInputEnabled(enabled, true);
+	}
+
+	/**
+	 * Sets the view to a busy/waiting state where all user interactions
+	 * are disabled, including the Stop button. This is used for operations
+	 * that cannot be cancelled once started.
+	 *
+	 * @param isBusy true to set busy state (disable all input), false to restore normal state
+	 */
+	public void setBusyWait(boolean isBusy) {
+		setInputEnabled(!isBusy, false);
+	}
+
+	/**
+	 * Controls the enabled/disabled state of all UI components in the view.
+	 * This method coordinates the state of multiple UI areas to ensure consistent
+	 * user interaction behavior during different application states.
+	 *
+	 * @param enabled true to enable user input, false to disable it
+	 * @param invertStop when true, the Stop button will have the opposite enabled state
+	 *                   of other buttons (enabled when others are disabled, and vice versa).
+	 *                   When false, all buttons including Stop follow the same enabled state.
+	 */
+	private void setInputEnabled(boolean enabled, boolean invertStop) {
+		// Show wait cursor when disabled to indicate processing state
+		// NOTE: Call first and synchronously, so buttonBarArea can override for "STOP" button.
+		Eclipse.runOnUIThreadSync(() -> {
+			mainContainer.setCursor(enabled ? null : Display.getCurrent().getSystemCursor(SWT.CURSOR_WAIT));
+		});
 		Eclipse.runOnUIThreadAsync(() -> {
 			getCurrentChatArea().setEnabled(enabled); // Blocks Javascript callbacks.
 			userInputArea.setEnabled(enabled);
-			buttonBarArea.setInputEnabled(enabled);
+			buttonBarArea.setInputEnabled(enabled, invertStop);
 			tabFolder.setEnabled(enabled); // Block tab switching during operations
 			tabButtonBarArea.setInputEnabled(enabled);
 		});
@@ -234,6 +267,7 @@ public class MainView extends ViewPart {
 	public void updateButtonStates() {
 		buttonBarArea.updateButtonStates();
 		tabButtonBarArea.updateButtonStates();
+		userInputArea.updateButtonStates();
 	}
 
 	/**

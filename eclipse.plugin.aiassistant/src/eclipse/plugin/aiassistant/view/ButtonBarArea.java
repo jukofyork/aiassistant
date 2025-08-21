@@ -62,18 +62,25 @@ public class ButtonBarArea {
 	}
 
 	/**
-	 * Sets the input enabled state for all buttons in the button bar area.
+	 * Controls the enabled/disabled state of all buttons in the button bar.
 	 *
-	 * @param enabled True to enable input, false to disable it.
+	 * @param enabled true to enable buttons, false to disable them
+	 * @param invertStop when true, the Stop button will have the opposite enabled state
+	 *                   of other buttons (enabled when others are disabled, and vice versa).
+	 *                   When false, all buttons including Stop follow the same enabled state.
+	 *                   Also sets a hand cursor on the Stop button when it's the only enabled button.
 	 */
-	public void setInputEnabled(boolean enabled) {
+	public void setInputEnabled(boolean enabled, boolean invertStop) {
 		Eclipse.runOnUIThreadAsync(() -> {
-			buttonContainer.setCursor(enabled ? null : Display.getCurrent().getSystemCursor(SWT.CURSOR_WAIT));
 			for (int i = 0; i < buttons.size(); i++) {
 				Button button = buttons.get(i);
-				if (button.getText().equals(STOP_NAME)) {
-					button.setEnabled(!enabled); // Stop has opposite enabled/disabled status to other buttons.
-					button.setCursor(enabled ? null : Display.getCurrent().getSystemCursor(SWT.CURSOR_HAND));
+				if (invertStop && button.getText().equals(STOP_NAME)) {
+					// Stop has opposite enabled/disabled status to other buttons
+					button.setEnabled(!enabled);
+					if (!enabled) {
+						// Stop will be the only control without the SWT.CURSOR_WAIT spinning cursor
+						button.setCursor(Display.getCurrent().getSystemCursor(SWT.CURSOR_HAND));
+					}
 				} else {
 					button.setEnabled(enabled);
 				}
@@ -97,6 +104,9 @@ public class ButtonBarArea {
 					button.setEnabled(mainPresenter.canRedo());
 				} else if (button.getText().equals(CLEAR_NAME)) {
 					button.setEnabled(!mainPresenter.isConversationEmpty());
+				} else if (button.getText().equals(STOP_NAME)) {
+					// Stop button is only enabled during active operations via setInputEnabled()
+					button.setEnabled(false);
 				}
 			}
 		});

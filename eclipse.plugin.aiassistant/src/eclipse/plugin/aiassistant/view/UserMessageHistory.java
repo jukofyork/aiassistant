@@ -28,14 +28,56 @@ public class UserMessageHistory implements Serializable {
 	}
 
 	/**
-	 * Stores a message if it is not empty and not already present in the
-	 * storedMessages list. Updates the currentIndex to point to the last element in
-	 * the list.
+	 * Checks if the message history is empty.
+	 *
+	 * @return true if no messages are stored, false otherwise.
+	 */
+	public boolean isEmpty() {
+		return storedMessages.isEmpty();
+	}
+
+	/**
+	 * Returns the number of stored messages.
+	 *
+	 * @return the size of the message history.
+	 */
+	public int size() {
+		return storedMessages.size();
+	}
+
+	/**
+	 * Checks if there are older messages available without changing position.
+	 *
+	 * @return true if there are older messages, false otherwise.
+	 */
+	public boolean hasOlderMessages() {
+		return currentIndex > 0;
+	}
+
+	/**
+	 * Checks if there are newer messages available without changing position.
+	 *
+	 * @return true if there are newer messages, false otherwise.
+	 */
+	public boolean hasNewerMessages() {
+		return currentIndex < storedMessages.size();
+	}
+
+	/**
+	 * Stores a message if it is not empty. If the message already exists in the
+	 * storedMessages list, it is moved to the end (most recent position) rather
+	 * than creating a duplicate entry. This ensures recent messages appear at
+	 * the end of history navigation.
+	 * Updates the currentIndex to point to the last element in the list.
 	 *
 	 * @param message The message to be stored.
 	 */
 	public void storeMessage(String message) {
-		if (!message.trim().isEmpty() && !storedMessages.contains(message)) {
+		if (!message.trim().isEmpty()) {
+			// Remove existing occurrence if present, then add to end
+			if (storedMessages.contains(message)) {
+				storedMessages.remove(message);
+			}
 			storedMessages.add(message);
 		}
 		currentIndex = storedMessages.size();
@@ -77,6 +119,14 @@ public class UserMessageHistory implements Serializable {
 	 */
 	public void resetPosition() {
 		currentIndex = storedMessages.size();
+	}
+
+	/**
+	 * Clears all stored messages and resets the current position.
+	 */
+	public void clear() {
+		storedMessages.clear();
+		currentIndex = 0;
 	}
 
 }

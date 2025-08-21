@@ -10,7 +10,6 @@ import org.eclipse.swt.layout.GridData;
 import org.eclipse.swt.layout.GridLayout;
 import org.eclipse.swt.widgets.Button;
 import org.eclipse.swt.widgets.Composite;
-import org.eclipse.swt.widgets.Label;
 
 import eclipse.plugin.aiassistant.utility.Eclipse;
 
@@ -108,12 +107,17 @@ public class TabButtonBarArea {
 	 */
 	private Composite createButtonContainer(Composite parent) {
 		Composite container = new Composite(parent, SWT.NONE);
-		// 7 buttons + 2 separators = 9 columns
-		GridLayout layout = new GridLayout(9, false);
+		// 4 buttons = 4 columns
+		GridLayout layout = new GridLayout(4, false);
 		layout.marginWidth = 0;
 		layout.marginHeight = 0;
 		layout.horizontalSpacing = 2;
 		container.setLayout(layout);
+
+		// Right-justify the button container
+		GridData gridData = new GridData(SWT.END, SWT.CENTER, true, false);
+		container.setLayoutData(gridData);
+
 		return container;
 	}
 
@@ -125,11 +129,6 @@ public class TabButtonBarArea {
 		for (int i = 0; i < buttonConfigs.size(); i++) {
 			ButtonConfig config = buttonConfigs.get(i);
 
-			// Add separator after previous/next buttons (index 1)
-			if (i == 2) {
-				createSeparator();
-			}
-
 			Button button = Eclipse.createButton(buttonContainer, config.name, config.tooltip, config.filename,
 					new SelectionAdapter() {
 				@Override
@@ -139,17 +138,6 @@ public class TabButtonBarArea {
 			});
 			buttons.add(button);
 		}
-	}
-
-	/**
-	 * Creates a vertical separator in the button container.
-	 */
-	private void createSeparator() {
-		Label separator = new Label(buttonContainer, SWT.SEPARATOR | SWT.VERTICAL);
-		GridData gridData = new GridData(SWT.CENTER, SWT.CENTER, false, false);
-		gridData.widthHint = 1;
-		gridData.heightHint = 16; // Fixed height to match typical button height
-		separator.setLayoutData(gridData);
 	}
 
 	/**

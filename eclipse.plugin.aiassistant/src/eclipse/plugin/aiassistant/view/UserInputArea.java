@@ -7,7 +7,6 @@ import org.eclipse.swt.events.SelectionAdapter;
 import org.eclipse.swt.events.SelectionEvent;
 import org.eclipse.swt.widgets.Button;
 import org.eclipse.swt.widgets.Composite;
-import org.eclipse.swt.widgets.Display;
 
 import eclipse.plugin.aiassistant.Constants;
 import eclipse.plugin.aiassistant.preferences.PreferenceConstants;
@@ -30,8 +29,10 @@ public class UserInputArea {
 
 	public static final String ARROW_UP_TOOLTIP = "Older User Messages";
 	public static final String ARROW_DOWN_TOOLTIP = "Newer User Messages";
+	public static final String CLEAR_MESSAGES_TOOLTIP = "Clear Message History";
 	public static final String ARROW_UP_ICON = "ArrowUp.png";
 	public static final String ARROW_DOWN_ICON = "ArrowDown.png";
+	public static final String CLEAR_MESSAGES_ICON = "ClearMessages.png";
 	public static final String INPUT_AREA_TOOLTIP = """
 			Ctrl+Enter: Delay the Assistant's Response
 			Shift+Enter: Insert a Newline""";
@@ -44,6 +45,7 @@ public class UserInputArea {
 	private Composite arrowButtonContainer;
 	private Button upArrowButton;
 	private Button downArrowButton;
+	private Button clearButton;
 
 	/**
 	 * Constructs a new UserInputArea instance with the given parent composite and
@@ -60,6 +62,7 @@ public class UserInputArea {
 		arrowButtonContainer = createArrowButtonContainer(mainContainer);
 		upArrowButton = createUpArrowButton(arrowButtonContainer);
 		downArrowButton = createDownArrowButton(arrowButtonContainer);
+		clearButton = createClearButton(arrowButtonContainer);
 		setupPropertyChangeListener();
 	}
 
@@ -104,10 +107,26 @@ public class UserInputArea {
 	 */
 	public void setEnabled(boolean enabled) {
 		Eclipse.runOnUIThreadAsync(() -> {
-			spellCheckedTextBox.setEnabled(enabled);
 			upArrowButton.setEnabled(enabled);
 			downArrowButton.setEnabled(enabled);
-			mainContainer.setCursor(enabled ? null : Display.getCurrent().getSystemCursor(SWT.CURSOR_WAIT));
+			clearButton.setEnabled(enabled);
+			if (enabled) {
+				updateButtonStates();
+			}
+			spellCheckedTextBox.setEnabled(enabled);
+		});
+	}
+
+	/**
+	 * Updates the enabled state of all buttons based on the current message history state.
+	 * Tests the message history methods to determine button availability without affecting state.
+	 */
+	public void updateButtonStates() {
+		Eclipse.runOnUIThreadAsync(() -> {
+			UserMessageHistory messageHistory = mainPresenter.getUserMessageHistory();
+			upArrowButton.setEnabled(messageHistory.hasOlderMessages());
+			downArrowButton.setEnabled(messageHistory.hasNewerMessages());
+			clearButton.setEnabled(!messageHistory.isEmpty());
 		});
 	}
 
@@ -190,6 +209,24 @@ public class UserInputArea {
 			}
 		};
 		return Eclipse.createButton(buttonContainer, "", ARROW_DOWN_TOOLTIP, ARROW_DOWN_ICON, listener);
+	}
+
+	/**
+	 * Creates the clear messages button component.
+	 *
+	 * @param buttonContainer The parent composite for the clear button.
+	 * @return The created button.
+	 */
+	private Button createClearButton(Composite buttonContainer) {
+		SelectionAdapter listener = new SelectionAdapter() {
+			@Override
+			public void widgetSelected(SelectionEvent e) {
+				if (spellCheckedTextBox.getEnabled()) {
+					mainPresenter.onAttemptClearMessages();
+				}
+			}
+		};
+		return Eclipse.createButton(buttonContainer, "", CLEAR_MESSAGES_TOOLTIP, CLEAR_MESSAGES_ICON, listener);
 	}
 
 	/**
