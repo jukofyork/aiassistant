@@ -12,6 +12,7 @@ import java.util.function.Consumer;
 
 import org.eclipse.core.runtime.ILogListener;
 import org.eclipse.core.runtime.IStatus;
+import org.eclipse.core.runtime.jobs.Job;
 import org.eclipse.jface.util.IPropertyChangeListener;
 import org.eclipse.jface.util.PropertyChangeEvent;
 import org.eclipse.swt.SWT;
@@ -659,9 +660,17 @@ public class MainPresenter {
 	 * then sends alternating user and assistant messages. Automatically schedules
 	 * an assistant reply if the prompt ends with a blank assistant message.
 	 *
+	 * This method prevents concurrent execution by checking if the conversation job is
+	 * already scheduled or running.
+	 *
 	 * @param type the type of the predefined prompt to process
 	 */
 	public void sendPredefinedPrompt(Prompts type) {
+
+		// Check if we're already processing (job scheduled/waiting/running)
+		if (sendConversationJob.getState() != Job.NONE) {
+			return;
+		}
 
 		// See if we have any user input to add to to the context.
 		String currentUserText = storeAndRetrieveUserMessage();
@@ -683,7 +692,6 @@ public class MainPresenter {
 			}
 			isUserMessage = !isUserMessage;
 		}
-
 	}
 
 	/**
