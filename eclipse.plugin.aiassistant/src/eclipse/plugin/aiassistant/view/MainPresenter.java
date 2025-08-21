@@ -523,41 +523,45 @@ public class MainPresenter {
 	 * mechanism has been found.
 	 */
 	public void loadStateFromPreferenceStore() {
+
+		// Load all conversations from preferences, fall back to empty list on failure
+		List<ChatConversation> loadedConversations;
 		try {
-			// Load all conversations from preferences
-			List<ChatConversation> loadedConversations = Preferences.loadChatConversations();
-
-			// Replace current conversations
-			chatConversations.clear();
-			chatConversations.addAll(loadedConversations);
-
-			// Create the tabs we are going to need
-			performOnMainViewAsync(mainView -> {
-				for (int i = 0; i < chatConversations.size(); i++) {
-					mainView.createNewTab();
-				}
-			});
-
-			// Set current tab top last
-			currentTabIndex = chatConversations.size() - 1;
-
-			// Schedule the actual replay for 5 seconds in the future
-			// TODO: Find a better way to do this...
-			for (int i = 0; i < chatConversations.size(); i++) {
-				final int index = i;
-				Eclipse.getDisplay().timerExec(Constants.STATE_RESTORE_REPLAY_DELAY_MS, () -> {
-					replayMessages(chatConversations.get(index).getMessages(), index, true);
-				});
-			}
-
-		} catch (IOException e) {
+			loadedConversations = Preferences.loadChatConversations();
+		} catch (IOException | ClassNotFoundException e) {
 			Logger.warning("Failed to load chat conversations: " + e.getMessage());
+			loadedConversations = new ArrayList<>();
 		}
 
+		// Replace current conversations
+		chatConversations.clear();
+		chatConversations.addAll(loadedConversations);
+
+		// Create the tabs we are going to need
+		performOnMainViewAsync(mainView -> {
+			for (int i = 0; i < chatConversations.size(); i++) {
+				mainView.createNewTab();
+			}
+		});
+
+		// Set current tab top last
+		currentTabIndex = chatConversations.size() - 1;
+
+		// Schedule the actual replay for 5 seconds in the future
+		// TODO: Find a better way to do this...
+		for (int i = 0; i < chatConversations.size(); i++) {
+			final int index = i;
+			Eclipse.getDisplay().timerExec(Constants.STATE_RESTORE_REPLAY_DELAY_MS, () -> {
+				replayMessages(chatConversations.get(index).getMessages(), index, true);
+			});
+		}
+
+		// Load user message history from preferences, fall back to empty history on failure
 		try {
 			userMessageHistory.copyFrom(Preferences.loadUserMessageHistory());
-		} catch (IOException e) {
+		} catch (IOException | ClassNotFoundException e) {
 			Logger.warning("Failed to load user message history: " + e.getMessage());
+			userMessageHistory.copyFrom(new UserMessageHistory());
 		}
 	}
 

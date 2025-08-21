@@ -1,6 +1,9 @@
 package eclipse.plugin.aiassistant.preferences;
 
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.ObjectOutputStream;
+import java.util.Base64;
 
 import org.eclipse.core.runtime.preferences.AbstractPreferenceInitializer;
 
@@ -136,8 +139,12 @@ public class PreferenceInitializer extends AbstractPreferenceInitializer {
 	 */
 	private void setDefaultBookmarkedApiSettings() {
 		try {
-			String serializedSettings = Preferences.serializeBookmarkedApiSettings(Constants.DEFAULT_BOOKMARKED_API_SETTINGS);
-			Preferences.getDefault().setDefault(PreferenceConstants.BOOKMARKED_API_SETTINGS, serializedSettings);
+			ByteArrayOutputStream baos = new ByteArrayOutputStream();
+			try (ObjectOutputStream oos = new ObjectOutputStream(baos)) {
+				oos.writeObject(Constants.DEFAULT_BOOKMARKED_API_SETTINGS);
+			}
+			String serializedData = Base64.getEncoder().encodeToString(baos.toByteArray());
+			Preferences.getDefault().setDefault(PreferenceConstants.BOOKMARKED_API_SETTINGS, serializedData);
 		} catch (IOException e) {
 			Logger.warning("Failed to set default bookmarked API settings: " + e.getMessage());
 		}

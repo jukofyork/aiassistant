@@ -1,5 +1,6 @@
 package eclipse.plugin.aiassistant.chat;
 
+import java.io.Serializable;
 import java.util.UUID;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
@@ -8,7 +9,8 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 /**
  * The ChatMessage class represents a content in a chat conversation.
  */
-public class ChatMessage {
+public class ChatMessage implements Serializable {
+	private static final long serialVersionUID = 1L;
 
 	private final UUID id;
 	private final ChatRole role;

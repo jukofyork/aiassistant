@@ -1,6 +1,7 @@
 package eclipse.plugin.aiassistant.chat;
 
 import java.io.IOException;
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -16,7 +17,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 /**
  * Represents a chat conversation with undo/redo capabilities.
  */
-public class ChatConversation {
+public class ChatConversation implements Serializable {
+	private static final long serialVersionUID = 1L;
 
 	private static final ObjectMapper objectMapper = new ObjectMapper();
 
@@ -278,64 +280,13 @@ public class ChatConversation {
 	}
 
 	/**
-	 * Creates a ChatConversation from a JSON string containing only message data.
-	 * This is a simplified deserialization that only restores the message history,
-	 * not the redo stack. For full state restoration, use {@link #deserialize(String)}.
+	 * Converts the conversation's full state (messages and redo history) to JSON.
+	 * This preserves complete conversation state for persistence across sessions.
 	 *
-	 * @param json the JSON string containing a "messages" field with message data
-	 * @return a new ChatConversation with the messages from the JSON
-	 * @throws IOException if the JSON cannot be parsed or the expected structure is missing
-	 */
-	public static ChatConversation fromJson(String json) throws IOException {
-		JsonNode root = objectMapper.readTree(json);
-		ChatConversation conversation = new ChatConversation();
-
-		JavaType stackType =
-				objectMapper.getTypeFactory().constructCollectionType(Stack.class, ChatMessage.class);
-		Stack<ChatMessage> messageStack =
-				objectMapper.convertValue(root.get("messages"), stackType);
-		conversation.messages.addAll(messageStack);
-
-		return conversation;
-	}
-
-	/**
-	 * Converts the conversation's message history to a JSON string.
-	 * This is a simplified serialization that only exports the messages,
-	 * not the redo stack. For full state preservation, use {@link #serialize()}.
-	 *
-	 * @return a JSON string containing the conversation's messages
+	 * @return a JSON string containing the conversation's complete state
 	 * @throws IOException if the JSON serialization fails
 	 */
 	public synchronized String toJson() throws IOException {
-		Map<String, Object> data = new HashMap<>();
-		data.put("messages", messages);
-		return objectMapper.writeValueAsString(data);
-	}
-
-	/**
-	 * Exports a transcript view to Markdown (USER and ASSISTANT only; skips NOTIFICATION and empty content).
-	 * Each message is prefixed with "### ROLE:" followed by the content. Messages are separated by a blank line.
-	 *
-	 * @return a markdown-formatted transcript string
-	 */
-	public synchronized String toMarkdown() {
-		StringBuilder markdown = new StringBuilder();
-		for (ChatMessage message : getTranscriptMessages()) {
-			markdown.append("### ").append(message.getRole()).append(":\n\n")
-			.append(message.getContent()).append("\n\n");
-		}
-		return markdown.toString().trim();
-	}
-
-	/**
-	 * Serializes the full internal state (messages + redo history) to JSON.
-	 * Intended for persistence across sessions (e.g., preferences), not for user-facing export.
-	 *
-	 * @return a JSON string representing the complete conversation state
-	 * @throws IOException if serialization fails
-	 */
-	public synchronized String serialize() throws IOException {
 		Map<String, Object> data = new HashMap<>();
 		data.put("messages", messages);
 		data.put("redoStack", redoStack);
@@ -343,15 +294,14 @@ public class ChatConversation {
 	}
 
 	/**
-	 * Deserializes a JSON string produced by {@link #serialize()} into a conversation
-	 * with full internal state (messages + redo history).
-	 * Expects both "messages" and "redoStack" fields to be present.
+	 * Creates a ChatConversation from a JSON string containing full conversation state.
+	 * Restores both message history and redo stack for complete state restoration.
 	 *
-	 * @param json the JSON string representing a full conversation state
-	 * @return a ChatConversation populated with messages and redo history
-	 * @throws IOException if parsing fails or the expected fields are missing
+	 * @param json the JSON string containing "messages" and "redoStack" fields
+	 * @return a new ChatConversation with complete state from the JSON
+	 * @throws IOException if the JSON cannot be parsed or the expected structure is missing
 	 */
-	public static ChatConversation deserialize(String json) throws IOException {
+	public static ChatConversation fromJson(String json) throws IOException {
 		JsonNode root = objectMapper.readTree(json);
 		ChatConversation conversation = new ChatConversation();
 
@@ -373,25 +323,23 @@ public class ChatConversation {
 	}
 
 	/**
-	 * Creates a snapshot list of messages suitable for transcript export.
-	 * Filters to USER and ASSISTANT roles, skipping any messages with empty content.
-	 * Order is preserved (chronological as stored).
+	 * Exports a transcript view to Markdown. Filters to USER and ASSISTANT roles only,
+	 * skipping NOTIFICATION messages and any messages with empty content.
+	 * Each message is prefixed with "### ROLE:" followed by the content. Messages are separated by a blank line.
 	 *
-	 * Thread-safety: must be called while holding this instance's monitor;
-	 * it is only invoked from synchronized methods in this class.
-	 *
-	 * @return a snapshot list of transcript messages
+	 * @return a markdown-formatted transcript string
 	 */
-	private List<ChatMessage> getTranscriptMessages() {
-		List<ChatMessage> transcriptMessages = new ArrayList<>();
+	public synchronized String toMarkdown() {
+		StringBuilder markdown = new StringBuilder();
 		for (ChatMessage message : messages) {
 			if (message.getRole() == ChatRole.USER || message.getRole() == ChatRole.ASSISTANT) {
 				if (!message.getContent().trim().isEmpty()) {
-					transcriptMessages.add(message);
+					markdown.append("### ").append(message.getRole()).append(":\n\n")
+					.append(message.getContent()).append("\n\n");
 				}
 			}
 		}
-		return transcriptMessages;
+		return markdown.toString().trim();
 	}
 
 }
