@@ -807,7 +807,7 @@ public class MainPresenter {
 				mainView.getChatAreaAt(tabIndex).setVisible(true);
 			}
 			mainView.getChatAreaAt(tabIndex).setEnabled(true);
-			mainView.getChatAreaAt(tabIndex).setAsyncExecution(false);
+			mainView.getChatAreaAt(tabIndex).setAsyncExecution(true);
 			mainView.updateButtonStates();
 			mainView.setBusyWait(false);
 		});
