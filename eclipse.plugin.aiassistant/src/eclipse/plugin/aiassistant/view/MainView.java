@@ -60,6 +60,7 @@ public class MainView extends ViewPart {
 		tabFolder = createTabFolder(mainContainer);
 		tabButtonBarArea = new TabButtonBarArea(mainPresenter, tabFolder);
 		tabFolder.setTopRight(tabButtonBarArea.getButtonContainer()); // Place button container in tab folder header
+		tabFolder.setUnselectedCloseVisible(true); // Show close button when hover over an unselected tabs.
 		chatAreas = new ArrayList<>();
 
 		setupTabListeners();
