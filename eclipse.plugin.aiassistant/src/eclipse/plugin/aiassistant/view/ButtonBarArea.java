@@ -11,14 +11,11 @@ import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Display;
 
 import eclipse.plugin.aiassistant.Constants;
-import eclipse.plugin.aiassistant.preferences.PreferenceConstants;
-import eclipse.plugin.aiassistant.preferences.Preferences;
 import eclipse.plugin.aiassistant.prompt.Prompts;
 import eclipse.plugin.aiassistant.utility.Eclipse;
 
 /**
  * Manages the button bar with undo, redo, clear, and start/stop buttons.
- * Provides dynamic tooltip updates for the start button based on current API settings.
  */
 public class ButtonBarArea {
 
@@ -37,7 +34,7 @@ public class ButtonBarArea {
 
 	public static final String START_NAME = "Start";
 	public static final String START_ICON = "Start.png";
-	public static final String START_TOOLTIP = "Start Response"; // Default only - will be overridden from preference store data
+	public static final String START_TOOLTIP = "Start Response";
 
 	public static final String STOP_NAME = "Stop";
 	public static final String STOP_TOOLTIP = "Cancel Response";
@@ -56,9 +53,6 @@ public class ButtonBarArea {
 	private List<Button> buttons;
 	private Button startStopButton;
 
-	// Cached tooltip showing current API configuration for the start button
-	private String currentStartTooltip;
-
 	/**
 	 * Constructs a new ButtonBarArea instance with the given main presenter and
 	 * parent composite.
@@ -70,8 +64,6 @@ public class ButtonBarArea {
 		this.mainPresenter = mainPresenter;
 		buttonContainer = createButtonContainer(parent);
 		createButtons();
-		setupTooltipListener();
-		updateStartTooltip(); // Initialize tooltip
 	}
 
 	/**
@@ -102,7 +94,7 @@ public class ButtonBarArea {
 						// Show Start button when idle - only change if currently Stop
 						if (button.getText().equals(STOP_NAME)) {
 							button.setText(START_NAME);
-							button.setToolTipText(currentStartTooltip);
+							button.setToolTipText(START_TOOLTIP);
 							Eclipse.setButtonIcon(button, START_ICON);
 						}
 						button.setEnabled(false);
@@ -138,43 +130,11 @@ public class ButtonBarArea {
 					// Ensure start/stop button shows as "Start" when idle
 					if (button.getText().equals(STOP_NAME)) {
 						button.setText(START_NAME);
-						button.setToolTipText(currentStartTooltip);
+						button.setToolTipText(START_TOOLTIP);
 						Eclipse.setButtonIcon(button, START_ICON);
 					}
 					button.setEnabled(!mainPresenter.isConversationEmpty());
 				}
-			}
-		});
-	}
-
-	/**
-	 * Registers a property change listener to handle changes in API settings
-	 * preferences. Updates the start button tooltip when any relevant setting changes.
-	 */
-	private void setupTooltipListener() {
-		Preferences.getDefault().addPropertyChangeListener(event -> {
-			// React to changes in API settings
-			if (event.getProperty().equals(PreferenceConstants.CURRENT_MODEL_NAME)
-					|| event.getProperty().equals(PreferenceConstants.CURRENT_API_URL)
-					|| event.getProperty().equals(PreferenceConstants.CURRENT_JSON_OVERRIDES)
-					|| event.getProperty().equals(PreferenceConstants.CURRENT_USE_STREAMING)
-					|| event.getProperty().equals(PreferenceConstants.CURRENT_USE_SYSTEM_MESSAGE)
-					|| event.getProperty().equals(PreferenceConstants.CURRENT_USE_DEVELOPER_MESSAGE)) {
-				updateStartTooltip();
-			}
-		});
-	}
-
-	/**
-	 * Updates the cached start button tooltip and applies it to the button if it's
-	 * currently showing as "Start".
-	 */
-	private void updateStartTooltip() {
-		currentStartTooltip = generateModelDetailsTooltip();
-
-		Eclipse.runOnUIThreadAsync(() -> {
-			if (startStopButton != null && startStopButton.getText().equals(START_NAME)) {
-				startStopButton.setToolTipText(currentStartTooltip);
 			}
 		});
 	}
@@ -247,42 +207,6 @@ public class ButtonBarArea {
 		} else {
 			mainPresenter.onStop();
 		}
-	}
-
-	/**
-	 * Generates a tooltip string showing current API configuration.
-	 * Always shows model name and API URL, then conditionally adds other settings
-	 * only if they are set/enabled.
-	 *
-	 * @return formatted tooltip string with current API settings
-	 */
-	private String generateModelDetailsTooltip() {
-		StringBuilder tooltip = new StringBuilder();
-
-		// Model name and API URL on separate lines
-		String modelName = Preferences.getCurrentModelName();
-		String apiUrl = Preferences.getCurrentApiUrl();
-		tooltip.append(modelName).append("\n\n").append(apiUrl);
-
-		// Add JSON overrides if not blank (with double newline)
-		String jsonOverrides = Preferences.getCurrentJsonOverrides();
-		if (jsonOverrides != null && !jsonOverrides.trim().isEmpty()) {
-			tooltip.append("\n\n").append(jsonOverrides.trim());
-		}
-
-		// Options section - streaming always shows, system/developer only if checked
-		tooltip.append("\n\n");
-		tooltip.append(Preferences.getCurrentUseStreaming() ? "🗹" : "☐").append(" Streaming");
-
-		if (Preferences.getCurrentUseSystemMessage()) {
-			tooltip.append("\n🗹 System");
-		}
-
-		if (Preferences.getCurrentUseDeveloperMessage()) {
-			tooltip.append("\n🗹 Developer");
-		}
-
-		return tooltip.toString();
 	}
 
 	/**

@@ -19,6 +19,7 @@ import eclipse.plugin.aiassistant.utility.SpellCheckedTextBox;
 /**
  * This class represents the user input area in the application, which consists
  * of a text area and arrow buttons for navigation.
+ * Provides dynamic tooltip updates for the settings button based on current API settings.
  */
 public class UserInputArea {
 
@@ -51,6 +52,9 @@ public class UserInputArea {
 	private Button clearButton;
 	private Button settingsButton;
 
+	// Cached tooltip showing current API configuration for the settings button
+	private String currentSettingsTooltip;
+
 	/**
 	 * Constructs a new UserInputArea instance with the given parent composite and
 	 * MainPresenter.
@@ -69,6 +73,8 @@ public class UserInputArea {
 		clearButton = createClearButton(arrowButtonContainer);
 		settingsButton = createSettingsButton(arrowButtonContainer);
 		setupPropertyChangeListener();
+		setupTooltipListener();
+		updateSettingsTooltip(); // Initialize tooltip
 	}
 
 	/**
@@ -135,6 +141,37 @@ public class UserInputArea {
 			downArrowButton.setEnabled(messageHistory.hasNewerMessages());
 			clearButton.setEnabled(!messageHistory.isEmpty());
 			// Settings button is always enabled when input is enabled
+		});
+	}
+
+	/**
+	 * Registers a property change listener to handle changes in API settings
+	 * preferences. Updates the settings button tooltip when any relevant setting changes.
+	 */
+	private void setupTooltipListener() {
+		Preferences.getDefault().addPropertyChangeListener(event -> {
+			// React to changes in API settings
+			if (event.getProperty().equals(PreferenceConstants.CURRENT_MODEL_NAME)
+					|| event.getProperty().equals(PreferenceConstants.CURRENT_API_URL)
+					|| event.getProperty().equals(PreferenceConstants.CURRENT_JSON_OVERRIDES)
+					|| event.getProperty().equals(PreferenceConstants.CURRENT_USE_STREAMING)
+					|| event.getProperty().equals(PreferenceConstants.CURRENT_USE_SYSTEM_MESSAGE)
+					|| event.getProperty().equals(PreferenceConstants.CURRENT_USE_DEVELOPER_MESSAGE)) {
+				updateSettingsTooltip();
+			}
+		});
+	}
+
+	/**
+	 * Updates the cached settings button tooltip and applies it to the button.
+	 */
+	private void updateSettingsTooltip() {
+		currentSettingsTooltip = generateModelDetailsTooltip();
+
+		Eclipse.runOnUIThreadAsync(() -> {
+			if (settingsButton != null) {
+				settingsButton.setToolTipText(currentSettingsTooltip);
+			}
 		});
 	}
 
@@ -292,6 +329,42 @@ public class UserInputArea {
 	 */
 	private void onSettings() {
 		Preferences.openPreferenceDialog();
+	}
+
+	/**
+	 * Generates a tooltip string showing current API configuration.
+	 * Always shows model name and API URL, then conditionally adds other settings
+	 * only if they are set/enabled.
+	 *
+	 * @return formatted tooltip string with current API settings
+	 */
+	private String generateModelDetailsTooltip() {
+		StringBuilder tooltip = new StringBuilder();
+
+		// Model name and API URL on separate lines
+		String modelName = Preferences.getCurrentModelName();
+		String apiUrl = Preferences.getCurrentApiUrl();
+		tooltip.append(modelName).append("\n\n").append(apiUrl);
+
+		// Add JSON overrides if not blank (with double newline)
+		String jsonOverrides = Preferences.getCurrentJsonOverrides();
+		if (jsonOverrides != null && !jsonOverrides.trim().isEmpty()) {
+			tooltip.append("\n\n").append(jsonOverrides.trim());
+		}
+
+		// Options section - streaming always shows, system/developer only if checked
+		tooltip.append("\n\n");
+		tooltip.append(Preferences.getCurrentUseStreaming() ? "🗹" : "☐").append(" Streaming");
+
+		if (Preferences.getCurrentUseSystemMessage()) {
+			tooltip.append("\n🗹 System");
+		}
+
+		if (Preferences.getCurrentUseDeveloperMessage()) {
+			tooltip.append("\n🗹 Developer");
+		}
+
+		return tooltip.toString();
 	}
 
 }
