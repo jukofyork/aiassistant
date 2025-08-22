@@ -120,10 +120,8 @@ public class ChatConversationMenu {
 	 * @param enabled True to enable the context menu, false to disable it.
 	 */
 	public void setEnabled(boolean enabled) {
-		if (menuEnabled != enabled) {
-			menuEnabled = enabled;
-			Eclipse.runOnUIThreadAsync(() -> { updateMenuItemsVisibility(); });
-		}
+		menuEnabled = enabled;
+		Eclipse.runOnUIThreadAsync(() -> { updateMenuItemsVisibility(); });
 	}
 
 	/**
@@ -190,12 +188,19 @@ public class ChatConversationMenu {
 	 * Updates the visibility and enabled state of menu items based on the current context.
 	 */
 	private void updateMenuItemsVisibility() {
-		boolean showBrowserFunctions = false;
-		boolean showPasteOptions = false;
-		if (menuEnabled) {
-			showBrowserFunctions = !copyBrowserSelectedText().isEmpty();
-			showPasteOptions = !Eclipse.getClipboardContents().isEmpty();
+		// Disable all menu items when menu is disabled
+		if (!menuEnabled) {
+			for (MenuItem item : menu.getItems()) {
+				if (item.getStyle() != SWT.SEPARATOR) {
+					item.setEnabled(false);
+				}
+			}
+			return;
 		}
+
+		// Otherwise selectively enable and disable the menu items
+		boolean showBrowserFunctions = !copyBrowserSelectedText().isEmpty();
+		boolean showPasteOptions = !Eclipse.getClipboardContents().isEmpty();
 		for (MenuItem item : menu.getItems()) {
 			switch (item.getText()) {
 			case UNDO_NAME:

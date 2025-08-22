@@ -7,6 +7,7 @@ import org.eclipse.swt.events.SelectionAdapter;
 import org.eclipse.swt.events.SelectionEvent;
 import org.eclipse.swt.widgets.Button;
 import org.eclipse.swt.widgets.Composite;
+import org.eclipse.swt.widgets.Display;
 
 import eclipse.plugin.aiassistant.Constants;
 import eclipse.plugin.aiassistant.preferences.PreferenceConstants;
@@ -119,6 +120,7 @@ public class UserInputArea {
 				updateButtonStates();
 			}
 			spellCheckedTextBox.setEnabled(enabled);
+			mainContainer.setCursor(enabled ? null : Display.getCurrent().getSystemCursor(SWT.CURSOR_WAIT));
 		});
 	}
 

@@ -97,9 +97,7 @@ public class ChatConversationArea {
 	 */
 	public void setEnabled(boolean enabled) {
 		setAllBrowserFunctionsEnabled(enabled);
-		Eclipse.runOnUIThreadAsync(() -> {
-			browserMenu.setEnabled(enabled);
-		});
+		Eclipse.runOnUIThreadAsync(() -> { browserMenu.setEnabled(enabled); });
 		useSmoothScroll = enabled;
 	}
 

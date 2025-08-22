@@ -634,15 +634,22 @@ public class MainPresenter {
 
 	/**
 	 * Updates an existing message from the assistant and maintains scroll position.
-	 * Always scrolls to bottom to ensure the latest content is visible during streaming.
+	 * If the user was viewing the bottom of the chat, keeps them at the bottom
+	 * to show new content. If they were scrolled up, preserves their position.
 	 *
 	 * @param message the message to update
 	 */
 	public void updateMessageFromAssistant(ChatMessage message) {
+		AtomicReference<Boolean> scrollbarAtBottom = new AtomicReference<>(false);
+		performOnMainViewSync(mainView -> {
+			scrollbarAtBottom.set(mainView.getCurrentChatArea().isScrollbarAtBottom());
+		});
 		performOnMainViewAsync(mainView -> {
 			mainView.getCurrentChatArea().updateMessage(message);
 		});
-		onScrollToBottom();
+		if (scrollbarAtBottom.get()) {
+			onScrollToBottom();
+		}
 	}
 
 	/**

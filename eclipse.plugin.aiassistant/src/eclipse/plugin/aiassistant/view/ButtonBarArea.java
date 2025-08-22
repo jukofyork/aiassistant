@@ -78,16 +78,16 @@ public class ButtonBarArea {
 	 * Controls the enabled/disabled state of all buttons in the button bar.
 	 *
 	 * @param enabled true to enable buttons, false to disable them
-	 * @param overrideStartStop when true, overrides normal enable/disable behavior for the
-	 *                          start/stop button. Instead shows "Stop" state when enabled=false
-	 *                          (during processing) and "Start" state when enabled=true (when idle).
-	 *                          When false, all buttons including start/stop follow normal enable/disable.
+	 * @param isRunningJob when true, overrides normal enable/disable behavior for the
+	 *                     start/stop button. Instead shows "Stop" state when enabled=false
+	 *                     (during processing) and "Start" state when enabled=true (when idle).
+	 *                     When false, all buttons including start/stop follow normal enable/disable.
 	 */
-	public void setInputEnabled(boolean enabled, boolean overrideStartStop) {
+	public void setInputEnabled(boolean enabled, boolean isRunningJob) {
 		Eclipse.runOnUIThreadAsync(() -> {
 			for (int i = 0; i < buttons.size(); i++) {
 				Button button = buttons.get(i);
-				if (overrideStartStop && (button.getText().equals(STOP_NAME) || button.getText().equals(START_NAME))) {
+				if (isRunningJob && (button.getText().equals(STOP_NAME) || button.getText().equals(START_NAME))) {
 					if (!enabled) {
 						// Show Stop button when processing - only change if currently Start
 						if (button.getText().equals(START_NAME)) {
@@ -96,8 +96,8 @@ public class ButtonBarArea {
 							Eclipse.setButtonIcon(button, STOP_ICON);
 						}
 						// Stop will be the only control without the SWT.CURSOR_WAIT spinning cursor
-						button.setCursor(Display.getCurrent().getSystemCursor(SWT.CURSOR_HAND));
 						button.setEnabled(true);
+						button.setCursor(Display.getCurrent().getSystemCursor(SWT.CURSOR_HAND));
 					} else {
 						// Show Start button when idle - only change if currently Stop
 						if (button.getText().equals(STOP_NAME)) {
@@ -106,9 +106,11 @@ public class ButtonBarArea {
 							Eclipse.setButtonIcon(button, START_ICON);
 						}
 						button.setEnabled(false);
+						button.setCursor(null);
 					}
 				} else {
 					button.setEnabled(enabled);
+					button.setCursor(enabled ? null : Display.getCurrent().getSystemCursor(SWT.CURSOR_WAIT));
 				}
 			}
 			if (enabled) {

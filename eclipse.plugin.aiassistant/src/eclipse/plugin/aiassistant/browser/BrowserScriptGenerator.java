@@ -130,7 +130,7 @@ public class BrowserScriptGenerator {
 	 */
 	public String generateIsScrollbarAtBottomScript() {
 		// https://stackoverflow.com/questions/9439725/how-to-detect-if-browser-window-is-scrolled-to-bottom
-		return "return Math.ceil(window.innerHeight + window.scrollY + 1) >= document.body.scrollHeight;";
+		return "return Math.ceil(window.innerHeight + window.scrollY) >= document.body.scrollHeight;";
 	}
 
 	/**

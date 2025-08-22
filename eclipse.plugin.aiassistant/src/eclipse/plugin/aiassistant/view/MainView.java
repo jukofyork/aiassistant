@@ -44,6 +44,9 @@ public class MainView extends ViewPart {
 
 	private Image tabIcon;
 
+	// Index of the only tab that should remain accessible when UI is disabled, or -1 when all tabs are enabled.
+	private int disableAllTabsBut = -1;
+
 	/**
 	 * Initializes the view components and sets up the presenter.
 	 *
@@ -243,22 +246,29 @@ public class MainView extends ViewPart {
 	 * user interaction behavior during different application states.
 	 *
 	 * @param enabled true to enable user input, false to disable it
-	 * @param invertStop when true, the Stop button will have the opposite enabled state
-	 *                   of other buttons (enabled when others are disabled, and vice versa).
-	 *                   When false, all buttons including Stop follow the same enabled state.
+	 * @param isRunningJob when true, the Stop button will have the opposite enabled state
+	 *                     of other buttons (enabled when others are disabled, and vice versa).
+	 *                     When false, all buttons including Stop follow the same enabled state.
 	 */
-	private void setInputEnabled(boolean enabled, boolean invertStop) {
+	private void setInputEnabled(boolean enabled, boolean isRunningJob) {
 		// Show wait cursor when disabled to indicate processing state
-		// NOTE: Call first and synchronously, so buttonBarArea can override for "STOP" button.
 		Eclipse.runOnUIThreadSync(() -> {
-			mainContainer.setCursor(enabled ? null : Display.getCurrent().getSystemCursor(SWT.CURSOR_WAIT));
+			// Save current tab index for blocking tab-switching in the listener
+			disableAllTabsBut = enabled ? -1 : tabFolder.getSelectionIndex();
 		});
 		Eclipse.runOnUIThreadAsync(() -> {
-			getCurrentChatArea().setEnabled(enabled); // Blocks Javascript callbacks.
-			userInputArea.setEnabled(enabled);
-			buttonBarArea.setInputEnabled(enabled, invertStop);
-			tabFolder.setEnabled(enabled); // Block tab switching during operations
+			// Block all Javascript callbacks and disable all right-click menu items
+			getCurrentChatArea().setEnabled(enabled);
+
+			// Disable all but the "STOP" button when running a job
+			buttonBarArea.setInputEnabled(enabled, isRunningJob);
 			tabButtonBarArea.setInputEnabled(enabled);
+			userInputArea.setEnabled(enabled);
+
+			// Disable everything when not running a job
+			if (!isRunningJob) {
+				mainContainer.setCursor(enabled ? null : Display.getCurrent().getSystemCursor(SWT.CURSOR_WAIT));
+			}
 		});
 	}
 
@@ -304,6 +314,16 @@ public class MainView extends ViewPart {
 	private void setupTabListeners() {
 		// Selection listener for tab switching
 		tabFolder.addSelectionListener(SelectionListener.widgetSelectedAdapter(e -> {
+
+			// Block tab switching if UI is disabled by forcing back to the allowed tab
+			if (disableAllTabsBut != -1 && tabFolder.getSelectionIndex() != disableAllTabsBut) {
+				// Check if the saved tab index is still valid
+				if (disableAllTabsBut >= 0 && disableAllTabsBut < tabFolder.getItemCount()) {
+					tabFolder.setSelection(disableAllTabsBut);
+				}
+				return;
+			}
+
 			int newIndex = tabFolder.getSelectionIndex();
 			mainPresenter.onTabSwitched(newIndex);
 		}));
@@ -312,6 +332,12 @@ public class MainView extends ViewPart {
 		tabFolder.addMouseListener(new org.eclipse.swt.events.MouseAdapter() {
 			@Override
 			public void mouseDoubleClick(org.eclipse.swt.events.MouseEvent e) {
+
+				// Block rename if UI is disabled
+				if (disableAllTabsBut != -1) {
+					return;
+				}
+
 				CTabItem item = tabFolder.getItem(new org.eclipse.swt.graphics.Point(e.x, e.y));
 				if (item != null) {
 					int tabIndex = tabFolder.indexOf(item);
@@ -326,6 +352,13 @@ public class MainView extends ViewPart {
 		tabFolder.addCTabFolder2Listener(new CTabFolder2Adapter() {
 			@Override
 			public void close(CTabFolderEvent event) {
+
+				// Block close if UI is disabled
+				if (disableAllTabsBut != -1) {
+					event.doit = false;
+					return;
+				}
+
 				int tabIndex = tabFolder.indexOf((CTabItem) event.item);
 				boolean shouldClose = mainPresenter.onAttemptCloseTab(tabIndex);
 
