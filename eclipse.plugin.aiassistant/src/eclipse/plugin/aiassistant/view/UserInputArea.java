@@ -31,7 +31,7 @@ public class UserInputArea {
 
 	public static final String ARROW_UP_TOOLTIP = "Older User Messages";
 	public static final String ARROW_DOWN_TOOLTIP = "Newer User Messages";
-	public static final String CLEAR_MESSAGES_TOOLTIP = "Clear Message History";
+	public static final String CLEAR_MESSAGES_TOOLTIP = "Clear the Message History";
 	public static final String SETTINGS_TOOLTIP = "Open the Settings Page";
 	public static final String ARROW_UP_ICON = "ArrowUp.png";
 	public static final String ARROW_DOWN_ICON = "ArrowDown.png";

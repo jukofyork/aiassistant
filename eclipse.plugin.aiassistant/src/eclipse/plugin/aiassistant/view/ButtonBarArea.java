@@ -34,7 +34,7 @@ public class ButtonBarArea {
 
 	public static final String START_NAME = "Start";
 	public static final String START_ICON = "Start.png";
-	public static final String START_TOOLTIP = "Start Response";
+	public static final String START_TOOLTIP = "Generate Response";
 
 	public static final String STOP_NAME = "Stop";
 	public static final String STOP_TOOLTIP = "Cancel Response";
