@@ -21,24 +21,6 @@ import eclipse.plugin.aiassistant.utility.Eclipse;
  */
 public class ChatConversationMenu {
 
-	public static final String UNDO_NAME = "Undo";
-	public static final String UNDO_TOOLTIP = "Undo the Last Chat Interaction";
-	public static final String UNDO_ICON = "Undo.png";
-	public static final String REDO_NAME = "Redo";
-	public static final String REDO_TOOLTIP = "Redo the Last Undone Chat Interaction";
-	public static final String REDO_ICON = "Redo.png";
-	public static final String CLEAR_NAME = "Clear";
-	public static final String CLEAR_TOOLTIP = "Clear the Chat History";
-	public static final String CLEAR_ICON = "Clear.png";
-	public static final String IMPORT_NAME = "Import";
-	public static final String IMPORT_TOOLTIP = "Import Chat History";
-	public static final String IMPORT_ICON = "Import.png";
-	public static final String EXPORT_NAME = "Export";
-	public static final String EXPORT_TOOLTIP = "Export Chat History";
-	public static final String EXPORT_ICON = "Export.png";
-	public static final String MARKDOWN_NAME = "Export as Markdown";
-	public static final String MARKDOWN_TOOLTIP = "Export Chat History as Markdown";
-	public static final String MARKDOWN_ICON = "Markdown.png";
 	public static final String PASTE_MESSAGE_NAME = "Paste To Message";
 	public static final String PASTE_MESSAGE_TOOLTIP = "Paste the Clipboard Contents as a Message";
 	public static final String PASTE_MESSAGE_ICON = "Paste.png";
@@ -54,20 +36,20 @@ public class ChatConversationMenu {
 	public static final String REVIEW_CHANGES_NAME = "Review Changes";
 	public static final String REVIEW_CHANGES_TOOLTIP = "Open the 'Review Changes' Dialog";
 	public static final String REVIEW_CHANGES_ICON = "ReviewChanges.png";
+	public static final String IMPORT_NAME = "Import";
+	public static final String IMPORT_TOOLTIP = "Import Chat History";
+	public static final String IMPORT_ICON = "Import.png";
+	public static final String EXPORT_NAME = "Export";
+	public static final String EXPORT_TOOLTIP = "Export Chat History";
+	public static final String EXPORT_ICON = "Export.png";
+	public static final String MARKDOWN_NAME = "Export as Markdown";
+	public static final String MARKDOWN_TOOLTIP = "Export Chat History as Markdown";
+	public static final String MARKDOWN_ICON = "Markdown.png";
 
 	private final MainPresenter mainPresenter;
 	private final ChatConversationArea chatConversationArea;
 
 	private final BrowserScriptGenerator browserScriptGenerator;
-
-	private MenuItemData[] undoRedoMenuItemsData = {
-			new MenuItemData(UNDO_NAME, UNDO_ICON, UNDO_TOOLTIP,
-					e -> handleUndo()),
-			new MenuItemData(REDO_NAME, REDO_ICON, REDO_TOOLTIP,
-					e -> handleRedo()),
-			new MenuItemData(CLEAR_NAME, CLEAR_ICON, CLEAR_TOOLTIP,
-					e -> handleClear())
-	};
 
 	private MenuItemData[] fileMenuItemsData = {
 			new MenuItemData(IMPORT_NAME, IMPORT_ICON, IMPORT_TOOLTIP,
@@ -133,19 +115,15 @@ public class ChatConversationMenu {
 	private Menu createMenu(Browser browser) {
 		Menu menu = new Menu(browser);
 
-		for (MenuItemData itemData : undoRedoMenuItemsData) {
-			addMenuItem(menu, itemData.text, itemData.iconPath, itemData.toolTipText, itemData.listener);
-		}
-		new MenuItem(menu, SWT.SEPARATOR);
-		for (MenuItemData itemData : fileMenuItemsData) {
-			addMenuItem(menu, itemData.text, itemData.iconPath, itemData.toolTipText, itemData.listener);
-		}
-		new MenuItem(menu, SWT.SEPARATOR);
 		for (MenuItemData itemData : pasteMenuItemsData) {
 			addMenuItem(menu, itemData.text, itemData.iconPath, itemData.toolTipText, itemData.listener);
 		}
 		new MenuItem(menu, SWT.SEPARATOR);
 		for (MenuItemData itemData : browserFunctionMenuItemsData) {
+			addMenuItem(menu, itemData.text, itemData.iconPath, itemData.toolTipText, itemData.listener);
+		}
+		new MenuItem(menu, SWT.SEPARATOR);
+		for (MenuItemData itemData : fileMenuItemsData) {
 			addMenuItem(menu, itemData.text, itemData.iconPath, itemData.toolTipText, itemData.listener);
 		}
 
@@ -203,15 +181,6 @@ public class ChatConversationMenu {
 		boolean showPasteOptions = !Eclipse.getClipboardContents().isEmpty();
 		for (MenuItem item : menu.getItems()) {
 			switch (item.getText()) {
-			case UNDO_NAME:
-				item.setEnabled(!showBrowserFunctions && !mainPresenter.isConversationEmpty());
-				break;
-			case REDO_NAME:
-				item.setEnabled(!showBrowserFunctions && mainPresenter.canRedo());
-				break;
-			case CLEAR_NAME:
-				item.setEnabled(!showBrowserFunctions && !mainPresenter.isConversationEmpty());
-				break;
 			case IMPORT_NAME:
 				item.setEnabled(!showBrowserFunctions);
 				break;
@@ -230,27 +199,6 @@ public class ChatConversationMenu {
 				break;
 			}
 		}
-	}
-
-	/**
-	 * Handles the 'Undo' menu item click event by delegating to the main presenter.
-	 */
-	private void handleUndo() {
-		mainPresenter.onUndo();
-	}
-
-	/**
-	 * Handles the 'Redo' menu item click event by delegating to the main presenter.
-	 */
-	private void handleRedo() {
-		mainPresenter.onRedo();
-	}
-
-	/**
-	 * Handles the 'Clear' menu item click event by delegating to the main presenter.
-	 */
-	private void handleClear() {
-		mainPresenter.onClear();
 	}
 
 	/**
