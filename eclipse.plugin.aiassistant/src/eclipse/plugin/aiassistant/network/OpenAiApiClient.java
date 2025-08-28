@@ -582,7 +582,7 @@ public class OpenAiApiClient {
 				cachedTokens > 0 ? "Cached: " + cachedTokens + " tokens" : null);
 
 		// Response line - subtract reasoning tokens since they don't count towards output limit
-		long actualResponseTokens = completionTokens - reasoningTokens;
+		long actualResponseTokens = Math.max(0, completionTokens - reasoningTokens);
 		appendTokenLine(responseStatistics, "Response", actualResponseTokens, maxOutputTokens,
 				reasoningTokens > 0 ? "Reasoning: " + reasoningTokens + " tokens" : null);
 
