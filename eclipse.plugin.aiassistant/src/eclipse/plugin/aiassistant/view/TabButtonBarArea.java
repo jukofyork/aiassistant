@@ -31,6 +31,9 @@ public class TabButtonBarArea {
 	public static final String CLONE_TAB_NAME = "";
 	public static final String CLONE_TAB_TOOLTIP = "Clone Tab";
 	public static final String CLONE_TAB_ICON = "CloneTab.png";
+	public static final String CLOSE_ALL_NAME = "";
+	public static final String CLOSE_ALL_TOOLTIP = "Close All Tabs";
+	public static final String CLOSE_ALL_ICON = "Close.png";
 
 	private final MainPresenter mainPresenter;
 
@@ -38,7 +41,8 @@ public class TabButtonBarArea {
 			new ButtonConfig(PREVIOUS_NAME, PREVIOUS_TOOLTIP, PREVIOUS_ICON, this::onPrevious),
 			new ButtonConfig(NEXT_NAME, NEXT_TOOLTIP, NEXT_ICON, this::onNext),
 			new ButtonConfig(NEW_TAB_NAME, NEW_TAB_TOOLTIP, NEW_TAB_ICON, this::onNewTab),
-			new ButtonConfig(CLONE_TAB_NAME, CLONE_TAB_TOOLTIP, CLONE_TAB_ICON, this::onCloneTab));
+			new ButtonConfig(CLONE_TAB_NAME, CLONE_TAB_TOOLTIP, CLONE_TAB_ICON, this::onCloneTab),
+			new ButtonConfig(CLOSE_ALL_NAME, CLOSE_ALL_TOOLTIP, CLOSE_ALL_ICON, this::onCloseAll));
 
 	private Composite buttonContainer;
 	private List<Button> buttons;
@@ -96,6 +100,8 @@ public class TabButtonBarArea {
 					button.setEnabled(mainPresenter.getTabCount() > 1);
 				} else if (button.getToolTipText().equals(CLONE_TAB_TOOLTIP)) {
 					button.setEnabled(!mainPresenter.isConversationEmpty());
+				} else if (button.getToolTipText().equals(CLOSE_ALL_TOOLTIP)) {
+					button.setEnabled(true);
 				}
 			}
 		});
@@ -109,8 +115,8 @@ public class TabButtonBarArea {
 	 */
 	private Composite createButtonContainer(Composite parent) {
 		Composite container = new Composite(parent, SWT.NONE);
-		// 4 buttons = 4 columns
-		GridLayout layout = new GridLayout(4, false);
+		// 5 buttons = 5 columns
+		GridLayout layout = new GridLayout(5, false);
 		layout.marginWidth = 0;
 		layout.marginHeight = 0;
 		layout.horizontalSpacing = 2;
@@ -168,6 +174,15 @@ public class TabButtonBarArea {
 	 */
 	private void onCloneTab() {
 		mainPresenter.onCloneTab();
+	}
+
+	/**
+	 * Handles the 'Close All' button click event by delegating to the main presenter.
+	 */
+	private void onCloseAll() {
+		if (mainPresenter.onAttemptCloseAllTabs()) {
+			mainPresenter.onCloseAllTabs();
+		}
 	}
 
 	/**

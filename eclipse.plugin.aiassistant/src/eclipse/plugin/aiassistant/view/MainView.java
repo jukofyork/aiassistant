@@ -368,7 +368,8 @@ public class MainView extends ViewPart {
 								"Tab index " + tabIndex + " is out of bounds (size: " + chatAreas.size() + ")");
 					}
 
-					// Remove from our chat areas list
+					// Remove from our chat areas list and dispose browser
+					chatAreas.get(tabIndex).getBrowser().dispose();
 					chatAreas.remove(tabIndex);
 
 					// Update data model AFTER UI is updated

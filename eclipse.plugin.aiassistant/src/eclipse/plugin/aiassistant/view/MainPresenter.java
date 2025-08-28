@@ -197,22 +197,14 @@ public class MainPresenter {
 	/**
 	 * Checks if a tab at the specified index can be closed and shows confirmation dialog
 	 * if the conversation is not empty. Does not update the data model - that is handled
-	 * later by onTabClosed() after the UI has been updated.
+	 * later by onCloseTab() after the UI has been updated. If the last tab is closed,
+	 * a new blank tab will be automatically created inside of `onCloseTab()`.
 	 *
 	 * @param tabIndex the index of the tab to close
-	 * @return true if the tab should be closed, false if cancelled or not allowed
+	 * @return true if the tab should be closed, false if cancelled by user
 	 */
 	public boolean onAttemptCloseTab(int tabIndex) {
 		if (tabIndex < 0 || tabIndex >= chatConversations.size()) {
-			return false;
-		}
-
-		// Can't close the last remaining tab
-		if (chatConversations.size() <= 1) {
-			Eclipse.showWarningDialog(
-					"Cannot Close All Tabs",
-					"At least one tab must remain open."
-					);
 			return false;
 		}
 
@@ -227,16 +219,17 @@ public class MainPresenter {
 			}
 		}
 
-		// DON'T update data model here - just return true to allow UI closure
+		// Allow closure - data model will be updated in onCloseTab()
 		return true;
 	}
 
 	/**
 	 * Called by the UI after a tab has been successfully removed.
-	 * Updates the data model to match the UI state.
+	 * Updates the data model to match the UI state. If all tabs are closed,
+	 * automatically creates a new blank tab to ensure at least one tab remains.
 	 */
 	public void onCloseTab(int closedTabIndex) {
-		// Remove the conversation
+		// Remove the conversation from the data model
 		chatConversations.remove(closedTabIndex);
 
 		// Adjust current tab index if necessary
@@ -247,7 +240,53 @@ public class MainPresenter {
 			currentTabIndex = chatConversations.size() - 1;
 		}
 
-		performOnMainViewAsync(mainView -> { mainView.updateButtonStates(); });
+		// If we closed all tabs, create a new blank one, otherwise just update button states
+		if (chatConversations.isEmpty()) {
+			onNewTab();
+		} else {
+			performOnMainViewAsync(mainView -> { mainView.updateButtonStates(); });
+		}
+	}
+
+	/**
+	 * Checks if all tabs can be closed by showing a confirmation dialog when there
+	 * are multiple tabs or when the current conversation has content. Does not update
+	 * the data model - that is handled later by onCloseAllTabs().
+	 *
+	 * @return true if all tabs should be closed, false if cancelled by user
+	 */
+	public boolean onAttemptCloseAllTabs() {
+
+		// Show confirmation dialog if there are multiple tabs or current conversation has content
+		if (getTabCount() > 1 || !isConversationEmpty()) {
+			boolean confirmed = Eclipse.showConfirmDialog(
+					"Close All Tabs",
+					"Are you sure you want to close all tabs? This will clear all conversations."
+					);
+			if (!confirmed) {
+				return false;
+			}
+		}
+
+		// Allow closure - data model will be updated in onCloseAllTabs()
+		return true;
+	}
+
+	/**
+	 * Closes all tabs by removing both the UI tabs and their corresponding conversations,
+	 * then creates a new blank tab. Uses async execution to perform the removal and
+	 * ensures onNewTab is called after all tabs are removed to maintain at least one tab.
+	 */
+	public void onCloseAllTabs() {
+		performOnMainViewAsync(mainView -> {
+			// Remove all tabs by repeatedly removing the first one
+			while (!chatConversations.isEmpty()) {
+				mainView.removeTab(0);
+				chatConversations.remove(0);
+			}
+			// Create a new blank tab after all tabs are removed
+			onNewTab();
+		});
 	}
 
 	/**
