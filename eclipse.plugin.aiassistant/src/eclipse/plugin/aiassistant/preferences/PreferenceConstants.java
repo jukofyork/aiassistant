@@ -9,6 +9,7 @@ public class PreferenceConstants {
 	public static final String STREAMING_UPDATE_INTERVAL = "STREAMING_UPDATE_INTERVAL";
 	public static final String CHAT_FONT_SIZE = "CHAT_FONT_SIZE";
 	public static final String NOTIFICATION_FONT_SIZE = "NOTIFICATION_FONT_SIZE";
+	public static final String USER_INPUT_FONT_SIZE = "USER_INPUT_FONT_SIZE";
 	public static final String DISABLE_TOOLTIPS = "DISABLE_TOOLTIPS";
 
 	public static final String CURRENT_MODEL_NAME = "CURRENT_MODEL_NAME";

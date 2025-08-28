@@ -92,6 +92,7 @@ public class PreferencePage extends FieldEditorPreferencePage implements IWorkbe
 	private IntegerFieldEditor streamingUpdateIntervalEditor;
 	private IntegerFieldEditor chatFontSizeEditor;
 	private IntegerFieldEditor notificationFontSizeEditor;
+	private IntegerFieldEditor userInputFontSizeEditor;
 	private BooleanFieldEditor disableTooltipsEditor;
 
 	/** Field editors for current API configuration */
@@ -213,6 +214,10 @@ public class PreferencePage extends FieldEditorPreferencePage implements IWorkbe
 		notificationFontSizeEditor.setValidRange(Constants.MIN_NOTIFICATION_FONT_SIZE,
 				Constants.MAX_NOTIFICATION_FONT_SIZE);
 
+		userInputFontSizeEditor = new IntegerFieldEditor(PreferenceConstants.USER_INPUT_FONT_SIZE,
+				"User Input Font Size:", parent);
+		userInputFontSizeEditor.setValidRange(Constants.MIN_USER_INPUT_FONT_SIZE, Constants.MAX_USER_INPUT_FONT_SIZE);
+
 		streamingUpdateIntervalEditor = new IntegerFieldEditor(PreferenceConstants.STREAMING_UPDATE_INTERVAL,
 				"Streaming Interval (ms):", parent);
 		streamingUpdateIntervalEditor.setValidRange(Constants.MIN_STREAMING_UPDATE_INTERVAL, Constants.MAX_STREAMING_UPDATE_INTERVAL);
@@ -224,6 +229,7 @@ public class PreferencePage extends FieldEditorPreferencePage implements IWorkbe
 		addField(requestTimeoutEditor);
 		addField(chatFontSizeEditor);
 		addField(notificationFontSizeEditor);
+		addField(userInputFontSizeEditor);
 		addField(streamingUpdateIntervalEditor);
 		addField(disableTooltipsEditor);
 	}

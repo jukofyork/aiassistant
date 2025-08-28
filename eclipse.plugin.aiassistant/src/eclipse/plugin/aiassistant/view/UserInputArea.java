@@ -26,9 +26,6 @@ public class UserInputArea {
 	// The height hint we pass to the SpellCheckedTextBox widget
 	public static final int HEIGHT_HINT_PIXELS = 80;
 
-	// Adjustment factor, used to try to better match the Browser widget and Eclipse UI font sizes
-	public static final int FONT_SIZE_OFFSET = -2;
-
 	public static final String ARROW_UP_TOOLTIP = "Older User Messages";
 	public static final String ARROW_DOWN_TOOLTIP = "Newer User Messages";
 	public static final String CLEAR_MESSAGES_TOOLTIP = "Clear the Message History";
@@ -201,7 +198,7 @@ public class UserInputArea {
 	 */
 	private SpellCheckedTextBox createSpellCheckedTextBox(Composite parent) {
 		SpellCheckedTextBox spellCheckedTextBox = new SpellCheckedTextBox(parent, HEIGHT_HINT_PIXELS,
-				Preferences.getChatFontSize() + FONT_SIZE_OFFSET, this::handleEnterKeyPress);
+				Preferences.getUserInputFontSize(), this::handleEnterKeyPress);
 		spellCheckedTextBox.configureTextToolTip(INPUT_AREA_TOOLTIP);
 		return spellCheckedTextBox;
 	}
@@ -300,8 +297,8 @@ public class UserInputArea {
 		Preferences.getDefault().addPropertyChangeListener(new IPropertyChangeListener() {
 			@Override
 			public void propertyChange(PropertyChangeEvent event) {
-				if (event.getProperty().equals(PreferenceConstants.CHAT_FONT_SIZE)) {
-					spellCheckedTextBox.setFontSize(Preferences.getChatFontSize() + FONT_SIZE_OFFSET);
+				if (event.getProperty().equals(PreferenceConstants.USER_INPUT_FONT_SIZE)) {
+					spellCheckedTextBox.setFontSize(Preferences.getUserInputFontSize());
 				}
 			}
 		});

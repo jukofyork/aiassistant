@@ -94,6 +94,15 @@ public final class Preferences {
 	}
 
 	/**
+	 * Returns the user input font size.
+	 *
+	 * @return The user input font size.
+	 */
+	public static Integer getUserInputFontSize() {
+		return preferenceStore.getInt(PreferenceConstants.USER_INPUT_FONT_SIZE);
+	}
+
+	/**
 	 * This method retrieves a boolean value from the preference store indicating
 	 * whether to disable tooltips.
 	 *

@@ -29,6 +29,7 @@ public class PreferenceInitializer extends AbstractPreferenceInitializer {
 		setDefaultStreamingUpdateInterval();
 		setDefaultChatFontSize();
 		setDefaultNotificationFontSize();
+		setDefaultUserInputFontSize();
 		setDefaultDisableTooltips();
 		setDefaultCurrentModelName();
 		setDefaultCurrentApiUrl();
@@ -73,6 +74,13 @@ public class PreferenceInitializer extends AbstractPreferenceInitializer {
 	 */
 	private void setDefaultNotificationFontSize() {
 		Preferences.getDefault().setDefault(PreferenceConstants.NOTIFICATION_FONT_SIZE, Constants.DEFAULT_NOTIFICATION_FONT_SIZE);
+	}
+
+	/**
+	 * Sets the default font size for user input elements.
+	 */
+	private void setDefaultUserInputFontSize() {
+		Preferences.getDefault().setDefault(PreferenceConstants.USER_INPUT_FONT_SIZE, Constants.DEFAULT_USER_INPUT_FONT_SIZE);
 	}
 
 	/**

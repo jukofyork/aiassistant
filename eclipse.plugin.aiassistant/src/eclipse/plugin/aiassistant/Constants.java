@@ -96,7 +96,7 @@ public final class Constants {
 	public static final boolean DEFAULT_USE_SYSTEM_MESSAGE = true;
 	public static final boolean DEFAULT_USE_DEVELOPER_MESSAGE = false;
 
-	// Font sizes.
+	// Font sizes for the ChatConversationArea
 	// NOTE: These are just substituted in "main-style.css" using a regex currently.
 	public static final int MIN_CHAT_FONT_SIZE = 8;
 	public static final int MAX_CHAT_FONT_SIZE = 16;
@@ -104,6 +104,11 @@ public final class Constants {
 	public static final int MIN_NOTIFICATION_FONT_SIZE = 8;
 	public static final int MAX_NOTIFICATION_FONT_SIZE = 16;
 	public static final int DEFAULT_NOTIFICATION_FONT_SIZE = 8;
+
+	// Fond size for the UserInputArea
+	public static final int MIN_USER_INPUT_FONT_SIZE = 8;
+	public static final int MAX_USER_INPUT_FONT_SIZE = 16;
+	public static final int DEFAULT_USER_INPUT_FONT_SIZE = 12;
 
 	// Timing delays for tab-related UI synchronization hacks.
 	// NOTE: These delays are used to ensure UI components are fully initialized before replaying messages.
