@@ -31,6 +31,7 @@ public final class Constants {
 	public static final String[] JS_FILENAMES = {
 			"mathjax/es5/tex-mml-chtml.js",
 			"highlight.min.js",
+			"utils.js",
 			"inline-code-renderer.js",
 			"latex-renderer.js",
 			"get-selected-text.js"
