@@ -134,14 +134,14 @@
            <command
                  commandId="eclipse.plugin.aiassistant.AddMessage"
                  icon="icons/Add.png"
-                 label="Add To Message"
+                 label="Add as Message"
                  style="push"
                  tooltip="Add the Selected Code or Document as a Message">
            </command>
            <command
                  commandId="eclipse.plugin.aiassistant.AddContext"
-                 icon="icons/Add.png"
-                 label="Add As Context"
+                 icon="icons/AddContext.png"
+                 label="Add as Context"
                  style="push"
                  tooltip="Add the Selected Code or Document as Context">
            </command>       

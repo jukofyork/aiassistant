@@ -667,7 +667,7 @@ public class MainPresenter {
 	public ChatMessage beginMessageFromAssistant() {
 		ChatMessage message = new ChatMessage(ChatRole.ASSISTANT);
 		performOnMainViewAsync(mainView -> { mainView.setInputEnabled(false); });
-		pushMessage(message);
+		pushMessage(message, true);
 		return message;
 	}
 
@@ -741,6 +741,44 @@ public class MainPresenter {
 	}
 
 	/**
+	 * Handles the action of quoting the selected text by sending it as a user message
+	 * with markdown quote formatting. Optionally wraps the quoted text in code blocks.
+	 * If there is current user input, it will be sent as a separate message after the quote.
+	 *
+	 * @param selectedText the text to quote as a user message
+	 * @param isCode whether to wrap the quoted text in triple backticks for code formatting
+	 */
+	public void onSendQuote(String selectedText, boolean isCode) {
+
+		// Don't add blank messages to the chat conversation.
+		if (!selectedText.trim().isEmpty()) {
+
+			// Trim leading and trailing blank lines, then add "> " to every line.
+			String quotedText = selectedText.trim().lines()
+					.map(line -> "> " + line)
+					.reduce("", (result, line) -> result + (result.isEmpty() ? "" : "\n") + line);
+
+			// Wrap in triple backticks for code formatting
+			if (isCode) {
+				quotedText = "```\n" + quotedText + "\n```";
+			}
+
+			// Send the quoted text
+			ChatMessage quoteMessage = new ChatMessage(ChatRole.USER, quotedText);
+			pushMessage(quoteMessage, false);
+
+			// If we have user input, add it then scroll to the bottom.
+			String currentUserText = storeAndRetrieveUserMessage().trim();
+			if (!currentUserText.isEmpty()) {
+				ChatMessage userMessage = new ChatMessage(ChatRole.USER, currentUserText);
+				pushMessage(userMessage, true);
+			}
+
+		}
+
+	}
+
+	/**
 	 * Adds a user message to the conversation (if non-blank) and optionally schedules
 	 * an assistant reply. Validates the model status before scheduling and can trigger
 	 * replies for previously buffered messages even when the current message is blank.
@@ -762,7 +800,7 @@ public class MainPresenter {
 		// Don't add blank messages to the chat conversation.
 		if (!messageString.trim().isEmpty()) {
 			ChatMessage message = new ChatMessage(ChatRole.USER, messageString);
-			pushMessage(message);
+			pushMessage(message, true);
 		}
 
 		// Schedule the reply if we have something to send and asked to.
@@ -783,7 +821,7 @@ public class MainPresenter {
 	private void sendAutoReplyAssistantMessage(String messageString) {
 		// TODO: Make more robust against blank messages.
 		ChatMessage autoReplyMessage = new ChatMessage(ChatRole.ASSISTANT, messageString);
-		pushMessage(autoReplyMessage);
+		pushMessage(autoReplyMessage, true);
 	}
 
 	/**
@@ -793,7 +831,7 @@ public class MainPresenter {
 	 */
 	private void displayNotificationMessage(String text) {
 		ChatMessage message = new ChatMessage(ChatRole.NOTIFICATION, text);
-		pushMessage(message);
+		pushMessage(message, true);
 	}
 
 	/**
@@ -815,18 +853,21 @@ public class MainPresenter {
 	}
 
 	/**
-	 * Adds a message to the conversation and displays it in the UI. Automatically
+	 * Adds a message to the conversation and displays it in the UI. Optionally
 	 * scrolls to bottom and updates button states after the change.
 	 *
 	 * @param message the message to add and display
+	 * @param autoScrollToBottom whether to automatically scroll to bottom after adding the message
 	 */
-	private void pushMessage(ChatMessage message) {
+	private void pushMessage(ChatMessage message, boolean autoScrollToBottom) {
 		getCurrentConversation().push(message);
 		performOnMainViewAsync(mainView -> {
 			mainView.getCurrentChatArea().newMessage(message);
 			mainView.updateButtonStates();
 		});
-		onScrollToBottom();
+		if (autoScrollToBottom) {
+			onScrollToBottom();
+		}
 	}
 
 	/**

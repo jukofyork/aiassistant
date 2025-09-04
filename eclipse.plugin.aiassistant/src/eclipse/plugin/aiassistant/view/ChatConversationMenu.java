@@ -21,12 +21,18 @@ import eclipse.plugin.aiassistant.utility.Eclipse;
  */
 public class ChatConversationMenu {
 
-	public static final String PASTE_MESSAGE_NAME = "Paste To Message";
+	public static final String PASTE_MESSAGE_NAME = "Paste";
 	public static final String PASTE_MESSAGE_TOOLTIP = "Paste the Clipboard Contents as a Message";
 	public static final String PASTE_MESSAGE_ICON = "Paste.png";
-	public static final String PASTE_CONTEXT_NAME = "Paste As Context";
+	public static final String PASTE_CONTEXT_NAME = "Paste as Context";
 	public static final String PASTE_CONTEXT_TOOLTIP = "Paste the Clipboard Contents as Context";
-	public static final String PASTE_CONTEXT_ICON = "Paste.png";
+	public static final String PASTE_CONTEXT_ICON = "PasteContext.png";
+	public static final String QUOTE_TEXT_NAME = "Quote";
+	public static final String QUOTE_TEXT_TOOLTIP = "Quote Selected Text";
+	public static final String QUOTE_TEXT_ICON = "Quote.png";
+	public static final String QUOTE_CODE_NAME = "Quote as Code";
+	public static final String QUOTE_CODE_TOOLTIP = "Quote Selected Text as Code";
+	public static final String QUOTE_CODE_ICON = "QuoteCode.png";
 	public static final String COPY_TO_CLIPBOARD_NAME = "Copy";
 	public static final String COPY_TO_CLIPBOARD_TOOLTIP = "Copy to the Clipboard";
 	public static final String COPY_TO_CLIPBOARD_ICON = "CopyToClipboard.png";
@@ -65,6 +71,13 @@ public class ChatConversationMenu {
 					e -> handlePasteMessage()),
 			new MenuItemData(PASTE_CONTEXT_NAME, PASTE_CONTEXT_ICON, PASTE_CONTEXT_TOOLTIP,
 					e -> handlePasteContext())
+	};
+
+	private MenuItemData[] quoteMenuItemsData = {
+			new MenuItemData(QUOTE_TEXT_NAME, QUOTE_TEXT_ICON, QUOTE_TEXT_TOOLTIP,
+					e -> handleQuoteSelection()),
+			new MenuItemData(QUOTE_CODE_NAME, QUOTE_CODE_ICON, QUOTE_CODE_TOOLTIP,
+					e -> handleQuoteCode())
 	};
 
 	private MenuItemData[] browserFunctionMenuItemsData = {
@@ -116,6 +129,10 @@ public class ChatConversationMenu {
 		Menu menu = new Menu(browser);
 
 		for (MenuItemData itemData : pasteMenuItemsData) {
+			addMenuItem(menu, itemData.text, itemData.iconPath, itemData.toolTipText, itemData.listener);
+		}
+		new MenuItem(menu, SWT.SEPARATOR);
+		for (MenuItemData itemData : quoteMenuItemsData) {
 			addMenuItem(menu, itemData.text, itemData.iconPath, itemData.toolTipText, itemData.listener);
 		}
 		new MenuItem(menu, SWT.SEPARATOR);
@@ -192,6 +209,8 @@ public class ChatConversationMenu {
 			case PASTE_CONTEXT_NAME:
 				item.setEnabled(!showBrowserFunctions && showPasteOptions);
 				break;
+			case QUOTE_TEXT_NAME:
+			case QUOTE_CODE_NAME:
 			case COPY_TO_CLIPBOARD_NAME:
 			case REPLACE_SELECTION_NAME:
 			case REVIEW_CHANGES_NAME:
@@ -234,6 +253,20 @@ public class ChatConversationMenu {
 	 */
 	private void handlePasteContext() {
 		mainPresenter.sendPredefinedPrompt(Prompts.PASTE_CONTEXT);
+	}
+
+	/**
+	 * Handles the action of quoting the selected text from the browser.
+	 */
+	private void handleQuoteSelection() {
+		mainPresenter.onSendQuote(copyBrowserSelectedText(), false);
+	}
+
+	/**
+	 * Handles the action of quoting the selected text as code from the browser.
+	 */
+	private void handleQuoteCode() {
+		mainPresenter.onSendQuote(copyBrowserSelectedText(), true);
 	}
 
 	/**
