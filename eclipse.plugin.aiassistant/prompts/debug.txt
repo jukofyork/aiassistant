@@ -1,7 +1,7 @@
 # Task: <taskname>
 Examine this source code<if(selection)> snippet<endif> from<if(selection)> <lines> of<endif> `<filename>` line-by-line to identify potential bugs:
-```<tag>
+<code><tag>
 <if(selection)><selection><else><document><endif>
-```
+<code>
 <usertext>
 <<switch-roles>>

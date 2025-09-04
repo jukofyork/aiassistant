@@ -1,7 +1,7 @@
 # Task: <taskname>
 When refactoring this source code<if(selection)> snippet<endif> from<if(selection)> <lines> of<endif> `<filename>` prioritize improvements in readability, performance, maintainability, extensibility, and overall code quality. Extract duplicated code into reusable functions/methods. Rename variables, functions, and classes to better reflect their purpose. Optimize performance without compromising readability. Ensure any new or modified code adheres to best practices and guidelines in <language>, follows <language> recommended commenting practices<if(documentation)> using <documentation><endif> and matches any already established coding style. Think step-by-step: always describe your plan in great detail before proceeding to the solution.
-```<tag>
+<code><tag>
 <if(selection)><selection><else><document><endif>
-```
+<code>
 <usertext>
 <<switch-roles>>

@@ -1,5 +1,5 @@
 From `<filename>`:
-```diff
+<code>diff
 <file_diff>
-```
+<code>
 <usertext>

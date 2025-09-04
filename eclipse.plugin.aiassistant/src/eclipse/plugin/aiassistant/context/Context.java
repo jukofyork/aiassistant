@@ -1,5 +1,9 @@
 package eclipse.plugin.aiassistant.context;
 
+import java.lang.reflect.Field;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
 import org.eclipse.core.resources.IFile;
 import org.eclipse.ui.texteditor.ITextEditor;
 
@@ -20,6 +24,7 @@ public class Context {
 	private String projectName = "";
 	private String filename = "";
 	private String language = "";
+	private String codeBlock = "";
 	private String tag = "";
 	private String compilerWarnings = "";
 	private String compilerErrors = "";
@@ -116,6 +121,8 @@ public class Context {
 		this.clipboardText = IndentationFormatter.removeIndentation(this.clipboardText);
 		this.selectionText = IndentationFormatter.removeIndentation(this.selectionText);
 
+		// Find unique backticks sequence that doesn't conflict with existing content
+		this.codeBlock = findUniqueCodeBlock();
 	}
 
 	/**
@@ -152,6 +159,16 @@ public class Context {
 	 */
 	public String getLanguage() {
 		return language;
+	}
+
+	/**
+	 * Returns a unique backticks sequence that doesn't conflict with any existing
+	 * markdown code blocks in the document, clipboard, selection, or git diffs.
+	 *
+	 * @return A string of backticks (starting from 3) that is unique across all text content.
+	 */
+	public String getCodeBlock() {
+		return codeBlock;
 	}
 
 	/**
@@ -244,6 +261,38 @@ public class Context {
 	 */
 	public String getProjectDiff() {
 		return projectDiff;
+	}
+
+	/**
+	 * Finds a unique backticks sequence (starting from 3 backticks) that doesn't
+	 * appear as a markdown code block delimiter in any of the string fields in this class.
+	 *
+	 * @return A string of backticks that is unique across all text content.
+	 */
+	private String findUniqueCodeBlock() {
+		nextCandidate: for (int count = 3; count <= 6; count++) {
+			String candidate = "`".repeat(count);
+			for (Field field : this.getClass().getDeclaredFields()) {
+				if (field.getType() == String.class) {
+					field.setAccessible(true);
+					Pattern codeBlockPattern = Pattern.compile("^[ \\t]*" + candidate + "[ \\t]*$", Pattern.MULTILINE);
+					try {
+						String value = (String) field.get(this);
+						if (value != null) {
+							Matcher matcher = codeBlockPattern.matcher(value);
+							if (matcher.find()) {
+								continue nextCandidate;
+							}
+						}
+					} catch (Exception e) {
+						return "```";  // If reflection fails for any reason, fall back to default
+					}
+				}
+			}
+			return candidate;  // No conflicts found, return this candidate
+		}
+
+		return "```";  // fallback if all candidates had conflicts
 	}
 
 }

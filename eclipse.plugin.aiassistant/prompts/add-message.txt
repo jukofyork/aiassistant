@@ -1,5 +1,5 @@
 From<if(selection)> <lines> of<endif> `<filename>`:
-```<tag>
+<code><tag>
 <if(selection)><selection><else><document><endif>
-```
+<code>
 <usertext>

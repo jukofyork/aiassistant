@@ -1,5 +1,5 @@
 Review the provided source code<if(selection)> snippet<endif> from<if(selection)> <lines> of<endif> `<filename>` to establish context for the upcoming task(s):
-```<tag>
+<code><tag>
 <if(selection)><selection><else><document><endif>
-```
+<code>
 <usertext>

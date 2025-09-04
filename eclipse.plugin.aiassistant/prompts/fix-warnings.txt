@@ -1,8 +1,8 @@
 # Task: <taskname>
 This source code<if(selection)> snippet<endif> from<if(selection)> <lines> of<endif> `<filename>`:
-```<tag>
+<code><tag>
 <if(selection)><selection><else><document><endif>
-```
+<code>
 Has the following compiler warnings:
 
 <warnings>

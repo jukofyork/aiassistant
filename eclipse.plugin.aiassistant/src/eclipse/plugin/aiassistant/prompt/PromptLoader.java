@@ -41,6 +41,7 @@ public class PromptLoader {
 				"project", context.getProjectName(),
 				"filename", context.getFilename(),
 				"language", context.getLanguage(),
+				"code", context.getCodeBlock(),
 				"tag", context.getTag(),
 				"warnings", context.getCompilerWarnings(),
 				"errors", context.getCompilerErrors(),

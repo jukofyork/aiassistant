@@ -1,5 +1,5 @@
 From `<project>`:
-```diff
+<code>diff
 <project_diff>
-```
+<code>
 <usertext>
