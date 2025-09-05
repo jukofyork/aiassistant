@@ -743,7 +743,8 @@ public class MainPresenter {
 	/**
 	 * Handles the action of quoting the selected text by sending it as a user message
 	 * with markdown quote formatting. Optionally wraps the quoted text in code blocks.
-	 * If there is current user input, it will be sent as a separate message after the quote.
+	 * - If there is current user input, it will be appended to the quoted message.
+	 * - Auto-scrolls to the bottom only when no user input is appended.
 	 *
 	 * @param selectedText the text to quote as a user message
 	 * @param isCode whether to wrap the quoted text in triple backticks for code formatting
@@ -763,15 +764,18 @@ public class MainPresenter {
 				quotedText = "```\n" + quotedText + "\n```";
 			}
 
-			// Send the quoted text
+			// Get the quoted text as a message.
 			ChatMessage quoteMessage = new ChatMessage(ChatRole.USER, quotedText);
-			pushMessage(quoteMessage, false);
 
-			// If we have user input, add it then scroll to the bottom.
+			// Get the current user input, if any.
 			String currentUserText = storeAndRetrieveUserMessage().trim();
+
+			// If we have user input, append it under the quote. Then push the message.
 			if (!currentUserText.isEmpty()) {
-				ChatMessage userMessage = new ChatMessage(ChatRole.USER, currentUserText);
-				pushMessage(userMessage, true);
+				quoteMessage.appendContent("\n" + currentUserText);
+				pushMessage(quoteMessage, false);  // Don't auto-scroll if was message added
+			} else {
+				pushMessage(quoteMessage, true);
 			}
 
 		}
