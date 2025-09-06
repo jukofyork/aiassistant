@@ -54,6 +54,9 @@ public class MarkdownToHtmlConverter {
 	private static final Pattern ITALIC_PATTERN = Pattern.compile("\\*(.*?)\\*");
 	private static final Pattern STRIKETHROUGH_PATTERN = Pattern.compile("~~(.*?)~~");
 
+	// The types of bullet points to use for unordered lists [•, ◦, ▪].
+	private static final String[] BULLET_SYMBOLS = { "&#8226;", "&#9702;", "&#9642;"};
+
 	/**
 	 * Converts Markdown formatted text to HTML. This method also allows for the inclusion
 	 * of interactive buttons within code blocks, such as copy, paste, and review changes.
@@ -322,7 +325,28 @@ public class MarkdownToHtmlConverter {
 		markdownLine = replacePattern(markdownLine, HEADER_H6_PATTERN, "<h6>$1</h6>");
 
 		// Convert unordered lists
-		markdownLine = replacePattern(markdownLine, UNORDERED_LIST_PATTERN, "&#8226; $1");
+		Matcher listMatcher = UNORDERED_LIST_PATTERN.matcher(markdownLine);
+		if (listMatcher.matches()) {
+			// Count leading whitespace (space or tab) as indentation level
+			int indentLevel = 0;
+			for (int i = 0; i < markdownLine.length(); i++) {
+				char ch = markdownLine.charAt(i);
+				if (ch == ' ' || ch == '\t') {
+					indentLevel++;
+				} else {
+					break;
+				}
+			}
+
+			// Use two "non-breaking space" so these don't get trimmed away
+			String indentSpaces = "&#160;".repeat(Math.max(0, indentLevel) * 2);
+
+			// Choose the bullet symbol (assume most will indent by 2 spaces each time)
+			String bullet = BULLET_SYMBOLS[(indentLevel / 2) % BULLET_SYMBOLS.length];
+
+			// Lead with a single "thin Space" to slightly indent the first level
+			markdownLine = "&#8201;" + indentSpaces + bullet + " " + listMatcher.group(1);
+		}
 
 		// Convert horizontal rules
 		markdownLine = replacePattern(markdownLine, HORIZONTAL_RULE_PATTERN, "<hr>");
