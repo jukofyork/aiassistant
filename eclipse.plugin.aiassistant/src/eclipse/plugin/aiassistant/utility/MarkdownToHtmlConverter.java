@@ -162,8 +162,6 @@ public class MarkdownToHtmlConverter {
 								appendCloseCodeBlock(htmlOutput);
 								currentBlock = BlockType.NONE;
 							}
-						} else {
-							codeBlockUnwindStack.push(codeBlockInfo.numBackticks);
 						}
 					}
 					if (currentBlock == BlockType.CODE) {
