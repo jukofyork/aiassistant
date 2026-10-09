@@ -709,23 +709,22 @@ public class MainPresenter {
 	}
 
 	/**
-	 * Updates an existing message from the assistant and maintains scroll position.
-	 * If the user was viewing the bottom of the chat, keeps them at the bottom
-	 * to show new content. If they were scrolled up, preserves their position.
+	 * Updates an existing assistant message in the chat view and forces a scroll to the bottom.
 	 *
-	 * @param message the message to update
+	 * <p>The message update is queued asynchronously so that the heavy Markdown-to-HTML
+	 * conversion runs on a background thread without blocking the caller. The scroll to
+	 * bottom is executed synchronously on the UI thread immediately afterwards, ensuring
+	 * the user stays locked to the latest content as it streams in.</p>
+	 *
+	 * @param message the assistant message to update
 	 */
 	public void updateMessageFromAssistant(ChatMessage message) {
-		AtomicReference<Boolean> scrollbarAtBottom = new AtomicReference<>(false);
-		performOnMainViewSync(mainView -> {
-			scrollbarAtBottom.set(mainView.getCurrentChatArea().isScrollbarAtBottom());
-		});
 		performOnMainViewAsync(mainView -> {
 			mainView.getCurrentChatArea().updateMessage(message);
 		});
-		if (scrollbarAtBottom.get()) {
-			onScrollToBottom();
-		}
+		performOnMainViewSync(mainView -> {
+			mainView.getCurrentChatArea().scrollToBottom();
+		});
 	}
 
 	/**
