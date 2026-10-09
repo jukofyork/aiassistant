@@ -1,8 +1,10 @@
 package eclipse.plugin.aiassistant.utility;
 
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.StringReader;
+import java.nio.charset.StandardCharsets;
 import java.util.Base64;
-import java.util.Scanner;
-import java.util.Stack;
 import java.util.UUID;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -57,6 +59,11 @@ public class MarkdownToHtmlConverter {
 	// The types of bullet points to use for unordered lists [•, ◦, ▪].
 	private static final String[] BULLET_SYMBOLS = { "&#8226;", "&#9702;", "&#9642;"};
 
+	// Load these once to re-use inside appendOpenCodeBlock.
+	private static final String COPY_ICON = Eclipse.loadIconAsBase64("CopyToClipboard.png");
+	private static final String REPLACE_ICON = Eclipse.loadIconAsBase64("ReplaceSelection.png");
+	private static final String REVIEW_ICON = Eclipse.loadIconAsBase64("ReviewChanges.png");
+
 	/**
 	 * Converts Markdown formatted text to HTML. This method also allows for the inclusion
 	 * of interactive buttons within code blocks, such as copy, paste, and review changes.
@@ -68,37 +75,37 @@ public class MarkdownToHtmlConverter {
 	 */
 	public static String convertMarkdownToHtml(String markdownText, boolean includeCodeBlockButtons) {
 		markdownText = StringUtils.stripStart(markdownText, " ");
-		StringBuilder htmlOutput = new StringBuilder();
+		// HTML usually expands relative to markdown; pre-size to avoid resizing
+		StringBuilder htmlOutput = new StringBuilder(markdownText.length() * 2);
 
-		// Enum to track the current parsing context for handling nested blocks
 		enum BlockType { NONE, CODE, LATEX }
 		BlockType currentBlock = BlockType.NONE;
 
 		StringBuilder latexBlockBuffer = new StringBuilder();
 
 		int thinkingBlockCount = 0;
+		boolean hasThinkingBlocks = false;
 
 		int currentQuoteLevel = 0;
 
-		Stack<Integer> codeBlockUnwindStack = new Stack<>();
+		// Primitive int stack: zero boxing overhead, no synchronization
+		int[] codeBlockUnwindStack = new int[8];
+		int codeBlockStackSize = 0;
 
-		try (Scanner scanner = new Scanner(markdownText)) {
-			scanner.useDelimiter("\n");
-
-			while (scanner.hasNext()) {
-				String line = scanner.next();
-
-				Matcher thinkingBlockOpenMatcher = THINKING_BLOCK_OPEN_PATTERN.matcher(line);
-				Matcher thinkingBlockCloseMatcher = THINKING_BLOCK_CLOSE_PATTERN.matcher(line);
-
-				Matcher latexMultilineBlockOpenMatcher = LATEX_MULTILINE_BLOCK_OPEN_PATTERN.matcher(line);
-				Matcher latexSinglelineBlockOpenMatcher = LATEX_SINGLELINE_BLOCK_OPEN_PATTERN.matcher(line);
-				Matcher latexCloseMatcher = LATEX_BLOCK_CLOSE_PATTERN.matcher(line);
+		try (BufferedReader reader = new BufferedReader(new StringReader(markdownText))) {
+			String line;
+			while ((line = reader.readLine()) != null) {
 
 				switch (currentBlock) {
-				case NONE:
+				case NONE: {
+					Matcher thinkingBlockOpenMatcher = THINKING_BLOCK_OPEN_PATTERN.matcher(line);
+					Matcher thinkingBlockCloseMatcher = THINKING_BLOCK_CLOSE_PATTERN.matcher(line);
+					Matcher latexMultilineBlockOpenMatcher = LATEX_MULTILINE_BLOCK_OPEN_PATTERN.matcher(line);
+					Matcher latexSinglelineBlockOpenMatcher = LATEX_SINGLELINE_BLOCK_OPEN_PATTERN.matcher(line);
+
 					while (thinkingBlockOpenMatcher.find()) {
 						htmlOutput.append(getThinkingBlockOpeningHtml());
+						hasThinkingBlocks = true;
 						line = replaceFirstPattern(line, THINKING_BLOCK_OPEN_PATTERN, "");
 						thinkingBlockOpenMatcher = THINKING_BLOCK_OPEN_PATTERN.matcher(line);
 						thinkingBlockCount++;
@@ -110,21 +117,17 @@ public class MarkdownToHtmlConverter {
 						thinkingBlockCount--;
 					}
 
-					// Get quote level for current line
 					int lineQuoteLevel = 0;
-					if (line.trim().startsWith(">")) {
+					if (isQuoteLine(line)) {
 						lineQuoteLevel = countQuoteMarkers(line);
-						// Remove quote markers if present and trim
 						line = replaceFirstPattern(line, QUOTE_MARKER_PATTERN, "");
 					} else {
-						// Not a quote line - close all quote blocks
 						while (currentQuoteLevel > 0) {
 							htmlOutput.append("</blockquote>");
 							currentQuoteLevel--;
 						}
 					}
 
-					// Handle quote level transitions
 					while (currentQuoteLevel > lineQuoteLevel) {
 						htmlOutput.append("</blockquote>");
 						currentQuoteLevel--;
@@ -137,7 +140,10 @@ public class MarkdownToHtmlConverter {
 					CodeBlockInfo openCodeBlockInfo = getCodeBlockInfo(line);
 					if (openCodeBlockInfo.numBackticks > 0) {
 						appendOpenCodeBlock(htmlOutput, openCodeBlockInfo.language, includeCodeBlockButtons);
-						codeBlockUnwindStack.push(openCodeBlockInfo.numBackticks);
+						if (codeBlockStackSize == codeBlockUnwindStack.length) {
+							codeBlockUnwindStack = java.util.Arrays.copyOf(codeBlockUnwindStack, codeBlockStackSize * 2);
+						}
+						codeBlockUnwindStack[codeBlockStackSize++] = openCodeBlockInfo.numBackticks;
 						currentBlock = BlockType.CODE;
 					} else if (latexMultilineBlockOpenMatcher.find()) {
 						String latexLine = replaceFirstPattern(line, LATEX_LINE_START_PATTERN, "");
@@ -149,16 +155,19 @@ public class MarkdownToHtmlConverter {
 						latexBlockBuffer.append(latexLine);
 						flushLatexBlockBuffer(latexBlockBuffer, htmlOutput);
 					} else {
-						htmlOutput.append(convertLineToHtml(StringEscapeUtils.escapeHtml4(line)));
+						String escapedLine = line;
+						if (containsHtmlMetaChars(escapedLine)) {
+							escapedLine = StringEscapeUtils.escapeHtml4(escapedLine);
+						}
+						htmlOutput.append(convertLineToHtml(escapedLine));
 					}
 					break;
-
-				case CODE:
+				}
+				case CODE: {
 					CodeBlockInfo codeBlockInfo = getCodeBlockInfo(line);
 					if (codeBlockInfo.numBackticks > 0 && codeBlockInfo.language.isEmpty()) {
-						if (codeBlockInfo.numBackticks == codeBlockUnwindStack.peek()) {
-							codeBlockUnwindStack.pop();
-							if (codeBlockUnwindStack.empty()) {
+						if (codeBlockStackSize > 0 && codeBlockInfo.numBackticks == codeBlockUnwindStack[codeBlockStackSize - 1]) {
+							if (--codeBlockStackSize == 0) {
 								appendCloseCodeBlock(htmlOutput);
 								currentBlock = BlockType.NONE;
 							}
@@ -168,8 +177,9 @@ public class MarkdownToHtmlConverter {
 						htmlOutput.append(convertToEscapedHtmlLine(line)).append("\n");
 					}
 					break;
-
-				case LATEX:
+				}
+				case LATEX: {
+					Matcher latexCloseMatcher = LATEX_BLOCK_CLOSE_PATTERN.matcher(line);
 					if (latexCloseMatcher.find()) {
 						String latexLine = replaceFirstPattern(line, LATEX_LINE_END_PATTERN, "");
 						latexBlockBuffer.append(latexLine);
@@ -180,29 +190,31 @@ public class MarkdownToHtmlConverter {
 					}
 					break;
 				}
+				}
 			}
+		} catch (IOException e) {
+			throw new IllegalStateException("Error reading markdown input", e);
 		}
 
-		// Handle unclosed code blocks at the end of the input
-		// NOTE: Ignore the codeBlockUnwindStack as only for the nesting heuristic in the loop above
-		// NOTE: Don't auto-close LaTeX here - it causes flicker/errors in output.
 		if (currentBlock == BlockType.CODE) {
 			appendCloseCodeBlock(htmlOutput);
 		}
 
-		// Close any remaining quote levels
 		while (currentQuoteLevel > 0) {
 			htmlOutput.append("</blockquote>");
 			currentQuoteLevel--;
 		}
 
-		// Close any unclosed thinking blocks
 		while (thinkingBlockCount > 0) {
 			htmlOutput.append(getThinkingBlockClosingHtml());
 			thinkingBlockCount--;
 		}
 
-		return replaceEscapeCodes(trimThinkingyBlock(replaceLineBreaks(htmlOutput.toString())));
+		String result = htmlOutput.toString();
+		if (hasThinkingBlocks) {
+			result = trimThinkingyBlock(result);
+		}
+		return replaceEscapeCodes(result);
 	}
 
 	/**
@@ -239,23 +251,6 @@ public class MarkdownToHtmlConverter {
 	}
 
 	/**
-	 * Counts the number of nested quote levels (>) at the start of a Markdown line.
-	 * Used for parsing nested blockquotes in Markdown text.
-	 *
-	 * @param line The text line to analyze for quote markers
-	 * @return The number of nested quote levels found
-	 */
-	private static int countQuoteMarkers(String line) {
-		int count = 0;
-		String trimmed = line.trim();
-		while (trimmed.startsWith(">")) {
-			count++;
-			trimmed = trimmed.substring(1).trim();
-		}
-		return count;
-	}
-
-	/**
 	 * Converts a single line of text to HTML, processing inline elements in a specific order:
 	 * inline code first, then LaTeX expressions, and finally Markdown formatting. This order
 	 * prevents interference between different syntax patterns and ensures proper escaping.
@@ -266,7 +261,14 @@ public class MarkdownToHtmlConverter {
 	 *         HTML spans with base64 encoded content
 	 */
 	private static String convertLineToHtml(String line) {
-		return convertMarkdownLineToHtml(convertInLineLatexToHtml(convertInlineCodeToHtml(line)));
+		// Guard inline parsers: if the trigger characters aren't present, skip the regex entirely
+		if (line.indexOf('`') >= 0) {
+			line = convertInlineCodeToHtml(line);
+		}
+		if (line.indexOf('$') >= 0 || line.indexOf('\\') >= 0) {
+			line = convertInLineLatexToHtml(line);
+		}
+		return convertMarkdownLineToHtml(line);
 	}
 
 	/**
@@ -280,7 +282,7 @@ public class MarkdownToHtmlConverter {
 	private static String convertInlineCodeToHtml(String line) {
 		return CODE_INLINE_PATTERN.matcher(line).replaceAll(match -> {
 			String content = match.group(1);
-			String base64Content = Base64.getEncoder().encodeToString(content.getBytes());
+			String base64Content = Base64.getEncoder().encodeToString(content.getBytes(StandardCharsets.UTF_8));
 			return "<span class=\"inline-code\">" + base64Content + "</span>";
 		});
 	}
@@ -298,7 +300,7 @@ public class MarkdownToHtmlConverter {
 			for (int i = 1; i <= match.groupCount(); i++) {
 				String content = match.group(i);
 				if (content != null) {
-					String base64Content = Base64.getEncoder().encodeToString(content.getBytes());
+					String base64Content = Base64.getEncoder().encodeToString(content.getBytes(StandardCharsets.UTF_8));
 					return "<span class=\"inline-latex\">" + base64Content + "</span>";
 				}
 			}
@@ -314,63 +316,71 @@ public class MarkdownToHtmlConverter {
 	 * @return The converted HTML line
 	 */
 	private static String convertMarkdownLineToHtml(String markdownLine) {
-		// Convert headers (h1 to h6)
-		markdownLine = replacePattern(markdownLine, HEADER_H1_PATTERN, "<h1>$1</h1>");
-		markdownLine = replacePattern(markdownLine, HEADER_H2_PATTERN, "<h2>$1</h2>");
-		markdownLine = replacePattern(markdownLine, HEADER_H3_PATTERN, "<h3>$1</h3>");
-		markdownLine = replacePattern(markdownLine, HEADER_H4_PATTERN, "<h4>$1</h4>");
-		markdownLine = replacePattern(markdownLine, HEADER_H5_PATTERN, "<h5>$1</h5>");
-		markdownLine = replacePattern(markdownLine, HEADER_H6_PATTERN, "<h6>$1</h6>");
-
-		// Convert unordered lists
-		Matcher listMatcher = UNORDERED_LIST_PATTERN.matcher(markdownLine);
-		if (listMatcher.matches()) {
-			// Count leading whitespace (space or tab) as indentation level
-			int indentLevel = 0;
-			for (int i = 0; i < markdownLine.length(); i++) {
-				char ch = markdownLine.charAt(i);
-				if (ch == ' ' || ch == '\t') {
-					indentLevel++;
-				} else {
-					break;
-				}
-			}
-
-			// Use two "non-breaking space" so these don't get trimmed away
-			String indentSpaces = "&#160;".repeat(Math.max(0, indentLevel) * 2);
-
-			// Choose the bullet symbol (assume most will indent by 2 spaces each time)
-			String bullet = BULLET_SYMBOLS[(indentLevel / 2) % BULLET_SYMBOLS.length];
-
-			// Lead with a single "thin Space" to slightly indent the first level
-			markdownLine = "&#8201;" + indentSpaces + bullet + " " + listMatcher.group(1);
+		// Headers: only run the 6 regexes when a '#' is actually present
+		if (markdownLine.indexOf('#') >= 0) {
+			markdownLine = replacePattern(markdownLine, HEADER_H1_PATTERN, "<h1>$1</h1>");
+			markdownLine = replacePattern(markdownLine, HEADER_H2_PATTERN, "<h2>$1</h2>");
+			markdownLine = replacePattern(markdownLine, HEADER_H3_PATTERN, "<h3>$1</h3>");
+			markdownLine = replacePattern(markdownLine, HEADER_H4_PATTERN, "<h4>$1</h4>");
+			markdownLine = replacePattern(markdownLine, HEADER_H5_PATTERN, "<h5>$1</h5>");
+			markdownLine = replacePattern(markdownLine, HEADER_H6_PATTERN, "<h6>$1</h6>");
 		}
 
-		// Convert horizontal rules
-		markdownLine = replacePattern(markdownLine, HORIZONTAL_RULE_PATTERN, "<hr>");
+		// Lists: only attempt when a list marker character exists
+		if (markdownLine.indexOf('*') >= 0 || markdownLine.indexOf('+') >= 0 || markdownLine.indexOf('-') >= 0) {
+			Matcher listMatcher = UNORDERED_LIST_PATTERN.matcher(markdownLine);
+			if (listMatcher.matches()) {
+				int indentLevel = 0;
+				for (int i = 0; i < markdownLine.length(); i++) {
+					char ch = markdownLine.charAt(i);
+					if (ch == ' ' || ch == '\t') {
+						indentLevel++;
+					} else {
+						break;
+					}
+				}
+				String indentSpaces = "&#160;".repeat(Math.max(0, indentLevel) * 2);
+				String bullet = BULLET_SYMBOLS[(indentLevel / 2) % BULLET_SYMBOLS.length];
+				markdownLine = "&#8201;" + indentSpaces + bullet + " " + listMatcher.group(1);
+			}
+		}
 
-		// Convert bold, italic, and combinations
-		markdownLine = replacePattern(markdownLine, BOLD_ITALIC_PATTERN, "<b><i>$1</i></b>");
-		markdownLine = replacePattern(markdownLine, BOLD_PATTERN, "<b>$1</b>");
-		markdownLine = replacePattern(markdownLine, ITALIC_PATTERN, "<i>$1</i>");
+		// Horizontal rules
+		if (markdownLine.indexOf('-') >= 0 || markdownLine.indexOf('*') >= 0 || markdownLine.indexOf('_') >= 0) {
+			markdownLine = replacePattern(markdownLine, HORIZONTAL_RULE_PATTERN, "<hr>");
+		}
 
-		// Convert strikethrough
-		markdownLine = replacePattern(markdownLine, STRIKETHROUGH_PATTERN, "<del>$1</del>");
+		// Bold / italic
+		if (markdownLine.indexOf('*') >= 0) {
+			markdownLine = replacePattern(markdownLine, BOLD_ITALIC_PATTERN, "<b><i>$1</i></b>");
+			markdownLine = replacePattern(markdownLine, BOLD_PATTERN, "<b>$1</b>");
+			markdownLine = replacePattern(markdownLine, ITALIC_PATTERN, "<i>$1</i>");
+		}
 
-		// Add line break
+		// Strikethrough
+		if (markdownLine.indexOf('~') >= 0) {
+			markdownLine = replacePattern(markdownLine, STRIKETHROUGH_PATTERN, "<del>$1</del>");
+		}
+
 		markdownLine += "<br/>";
-
 		return markdownLine;
 	}
 
 	/**
 	 * Converts a single line of text to an HTML-escaped line with escaped backslashes.
+	 * Skips work when the line contains no characters that need escaping.
 	 *
 	 * @param line The line of text to be processed
 	 * @return The HTML-escaped line with backslashes escaped
 	 */
 	private static String convertToEscapedHtmlLine(String line) {
-		return StringEscapeUtils.escapeHtml4(escapeBackslashes(line));
+		if (line.indexOf('\\') >= 0) {
+			line = escapeBackslashes(line);
+		}
+		if (containsHtmlMetaChars(line)) {
+			line = StringEscapeUtils.escapeHtml4(line);
+		}
+		return line;
 	}
 
 	/**
@@ -381,6 +391,10 @@ public class MarkdownToHtmlConverter {
 	 * @return CodeBlockInfo with backtick count and language, or (0, "") if not a code block delimiter
 	 */
 	private static CodeBlockInfo getCodeBlockInfo(String line) {
+		// Fast path: if there's no backtick at all, it can't be a code fence
+		if (line.indexOf('`') < 0) {
+			return new CodeBlockInfo(0, "");
+		}
 		Matcher matcher = CODE_BLOCK_PATTERN.matcher(line);
 		if (matcher.matches()) {
 			return new CodeBlockInfo(matcher.group(1).length(), matcher.group(2));
@@ -398,9 +412,6 @@ public class MarkdownToHtmlConverter {
 	 */
 	private static void appendOpenCodeBlock(StringBuilder htmlOutput, String language, boolean includeCodeBlockButtons) {
 		String codeBlockId = UUID.randomUUID().toString();
-		String copyIcon = Eclipse.loadIconAsBase64("CopyToClipboard.png");
-		String replaceIcon = Eclipse.loadIconAsBase64("ReplaceSelection.png");
-		String reviewIcon = Eclipse.loadIconAsBase64("ReviewChanges.png");
 		htmlOutput.append("""
 				<style>
 				.copy-btn { background-image: url(data:image/png;base64,%s); }
@@ -413,7 +424,7 @@ public class MarkdownToHtmlConverter {
 				<input type="${showReviewChanges}" class="code-button review-btn" onClick="eclipseReviewChanges(getSelectedTextFromElement('${codeBlockId}'))" value="Review Changes"/>
 				<input type="${showApplyPatch}" class="code-button patch-btn" onClick="eclipseApplyPatch(document.getElementById('${codeBlockId}').innerText)" value="Apply Patch"/>
 				<pre><code lang="${lang}" id="${codeBlockId}">"""
-				.formatted(copyIcon, replaceIcon, reviewIcon, reviewIcon)
+				.formatted(COPY_ICON, REPLACE_ICON, REVIEW_ICON, REVIEW_ICON)
 				.replace( "${lang}", language )
 				.replace( "${codeBlockId}", codeBlockId )
 				.replace( "${showCopy}", includeCodeBlockButtons ? "button" : "hidden" )
@@ -443,7 +454,7 @@ public class MarkdownToHtmlConverter {
 	private static void flushLatexBlockBuffer(StringBuilder latexBlockBuffer, StringBuilder htmlOutput) {
 		if (latexBlockBuffer.length() > 0) {
 			htmlOutput.append("<span class=\"block-latex\">");
-			htmlOutput.append(Base64.getEncoder().encodeToString(latexBlockBuffer.toString().getBytes()));
+			htmlOutput.append(Base64.getEncoder().encodeToString(latexBlockBuffer.toString().getBytes(StandardCharsets.UTF_8)));
 			htmlOutput.append("</span>\n");
 			latexBlockBuffer.setLength(0);  // Clear the buffer after processing to avoid duplicate content.
 		}
@@ -486,22 +497,74 @@ public class MarkdownToHtmlConverter {
 	}
 
 	/**
-	 * Replaces special characters in the HTML string with their escaped versions.
+	 * Escapes quotes and newlines so the HTML can be safely embedded inside a
+	 * JavaScript string literal.
 	 *
-	 * @param html The HTML string to escape special characters in
-	 * @return The HTML string with special characters escaped
+	 * @param html The HTML string to escape
+	 * @return The escaped string with {@code "}, {@code '} and newlines backslash-escaped
 	 */
 	private static String replaceEscapeCodes(String html) {
 		return html.replace("\"", "\\\"").replace("'", "\\'").replace("\n", "\\n");
 	}
 
 	/**
-	 * Removes MSDOS style line breaks (carriage returns) from the HTML string.
+	 * Returns {@code true} if the string contains any character that would be
+	 * transformed by {@link StringEscapeUtils#escapeHtml4(String)}.
 	 *
-	 * @param html The HTML string to remove carriage returns from
-	 * @return The HTML string with carriage returns removed
+	 * @param s The string to inspect
+	 * @return {@code true} if the string contains HTML metacharacters
 	 */
-	private static String replaceLineBreaks(String html) {
-		return html.replace("\r", "");
+	private static boolean containsHtmlMetaChars(String s) {
+		for (int i = 0, n = s.length(); i < n; i++) {
+			char c = s.charAt(i);
+			if (c == '&' || c == '<' || c == '>' || c == '"' || c == '\'') {
+				return true;
+			}
+		}
+		return false;
+	}
+
+	/**
+	 * Fast, zero-allocation check that returns {@code true} if the first
+	 * non-whitespace character in the line is a {@code '>'} quote marker.
+	 *
+	 * @param line The text line to analyze
+	 * @return {@code true} if the line begins with a quote marker
+	 */
+	private static boolean isQuoteLine(String line) {
+		for (int i = 0, n = line.length(); i < n; i++) {
+			char c = line.charAt(i);
+			if (c == '>') return true;
+			if (c != ' ' && c != '\t') return false;
+		}
+		return false;
+	}
+
+	/**
+	 * Counts the number of nested quote levels (>) at the start of a Markdown line.
+	 * Used for parsing nested blockquotes in Markdown text.
+	 *
+	 * @param line The text line to analyze for quote markers
+	 * @return The number of nested quote levels found
+	 */
+	private static int countQuoteMarkers(String line) {
+		int count = 0;
+		int len = line.length();
+		int i = 0;
+
+		// skip leading whitespace
+		while (i < len && (line.charAt(i) == ' ' || line.charAt(i) == '\t')) {
+			i++;
+		}
+
+		// count '>' markers, allowing whitespace between them
+		while (i < len && line.charAt(i) == '>') {
+			count++;
+			i++;
+			while (i < len && (line.charAt(i) == ' ' || line.charAt(i) == '\t')) {
+				i++;
+			}
+		}
+		return count;
 	}
 }
