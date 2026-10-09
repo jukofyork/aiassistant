@@ -47,8 +47,8 @@ public class OpenAiApiClient {
 	/** Callback to check if the current operation should be cancelled */
 	private Supplier<Boolean> isCancelled = () -> false;
 
-	/** Used to avoid stalling the GUI by having a minimum time between updates */
-	private long nextScheduledUpdateTime = 0;
+	/** Timestamp of the last streaming update to enforce a minimum interval between UI updates. */
+	private long lastStreamingUpdateTime = 0;
 
 	public OpenAiApiClient() {
 	}
@@ -160,6 +160,7 @@ public class OpenAiApiClient {
 	 */
 	public Runnable run(ChatConversation chatConversation) {
 		return () -> {
+			lastStreamingUpdateTime = 0;
 			try {
 				String modelStatus = checkCurrentModelStatus();
 				if (!modelStatus.equals("OK")) {
@@ -480,17 +481,15 @@ public class OpenAiApiClient {
 
 					}
 
-					// If the queue is empty then deal with the buffered string.
-					// NOTE: Now also avoids stalling the GUI by having a minimum time between updates.
+					// Submit buffered output only once the minimum interval has elapsed since the
+					// last update. This absorbs slow iterations: a long chunk releases immediately,
+					// but the next update still waits the full interval before proceeding.
 					if (streamingResponsePublisher.estimateMaximumLag() == 0) {
 						long currentTime = System.currentTimeMillis();
-						if (nextScheduledUpdateTime == 0) {
-							nextScheduledUpdateTime = currentTime + Preferences.getStreamingUpdateInterval();
-						}
-						else if (currentTime >= nextScheduledUpdateTime) {
+						if (currentTime - lastStreamingUpdateTime >= Preferences.getStreamingUpdateInterval()) {
 							streamingResponsePublisher.submit(responseContentBuffer.toString());
 							responseContentBuffer.setLength(0);
-							nextScheduledUpdateTime = 0;
+							lastStreamingUpdateTime = currentTime;
 						}
 					}
 

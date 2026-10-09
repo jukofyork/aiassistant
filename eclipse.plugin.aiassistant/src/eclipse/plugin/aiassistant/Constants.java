@@ -79,9 +79,10 @@ public final class Constants {
 	public static final int MAX_REQUEST_TIMEOUT = Integer.MAX_VALUE;
 	public static final int DEFAULT_REQUEST_TIMEOUT = 300;
 
-	// The (minimum) update interval for use in processStreamingResponse() to avoid GUI stalling.
-	public static final int MIN_STREAMING_UPDATE_INTERVAL = 1;
-	public static final int MAX_STREAMING_UPDATE_INTERVAL = 1000;
+	// The minimum time between streaming UI updates to prevent GUI stalling.
+	// NOTE: The actual interval may be longer if processing a chunk takes more time.
+	public static final int MIN_STREAMING_UPDATE_INTERVAL = 10;
+	public static final int MAX_STREAMING_UPDATE_INTERVAL = 500;
 	public static final int DEFAULT_STREAMING_UPDATE_INTERVAL = 50;
 
 	// Miscellaneous global checkbox settings.
